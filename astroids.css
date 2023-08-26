@@ -1,0 +1,10 @@
+canvas {
+  background: #9c9c9c;
+}
+
+#minimapCanvas {
+  position: absolute;
+  top: 40px; 
+  left: 1070px; 
+  border: 2px solid #000; 
+}
