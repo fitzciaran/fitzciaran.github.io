@@ -23,8 +23,8 @@ export function generatePowerups(globalPowerUps, connections, worldWidth, worldH
   if (globalPowerUps.length < 2) {
     // Generate a new dot with random x and y within the world
     let powerup = {
-      x: Math.random() * worldWidth,
-      y: Math.random() * worldHeight,
+      x: (Math.random() * 0.8 + 0.1) * worldWidth,
+      y: (Math.random() * 0.8 + 0.1) * worldHeight,
       color: colors[Math.floor(Math.random() * colors.length)],
     };
     globalPowerUps.push(powerup);
