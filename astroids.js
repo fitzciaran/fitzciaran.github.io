@@ -1,4 +1,6 @@
 import { setupCanvas, drawBackground, drawWorldBounds,drawMinimap,drawRotatedShip,drawPowerups,drawMinimapPowerups,renderPowerupLevels } from './canvasDrawingFunctions.js';
+import { resetPowerLevels,checkWinner,generatePowerups,checkPowerupCollision } from './gameLogic.js';
+import { sendPlayerStates, sendPowerups } from './connectionHandlers.js';
 
 const { canvas, ctx } = setupCanvas();
 
@@ -70,7 +72,7 @@ let index = 0;
 let peer; // Declare the peer variable here
 let otherPlayers = [];
 let handleCounter = 0;
-let sendCounter = 0;
+
 
 /* START CONNECTION HANDLERS  */
 
@@ -147,10 +149,10 @@ function addConnectionHandlers(conn) {
     }
 
     // Reset all powerUps when a new peer connects
-    resetPowerLevels();
+    resetPowerLevels(player, otherPlayers, connections);
 
     // Send the current powerups to the new peer
-    sendPowerups();
+    sendPowerups(globalPowerUps, connections);
   });
 
   conn.on("error", function (err) {
@@ -203,8 +205,14 @@ function handleData(data) {
 }
 
 setInterval(connectToPeers, 6000);
-setInterval(generatePowerups, 3000);
-setInterval(sendPowerups, 3000);
+
+
+setInterval(function() {
+generatePowerups(globalPowerUps,connections,worldWidth,worldHeight,colors);
+}, 3000);
+setInterval(function() {
+  sendPowerups(globalPowerUps, connections);
+}, 3000);
 
 function connectToPeers() {
   // Connect to the other peers
@@ -387,13 +395,9 @@ function update() {
   player.x += vel.x;
   player.y += vel.y;
   // Check collision for you
-  // checkPowerupCollision({ x: player.x, y: player.y, powerUps: player.powerUps, color: player.color });
-  checkPowerupCollision(player);
-
-  // Check collision for other players
-  otherPlayers.forEach((playerToCheck) => {
-    //checkPowerupCollision(playerToCheck);
-  });
+  checkPowerupCollision(player,globalPowerUps,connections);
+  // Don't Check collision for other players let each player do it for themselves
+ 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   drawBackground(ctx, camX,camY,canvas);
@@ -412,7 +416,7 @@ function update() {
   drawRotatedShip(ctx, camX,camY,  player.x, player.y, player.angle, shipPoints, player.color);
   renderPowerupLevels(ctx,player,otherPlayers);
   if (everConnected) {
-    sendPlayerStates();
+    sendPlayerStates(player,connections);
    
   } else {
     connections.forEach((conn) => {
@@ -429,115 +433,20 @@ function update() {
       }
     });
   }
-  if (checkWinner(player, otherPlayers)) {
+  if (checkWinner(player, otherPlayers,connections,ctx,canvas)) {
     return;
   }
   requestAnimationFrame(update);
 }
 
-function sendPlayerStates(){
-   // Check if connection is open before sending data
-    // Send game state to other player
-    let data = {
-      id: player.id,
-      x: player.x,
-      y: player.y,
-      angle: player.angle,
-      color: player.color,
-      powerUps: player.powerUps,
-    };
-    //console.log("Sending data:", data); // Log any data sent
-    connections.forEach((conn) => {
-      if (conn && conn.open) {
-        conn.send(data);
-        sendCounter++;
-        // Log the data every 1000 calls
-        if (sendCounter === 1000) {
-          console.log("sending data:", data);
-          sendCounter = 0; // reset the counter
-        }
-      }
-    });
-}
 function shuffleArray(array) {
   for (let i = array.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [array[i], array[j]] = [array[j], array[i]];
   }
 }
-function checkPowerupCollision(playerToCheck) {
-  for (let i = 0; i < globalPowerUps.length; i++) {
-    let dx = playerToCheck.x - globalPowerUps[i].x;
-    let dy = playerToCheck.y - globalPowerUps[i].y;
-    let distance = Math.sqrt(dx * dx + dy * dy);
 
-    if (distance < 20) {
-      // assuming the radius of both ship and powerup is 10
-      playerToCheck.powerUps += 1;
-      globalPowerUps.splice(i, 1);
-      sendPowerups();
-      break; // exit the loop to avoid possible index errors
-    }
-  }
-}
-function generatePowerups() {
-  // Check if there are less than 2 powerups
-  if (globalPowerUps.length < 2) {
-    // Generate a new dot with random x and y within the world
-    let powerup = {
-      x: Math.random() * worldWidth,
-      y: Math.random() * worldHeight,
-      color: colors[Math.floor(Math.random() * colors.length)],
-    };
-    globalPowerUps.push(powerup);
 
-    // Send the powerups every time you generate one
-    sendPowerups();
-  }
-}
-function sendPowerups() {
-  let powerUpData = {
-    globalPowerUps: globalPowerUps,
-  };
 
-  connections.forEach((conn) => {
-    if (conn && conn.open) {
-      conn.send(powerUpData);
-    }
-  });
-}
 
-function checkWinner(player, otherPlayers) {
-  if (player.powerUps >= 5) {
-    sendPlayerStates();
-    ctx.font = "70px Arial";
-    ctx.fillStyle = "white";
-    ctx.textAlign = "center";
-    ctx.fillText("Winner! Rivals dreams crushed.", canvas.width / 2, canvas.height / 2); 
-    return true;
-  }
-  for (let otherPlayer of otherPlayers) {
-    if (otherPlayer.powerUps >= 5) {
-      ctx.font = "70px Arial";
-      ctx.fillStyle = "white";
-      ctx.textAlign = "center";
-      ctx.fillText("Get good scrub! You lose", canvas.width / 2, canvas.height / 2); 
-      return true;
-    }
-  };
-  return false;
-}
-
-function resetPowerLevels() {
-  // Reset my powerUps
-  player.powerUps = 0;
-  
-  // Reset powerUps of other players
-  otherPlayers.forEach(player => {
-      player.powerUps = 0;
-  });
-
-  // Send updated powerUps to other players
-  sendPlayerStates();
-}
 update();
