@@ -1,7 +1,6 @@
-const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
-canvas.width = 1200;
-canvas.height = 600;
+import { setupCanvas, drawBackground, drawWorldBounds,drawMinimap,drawRotatedShip,drawPowerups,drawMinimapPowerups,renderPowerupLevels } from './canvasDrawingFunctions.js';
+
+const { canvas, ctx } = setupCanvas();
 
 const worldWidth = 3600;
 const worldHeight = 2400;
@@ -10,8 +9,8 @@ let globalPowerUps = [];
 
 let powerUps = 0;
 // Random initial position, at least 100 units away from each edge
-centerX = 100 + Math.random() * (worldWidth - 200);
-centerY = 100 + Math.random() * (worldHeight - 200);
+let centerX = 100 + Math.random() * (worldWidth - 200);
+let centerY = 100 + Math.random() * (worldHeight - 200);
 const colors = ["red", "blue", "green", "yellow", "purple", "orange", "pink", "violet", "maroon", "crimson", "white"];
 let color = colors[Math.floor(Math.random() * colors.length)];
 let angle = 0;
@@ -25,8 +24,8 @@ let player = {
 };
 
 // Initial camera position at start of game
-camX = player.x - canvas.width / 2;
-camY = player.y - canvas.height / 2;
+let camX = player.x - canvas.width / 2;
+let camY = player.y - canvas.height / 2;
 const radius = 50;
 const maxDistance = Math.sqrt((canvas.width / 2) ** 2 + (canvas.height / 2) ** 2);
 const shipPoints = [
@@ -397,21 +396,21 @@ function update() {
   });
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  drawBackground();
-  drawWorldBounds();
+  drawBackground(ctx, camX,camY,canvas);
+  drawWorldBounds(ctx, camX,camY,worldWidth,worldHeight);
 
   ctx.lineWidth = 2;
 
   // Draw other players
   otherPlayers.forEach((player) => {
-    drawRotatedShip(player.x, player.y, player.angle, shipPoints, player.color);
+    drawRotatedShip(ctx, camX,camY, player.x, player.y, player.angle, shipPoints, player.color);
   });
 
-  drawPowerups();
-  drawMinimap();
-  drawMinimapPowerups();
-  drawRotatedShip(player.x, player.y, player.angle, shipPoints, player.color);
-  renderPowerupLevels();
+  drawPowerups(globalPowerUps,ctx,camX,camY);
+  drawMinimap(player,otherPlayers, worldWidth, worldHeight);
+  drawMinimapPowerups(globalPowerUps, worldWidth, worldHeight);
+  drawRotatedShip(ctx, camX,camY,  player.x, player.y, player.angle, shipPoints, player.color);
+  renderPowerupLevels(ctx,player,otherPlayers);
   if (everConnected) {
     sendPlayerStates();
    
@@ -430,92 +429,12 @@ function update() {
       }
     });
   }
-  if (checkWinner()) {
+  if (checkWinner(player, otherPlayers)) {
     return;
   }
   requestAnimationFrame(update);
 }
 
-function drawRotatedShip(centerX, centerY, angle, points, color) {
-  ctx.beginPath();
-
-  // Move to the first point after rotating
-  let rotatedPoint = rotatePoint(points[0].x, points[0].y, angle);
-  ctx.moveTo(centerX - camX + rotatedPoint.x, centerY - camY + rotatedPoint.y);
-
-  // Create a line for each point
-  for (let i = 1; i < points.length; i++) {
-    rotatedPoint = rotatePoint(points[i].x, points[i].y, angle);
-    ctx.lineTo(centerX - camX + rotatedPoint.x, centerY - camY + rotatedPoint.y);
-  }
-
-  ctx.strokeStyle = color;
-  ctx.stroke();
-  ctx.closePath();
-  ctx.strokeStyle = color;
-  ctx.stroke();
-}
-
-// Rotate a point (x, y) by a certain angle
-function rotatePoint(x, y, angle) {
-  return {
-    x: x * Math.cos(angle) - y * Math.sin(angle),
-    y: x * Math.sin(angle) + y * Math.cos(angle),
-  };
-}
-
-function drawBackground() {
-  ctx.fillStyle = "#999";
-  ctx.fillRect(camX, camY, canvas.width, canvas.height);
-
-  const gridSize = 100; // change as needed
-  ctx.strokeStyle = "#555";
-  ctx.lineWidth = 0.5;
-
-  // horizontal lines
-  for (let i = camY - (camY % gridSize); i < camY + canvas.height; i += gridSize) {
-    ctx.beginPath();
-    ctx.moveTo(0, i - camY);
-    ctx.lineTo(canvas.width, i - camY);
-    ctx.stroke();
-  }
-
-  // vertical lines
-  for (let i = camX - (camX % gridSize); i < camX + canvas.width; i += gridSize) {
-    ctx.beginPath();
-    ctx.moveTo(i - camX, 0);
-    ctx.lineTo(i - camX, canvas.height);
-    ctx.stroke();
-  }
-}
-
-function drawWorldBounds() {
-  ctx.lineWidth = 10; // Line width increased
-  ctx.strokeStyle = "blue";
-  ctx.strokeRect(-camX, -camY, worldWidth, worldHeight);
-}
-
-function drawMinimap() {
-  const minimapCanvas = document.getElementById("minimapCanvas");
-  const minimapCtx = minimapCanvas.getContext("2d");
-
-  const dotSize = 5; // Size of the dot
-  const scaleX = (minimapCanvas.width - dotSize) / worldWidth; // Adjust scale
-  const scaleY = (minimapCanvas.height - dotSize) / worldHeight; // Adjust scale
-
-  // Clear the minimap
-  minimapCtx.clearRect(0, 0, minimapCanvas.width, minimapCanvas.height);
-
-  // Draw the player's ship on the minimap
-  minimapCtx.fillStyle = player.color;
-  minimapCtx.fillRect(player.x * scaleX, player.y * scaleY, dotSize, dotSize);
-
-  // Draw other players on the minimap
-  otherPlayers.forEach((player) => {
-    minimapCtx.fillStyle = player.color;
-    minimapCtx.fillRect(player.x * scaleX, player.y * scaleY, dotSize, dotSize);
-  });
-}
 function sendPlayerStates(){
    // Check if connection is open before sending data
     // Send game state to other player
@@ -587,50 +506,8 @@ function sendPowerups() {
     }
   });
 }
-function drawPowerups() {
-  // Draw each dot
-  globalPowerUps.forEach((powerup) => {
-    ctx.beginPath();
-    ctx.arc(powerup.x - camX, powerup.y - camY, 10, 0, Math.PI * 2);
-    ctx.fillStyle = powerup.color;
-    ctx.fill();
-  });
-}
 
-function drawMinimapPowerups() {
-  const minimapCanvas = document.getElementById("minimapCanvas");
-  const minimapCtx = minimapCanvas.getContext("2d");
-
-  const powerupSize = 2; // Smaller size for powerups on the minimap
-  const scaleX = (minimapCanvas.width - powerupSize) / worldWidth; // Adjust scale
-  const scaleY = (minimapCanvas.height - powerupSize) / worldHeight; // Adjust scale
-
-  // Draw each powerup on the minimap
-  globalPowerUps.forEach((powerup) => {
-    minimapCtx.fillStyle = powerup.color;
-    minimapCtx.fillRect(powerup.x * scaleX, powerup.y * scaleY, powerupSize, powerupSize);
-  });
-}
-
-function renderPowerupLevels() {
-  const minimapTopY = 100; // Replace with the Y position of your minimap
-  const textHeight = 75; // Adjust this to the size of your text
-  const gap = 10; // Gap between lines
-  ctx.font = "12px Arial";
-  const myPowerupText = `              My Powerups: ${player.powerUps}`;
-  ctx.fillStyle = player.color; // your ship color
-  ctx.fillText(myPowerupText, 58, minimapTopY - textHeight);
-
-  // Draw other players' powerups
-  otherPlayers.forEach((player, index) => {
-    const playerPowerupText = `Player ${player.id.slice(0, 7)} Powerups: ${player.powerUps}`; // Showing only the first 7 digits of id for readability
-    const y = minimapTopY - textHeight + (1.5 + index) * gap; // calculate y position for each player's text
-    ctx.fillStyle = player.color; // individual ship color for each player
-    ctx.fillText(playerPowerupText, 40, y);
-  });
-}
-
-function checkWinner() {
+function checkWinner(player, otherPlayers) {
   if (player.powerUps >= 5) {
     sendPlayerStates();
     ctx.font = "70px Arial";
