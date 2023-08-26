@@ -1,6 +1,27 @@
-import { setupCanvas, drawBackground, drawWorldBounds,drawMinimap,drawRotatedShip,drawPowerups,drawMinimapPowerups,renderPowerupLevels } from './canvasDrawingFunctions.js';
-import { checkWinner,generatePowerups,checkPowerupCollision } from './gameLogic.js';
-import { everConnected, peerIds, getPeer, setPeer, connections,tryNextId, sendPlayerStates, sendPowerups,attemptConnections,connectToPeers } from './connectionHandlers.js';
+import {
+  setupCanvas,
+  drawBackground,
+  drawWorldBounds,
+  drawMinimap,
+  drawRotatedShip,
+  drawPowerups,
+  drawMinimapPowerups,
+  renderPowerupLevels,
+} from "./canvasDrawingFunctions.js";
+import { checkWinner, generatePowerups, checkPowerupCollision } from "./gameLogic.js";
+import {
+  everConnected,
+  peerIds,
+  getPeer,
+  setPeer,
+  connections,
+  tryNextId,
+  sendPlayerStates,
+  sendPowerups,
+  attemptConnections,
+  connectToPeers,
+} from "./connectionHandlers.js";
+import { keys, handleInputEvents, mousePos } from "./inputHandlers.js";
 
 const { canvas, ctx } = setupCanvas();
 
@@ -26,8 +47,8 @@ let player = {
 };
 
 // Initial camera position at start of game
-let camX = player.x - canvas.width / 2;
-let camY = player.y - canvas.height / 2;
+export let camX = player.x - canvas.width / 2;
+export let camY = player.y - canvas.height / 2;
 const radius = 50;
 const maxDistance = Math.sqrt((canvas.width / 2) ** 2 + (canvas.height / 2) ** 2);
 const shipPoints = [
@@ -36,130 +57,35 @@ const shipPoints = [
   { x: 0, y: 10 },
   { x: 10, y: 20 },
 ];
-let mousePos = { x: 0, y: 0 };
+
 
 const acceleration = 0.25;
 const friction = 0.95;
 let vel = { x: 0, y: 0 };
 
-// Define the max distance (2 ship lengths in this case)
-let maxForceDistance = 2 * 50;
-
 let distanceFactor;
-let keys = {
-  up: false,
-  down: false,
-  left: false,
-  right: false,
-};
-
-
-
 let otherPlayers = [];
 
 /* START CONNECTION HANDLERS  */
-setPeer(tryNextId(peerIds,getPeer(),player));
-
+setPeer(tryNextId(peerIds, getPeer(), player));
 
 setTimeout(function () {
-  setPeer(attemptConnections(player, getPeer(), peerIds, otherPlayers, connections,globalPowerUps));
+  setPeer(attemptConnections(player, getPeer(), peerIds, otherPlayers, connections, globalPowerUps));
 }, 500);
-setInterval(function() {
-  connectToPeers(peerIds,player, otherPlayers,connections,globalPowerUps);
-  }, 6000);
+setInterval(function () {
+  connectToPeers(peerIds, player, otherPlayers, connections, globalPowerUps);
+}, 6000);
 
-setInterval(function() {
-generatePowerups(globalPowerUps,connections,worldWidth,worldHeight,colors);
+setInterval(function () {
+  generatePowerups(globalPowerUps, connections, worldWidth, worldHeight, colors);
 }, 3000);
-setInterval(function() {
+setInterval(function () {
   sendPowerups(globalPowerUps, connections);
 }, 3000);
 
-
-
 /* END CONNECTION HANDLERS  */
 
-/* START INPUT EVENT HANDLERS  */
-
-window.addEventListener("keydown", function (e) {
-  if (e.code === "Space") {
-    keys.space = true;
-  }
-});
-
-window.addEventListener("keyup", function (e) {
-  if (e.code === "Space") {
-    keys.space = false;
-  }
-});
-
-canvas.addEventListener(
-  "mousemove",
-  function (evt) {
-    let coords = getMousePos(canvas, evt);
-    mousePos.x = coords.x + camX;
-    mousePos.y = coords.y + camY;
-    player.angle = calculateAngle(mousePos);
-  },
-  false
-);
-
-canvas.addEventListener("mousedown", function (e) {
-  keys.space = true;
-});
-
-canvas.addEventListener("mouseup", function (e) {
-  keys.space = false;
-});
-
-canvas.addEventListener("touchstart", function (e) {
-  keys.space = true;
-
-  // Update mouse position on touch start
-  if (e.touches) {
-    mousePos.x = e.touches[0].clientX + camX;
-    mousePos.y = e.touches[0].clientY + camY;
-    player.angle = calculateAngle(mousePos);
-  }
-});
-
-canvas.addEventListener("touchend", function (e) {
-  keys.space = false;
-});
-
-canvas.addEventListener(
-  "touchmove",
-  function (e) {
-    // Prevent scrolling when touching the canvas
-    e.preventDefault();
-
-    if (e.touches) {
-      let coords = getMousePos(canvas, e.touches[0]);
-      mousePos.x = coords.x + camX;
-      mousePos.y = coords.y + camY;
-      player.angle = calculateAngle(mousePos);
-    }
-  },
-  { passive: false }
-); // Set passive to false to prevent scrolling
-
-/* END INPUT EVENT HANDLERS  */
-
-function shipHitsBorder(x, y) {
-  return x < 0 || y < 0 || x > worldWidth || y > worldHeight;
-}
-
-function calculateAngle(mousePos) {
-  return Math.atan2(mousePos.y - player.y, mousePos.x - player.x);
-}
-
-function getMousePos(canvas, evt) {
-  var rect = canvas.getBoundingClientRect();
-  return {
-    x: evt.clientX - rect.left,
-    y: evt.clientY - rect.top,
-  };
-}
+handleInputEvents(canvas, player, keys);
 
 function update() {
   const bounceFactor = 1.5; // Adjust this to control bounce behavior
@@ -195,7 +121,7 @@ function update() {
 
   if (keys.space) {
     let mouseToCenter = { x: dx / distance, y: dy / distance };
-    let maxForceDistance = 2 * 20;
+    let maxForceDistance = 2 * 30;
 
     if (distance > maxForceDistance) {
       distanceFactor = 1;
@@ -239,29 +165,28 @@ function update() {
   player.x += vel.x;
   player.y += vel.y;
   // Check collision for you
-  checkPowerupCollision(player,globalPowerUps,connections);
+  checkPowerupCollision(player, globalPowerUps, connections);
   // Don't Check collision for other players let each player do it for themselves
- 
+
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  drawBackground(ctx, camX,camY,canvas);
-  drawWorldBounds(ctx, camX,camY,worldWidth,worldHeight);
+  drawBackground(ctx, camX, camY, canvas);
+  drawWorldBounds(ctx, camX, camY, worldWidth, worldHeight);
 
   ctx.lineWidth = 2;
 
   // Draw other players
   otherPlayers.forEach((player) => {
-    drawRotatedShip(ctx, camX,camY, player.x, player.y, player.angle, shipPoints, player.color);
+    drawRotatedShip(ctx, camX, camY, player.x, player.y, player.angle, shipPoints, player.color);
   });
 
-  drawPowerups(globalPowerUps,ctx,camX,camY);
-  drawMinimap(player,otherPlayers, worldWidth, worldHeight);
+  drawPowerups(globalPowerUps, ctx, camX, camY);
+  drawMinimap(player, otherPlayers, worldWidth, worldHeight);
   drawMinimapPowerups(globalPowerUps, worldWidth, worldHeight);
-  drawRotatedShip(ctx, camX,camY,  player.x, player.y, player.angle, shipPoints, player.color);
-  renderPowerupLevels(ctx,player,otherPlayers);
+  drawRotatedShip(ctx, camX, camY, player.x, player.y, player.angle, shipPoints, player.color);
+  renderPowerupLevels(ctx, player, otherPlayers);
   if (everConnected) {
-    sendPlayerStates(player,connections);
-   
+    sendPlayerStates(player, connections);
   } else {
     connections.forEach((conn) => {
       if (conn && conn.closed) {
@@ -277,18 +202,14 @@ function update() {
       }
     });
   }
-  if (checkWinner(player, otherPlayers,connections,ctx,canvas)) {
+  if (checkWinner(player, otherPlayers, connections, ctx, canvas)) {
     return;
   }
   requestAnimationFrame(update);
 }
 
-
-export function setGlobalPowerUps(newPowerUps){
+export function setGlobalPowerUps(newPowerUps) {
   globalPowerUps = newPowerUps;
 }
-
-
-
 
 update();

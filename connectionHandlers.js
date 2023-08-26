@@ -1,5 +1,5 @@
-import { resetPowerLevels } from './gameLogic.js';
-import { setGlobalPowerUps } from './astroids.js';
+import { resetPowerLevels } from "./gameLogic.js";
+import { setGlobalPowerUps } from "./astroids.js";
 
 export let everConnected = false;
 export let connections = [];
@@ -17,34 +17,34 @@ shuffleArray(peerIds);
 let index = 0;
 let handleCounter = 0;
 let sendCounter = 0;
-let peer; 
+let peer;
 
-export function sendPlayerStates(player,connections){
-    // Check if connection is open before sending data
-     // Send game state to other player
-     let data = {
-       id: player.id,
-       x: player.x,
-       y: player.y,
-       angle: player.angle,
-       color: player.color,
-       powerUps: player.powerUps,
-     };
-     //console.log("Sending data:", data); // Log any data sent
-     connections.forEach((conn) => {
-       if (conn && conn.open) {
-         conn.send(data);
-         sendCounter++;
-         // Log the data every 1000 calls
-         if (sendCounter === 1000) {
-           console.log("sending data:", data);
-           sendCounter = 0; // reset the counter
-         }
-       }
-     });
- }
+export function sendPlayerStates(player, connections) {
+  // Check if connection is open before sending data
+  // Send game state to other player
+  let data = {
+    id: player.id,
+    x: player.x,
+    y: player.y,
+    angle: player.angle,
+    color: player.color,
+    powerUps: player.powerUps,
+  };
+  //console.log("Sending data:", data); // Log any data sent
+  connections.forEach((conn) => {
+    if (conn && conn.open) {
+      conn.send(data);
+      sendCounter++;
+      // Log the data every 1000 calls
+      if (sendCounter === 1000) {
+        console.log("sending data:", data);
+        sendCounter = 0; // reset the counter
+      }
+    }
+  });
+}
 
- export function sendPowerups(globalPowerUps,connections) {
+export function sendPowerups(globalPowerUps, connections) {
   let powerUpData = {
     globalPowerUps: globalPowerUps,
   };
@@ -57,7 +57,7 @@ export function sendPlayerStates(player,connections){
 }
 
 // Wait for a short delay to allow time for the connections to be attempted
-export function attemptConnections(player, peer, peerIds, otherPlayers, connections,globalPowerUps) {
+export function attemptConnections(player, peer, peerIds, otherPlayers, connections, globalPowerUps) {
   if (player.id === null) {
     console.log("All IDs are in use");
     return;
@@ -65,7 +65,7 @@ export function attemptConnections(player, peer, peerIds, otherPlayers, connecti
 
   peer.on("connection", function (conn) {
     console.log("Connection made with peer:", conn.peer);
-    addConnectionHandlers(conn,player, otherPlayers, connections,globalPowerUps);
+    addConnectionHandlers(conn, player, otherPlayers, connections, globalPowerUps);
     everConnected = true;
   });
 
@@ -77,11 +77,11 @@ export function attemptConnections(player, peer, peerIds, otherPlayers, connecti
     console.log("Disconnected from server");
   });
 
-  connectToPeers(peerIds, player,otherPlayers,connections,globalPowerUps);
+  connectToPeers(peerIds, player, otherPlayers, connections, globalPowerUps);
   return peer;
 }
 
-export function connectToPeers(peerIds,player, otherPlayers,connections,globalPowerUps) {
+export function connectToPeers(peerIds, player, otherPlayers, connections, globalPowerUps) {
   // Connect to the other peers
   peerIds.forEach((id) => {
     if (id !== player.id) {
@@ -92,7 +92,7 @@ export function connectToPeers(peerIds,player, otherPlayers,connections,globalPo
         if (conn != null && conn != undefined) {
           //connections.push(conn); // Add the connection to the array
           everConnected = true;
-          addConnectionHandlers(conn, player,otherPlayers, connections,globalPowerUps);
+          addConnectionHandlers(conn, player, otherPlayers, connections, globalPowerUps);
         }
       } else {
         console.log("existing connection with: " + id);
@@ -101,7 +101,7 @@ export function connectToPeers(peerIds,player, otherPlayers,connections,globalPo
   });
 }
 
-export function tryNextId(peerIds,peer,player) {
+export function tryNextId(peerIds, peer, player) {
   if (index >= peerIds.length) {
     console.log("All IDs are in use");
     return;
@@ -122,7 +122,7 @@ export function tryNextId(peerIds,peer,player) {
       console.log("ID is in use:", id);
       index++;
 
-      peer = tryNextId(peerIds,peer,player);
+      peer = tryNextId(peerIds, peer, player);
     } else {
       // console.log("Other error:", err);
       //console.log("Other error:");
@@ -131,7 +131,7 @@ export function tryNextId(peerIds,peer,player) {
   return peer;
 }
 
-function addConnectionHandlers(conn,player,otherPlayers,connections,globalPowerUps) {
+function addConnectionHandlers(conn, player, otherPlayers, connections, globalPowerUps) {
   console.log("adding connection handlers");
   conn.on("open", function () {
     console.log("Connection opened with peer:", conn.peer);
@@ -169,14 +169,14 @@ function addConnectionHandlers(conn,player,otherPlayers,connections,globalPowerU
   conn.on("data", function (data) {
     //console.log("Received data:", data);
     if ((data && data.id) || (data && data.globalPowerUps)) {
-      handleData(data,otherPlayers,globalPowerUps);
+      handleData(data, otherPlayers, globalPowerUps);
     } else {
       console.log("Received unexpected data:", data);
     }
   });
 }
 
-function handleData(data,otherPlayers,globalPowerUps) {
+function handleData(data, otherPlayers, globalPowerUps) {
   //console.log("handling data:");
   // Find the player in the array
   let player = otherPlayers.find((player) => player.id === data.id);
@@ -211,7 +211,6 @@ function shuffleArray(array) {
     [array[i], array[j]] = [array[j], array[i]];
   }
 }
-
 
 export function getPeer() {
   return peer;

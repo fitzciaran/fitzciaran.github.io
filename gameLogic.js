@@ -2,8 +2,6 @@ import { sendPlayerStates, sendPowerups } from "./connectionHandlers.js";
 //finish game after 2 for easier testing the finish
 let pointsToWin = 2;
 
-
-
 export function checkWinner(player, otherPlayers, connections, ctx, canvas) {
   if (player.powerUps >= pointsToWin) {
     sendPlayerStates(player, connections);
@@ -25,7 +23,7 @@ export function checkWinner(player, otherPlayers, connections, ctx, canvas) {
   return false;
 }
 
-export function generatePowerups(globalPowerUps, connections,worldWidth,worldHeight,colors) {
+export function generatePowerups(globalPowerUps, connections, worldWidth, worldHeight, colors) {
   // Check if there are less than 2 powerups
   if (globalPowerUps.length < 2) {
     // Generate a new dot with random x and y within the world
@@ -58,14 +56,18 @@ export function checkPowerupCollision(playerToCheck, globalPowerUps, connections
 }
 
 export function resetPowerLevels(player, otherPlayers, connections) {
-    // Reset my powerUps
+  // Reset my powerUps
+  player.powerUps = 0;
+
+  // Reset powerUps of other players
+  otherPlayers.forEach((player) => {
     player.powerUps = 0;
-  
-    // Reset powerUps of other players
-    otherPlayers.forEach((player) => {
-      player.powerUps = 0;
-    });
-  
-    // Send updated powerUps to other players
-    sendPlayerStates(player, connections);
-  }
+  });
+
+  // Send updated powerUps to other players
+  sendPlayerStates(player, connections);
+}
+
+function shipHitsBorder(x, y) {
+  return x < 0 || y < 0 || x > worldWidth || y > worldHeight;
+}
