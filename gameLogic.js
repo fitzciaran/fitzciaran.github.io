@@ -2,18 +2,7 @@ import { sendPlayerStates, sendPowerups } from "./connectionHandlers.js";
 //finish game after 2 for easier testing the finish
 let pointsToWin = 2;
 
-export function resetPowerLevels(player, otherPlayers, connections) {
-  // Reset my powerUps
-  player.powerUps = 0;
 
-  // Reset powerUps of other players
-  otherPlayers.forEach((player) => {
-    player.powerUps = 0;
-  });
-
-  // Send updated powerUps to other players
-  sendPlayerStates(player, connections);
-}
 
 export function checkWinner(player, otherPlayers, connections, ctx, canvas) {
   if (player.powerUps >= pointsToWin) {
@@ -67,3 +56,16 @@ export function checkPowerupCollision(playerToCheck, globalPowerUps, connections
     }
   }
 }
+
+export function resetPowerLevels(player, otherPlayers, connections) {
+    // Reset my powerUps
+    player.powerUps = 0;
+  
+    // Reset powerUps of other players
+    otherPlayers.forEach((player) => {
+      player.powerUps = 0;
+    });
+  
+    // Send updated powerUps to other players
+    sendPlayerStates(player, connections);
+  }

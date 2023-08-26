@@ -120,16 +120,16 @@ export function setupCanvas() {
   export function renderPowerupLevels(ctx,player,otherPlayers) {
     const minimapTopY = 100; // Replace with the Y position of your minimap
     const textHeight = 75; // Adjust this to the size of your text
-    const gap = 10; // Gap between lines
-    ctx.font = "12px Arial";
-    const myPowerupText = `              My Powerups: ${player.powerUps}`;
+    const gap = 16; // Gap between lines
+    ctx.font = "14px Arial";
+    const myPowerupText = `               My Powerups: ${player.powerUps}`;
     ctx.fillStyle = player.color; // your ship color
     ctx.fillText(myPowerupText, 58, minimapTopY - textHeight);
   
     // Draw other players' powerups
     otherPlayers.forEach((player, index) => {
       const playerPowerupText = `Player ${player.id.slice(0, 7)} Powerups: ${player.powerUps}`; // Showing only the first 7 digits of id for readability
-      const y = minimapTopY - textHeight + (1.5 + index) * gap; // calculate y position for each player's text
+      const y = minimapTopY - textHeight + (1 + index) * gap; // calculate y position for each player's text
       ctx.fillStyle = player.color; // individual ship color for each player
       ctx.fillText(playerPowerupText, 40, y);
     });
