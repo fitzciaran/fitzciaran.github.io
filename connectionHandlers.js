@@ -57,7 +57,7 @@ export function sendPowerups(globalPowerUps, connections) {
 }
 
 // Wait for a short delay to allow time for the connections to be attempted
-export function attemptConnections(player, peer, peerIds, otherPlayers, connections, globalPowerUps) {
+export function attemptConnections(player, otherPlayers ,peerIds, connections, globalPowerUps) {
   if (player.id === null) {
     console.log("All IDs are in use");
     return;
@@ -65,7 +65,7 @@ export function attemptConnections(player, peer, peerIds, otherPlayers, connecti
 
   peer.on("connection", function (conn) {
     console.log("Connection made with peer:", conn.peer);
-    addConnectionHandlers(conn, player, otherPlayers, connections, globalPowerUps);
+    addConnectionHandlers( player, otherPlayers,conn, connections, globalPowerUps);
     everConnected = true;
   });
 
@@ -77,22 +77,28 @@ export function attemptConnections(player, peer, peerIds, otherPlayers, connecti
     console.log("Disconnected from server");
   });
 
-  connectToPeers(peerIds, player, otherPlayers, connections, globalPowerUps);
-  return peer;
+  connectToPeers(player, otherPlayers,peerIds, connections, globalPowerUps);
 }
 
-export function connectToPeers(peerIds, player, otherPlayers, connections, globalPowerUps) {
+export function connectToPeers( player,otherPlayers,peerIds,  connections, globalPowerUps) {
   // Connect to the other peers
   peerIds.forEach((id) => {
     if (id !== player.id) {
       // Check if a connection with this id already exists
       let existingConnection = connections.find((conn) => conn.peer === id);
       if (!existingConnection) {
-        let conn = peer.connect(id);
+        let conn = null;
+        if (peer) {
+          conn = peer.connect(id);
+        } else {
+          if (Math.random() > 0.9) {
+            console.log("peer undefined in connect to peeers");
+          }
+        }
         if (conn != null && conn != undefined) {
           //connections.push(conn); // Add the connection to the array
           everConnected = true;
-          addConnectionHandlers(conn, player, otherPlayers, connections, globalPowerUps);
+          addConnectionHandlers( player, otherPlayers, conn, connections, globalPowerUps);
         }
       } else {
         console.log("existing connection with: " + id);
@@ -101,7 +107,7 @@ export function connectToPeers(peerIds, player, otherPlayers, connections, globa
   });
 }
 
-export function tryNextId(peerIds, peer, player) {
+export function tryNextId(player,peerIds) {
   if (index >= peerIds.length) {
     console.log("All IDs are in use");
     return;
@@ -122,16 +128,15 @@ export function tryNextId(peerIds, peer, player) {
       console.log("ID is in use:", id);
       index++;
 
-      peer = tryNextId(peerIds, peer, player);
+      tryNextId(player, peerIds);
     } else {
       // console.log("Other error:", err);
       //console.log("Other error:");
     }
   });
-  return peer;
 }
 
-function addConnectionHandlers(conn, player, otherPlayers, connections, globalPowerUps) {
+function addConnectionHandlers( player, otherPlayers,conn, connections, globalPowerUps) {
   console.log("adding connection handlers");
   conn.on("open", function () {
     console.log("Connection opened with peer:", conn.peer);
@@ -220,7 +225,7 @@ export function setPeer(newPeer) {
   peer = newPeer;
 }
 
-export function updateConnections(player,otherPlayers,connections) {
+export function updateConnections(player, otherPlayers, connections) {
   if (everConnected) {
     sendPlayerStates(player, connections);
   } else {
@@ -235,4 +240,7 @@ export function updateConnections(player,otherPlayers,connections) {
       }
     });
   }
+}
+export function getPlayerId(){
+  return id;
 }

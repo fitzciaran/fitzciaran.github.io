@@ -1,5 +1,4 @@
 
-paralax
 shooting stars effect
 gravity black hole - reappear warp
 powerups and black holes disappear after time, blinking out at the end.
@@ -15,11 +14,9 @@ make connection more robust
 make powerup sharing more robust
 music
 sound effects
-min speed should be further away
-powerups should not generate near the edge,
-powerups should be rendered a little larger on the minimap
-
-I want the ships to check for collision with the powerup and if they collide with it the power up should disappear and a property on the ship be incremented. THe powerup should be removed. This info should be sent to the other connected peers
+different update loops for different states
+review acceleration
+need some forground objects to get sense of speed
 
 When a ship collides with one of these the ship should get slightly bigger. 
 We'll need to keep track of all ships size

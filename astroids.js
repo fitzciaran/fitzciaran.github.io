@@ -1,18 +1,11 @@
+
 import {
   setupCanvas,
-  drawBackground,
-  drawWorldBounds,
-  drawMinimap,
-  drawRotatedShip,
-  drawPowerups,
-  drawMinimapPowerups,
-  renderPowerupLevels,
+  drawScene,
 } from "./canvasDrawingFunctions.js";
 import { checkWinner, generatePowerups, checkPowerupCollision } from "./gameLogic.js";
 import {
   peerIds,
-  getPeer,
-  setPeer,
   connections,
   tryNextId,
   sendPowerups,
@@ -31,12 +24,13 @@ const shipPoints = [
   { x: 0, y: 10 },
   { x: 10, y: 20 },
 ];
-const acceleration = 0.25;
+const acceleration = 0.65;
 const friction = 0.95;
 let vel = { x: 0, y: 0 };
-let distanceFactor;
+export let distanceFactor;
 let otherPlayers = [];
 let globalPowerUps = [];
+let currentSpeed = 0;
 
 const player = {
   id: null,
@@ -53,14 +47,15 @@ const radius = 50;
 const maxDistance = Math.sqrt((canvas.width / 2) ** 2 + (canvas.height / 2) ** 2);
 const bounceFactor = 1.5;
 const offset = 1;
-const camSpeed = 0.025;
+const camSpeedX = 0.025;
+const camSpeedY = 0.05;
 const minBounceSpeed = 5;
 
 /* START CONNECTION HANDLERS  */
-setPeer(tryNextId(peerIds, getPeer(), player));
+tryNextId(player, peerIds);
 
-setTimeout(() => setPeer(attemptConnections(player, getPeer(), peerIds, otherPlayers, connections, globalPowerUps)), 500);
-setInterval(() => connectToPeers(peerIds, player, otherPlayers, connections, globalPowerUps), 6000);
+setTimeout(() => attemptConnections(player, otherPlayers, peerIds, connections, globalPowerUps), 500);
+setInterval(() => connectToPeers(player, otherPlayers, peerIds, connections, globalPowerUps), 6000);
 setInterval(() => generatePowerups(globalPowerUps, connections, worldDimensions.width, worldDimensions.height, colors), 3000);
 setInterval(() => sendPowerups(globalPowerUps, connections), 3000);
 
@@ -68,15 +63,37 @@ setInterval(() => sendPowerups(globalPowerUps, connections), 3000);
 
 handleInputEvents(canvas, player, keys);
 
-
 function updateCamera() {
   const targetCamX = player.x - canvas.width / 2;
-  const targetCamY = player.y - canvas.height / 2;
-  camX += (targetCamX - camX) * camSpeed;
-  camY += (targetCamY - camY) * camSpeed;
+  let targetCamY;
+  if (player.ySpeed < 0) { // Moving up
+    targetCamY = player.y - canvas.height * 2 / 4;
+  } else { // Moving down or not moving vertically
+    targetCamY = player.y - canvas.height * 2 / 4;
+  }
+  let newCamX = camX + (targetCamX - camX) * camSpeedX;
+  let newCamY = camY + (targetCamY - camY) * camSpeedY;
 
-  camX = Math.max(Math.min(camX, worldDimensions.width - canvas.width), 0);
-  camY = Math.max(Math.min(camY, worldDimensions.height - canvas.height), 0);
+  // Define the size of the buffer zone
+  let bufferZoneX = 200;
+  let bufferZoneY = 100;
+
+  // Calculate the distance to the edge of the world
+  let distanceToEdgeX = worldDimensions.width - player.x;
+  let distanceToEdgeY = worldDimensions.height - player.y;
+
+  // If the ship is within the buffer zone, slow down the camera
+  if (distanceToEdgeX < bufferZoneX) {
+    let slowdownFactor = distanceToEdgeX / bufferZoneX;
+    newCamX = camX + (targetCamX - camX) * camSpeedX * slowdownFactor;
+  }
+  if (distanceToEdgeY < bufferZoneY) {
+    let slowdownFactor = (distanceToEdgeY / bufferZoneY) * (bufferZoneX / bufferZoneY); // Adjusted this line
+    newCamY = camY + (targetCamY - camY) * camSpeedY * slowdownFactor;
+  }
+
+  camX = Math.max(Math.min(newCamX, worldDimensions.width - canvas.width), 0);
+  camY = Math.max(Math.min(newCamY, worldDimensions.height - canvas.height), 0);
 }
 
 function updatePlayerAngle() {
@@ -88,8 +105,7 @@ function updatePlayerAngle() {
 }
 
 function updatePlayerVelocity({ dx, dy, distance }) {
-  let speed = Math.sqrt(vel.x * vel.x + vel.y * vel.y);
-  let squareFactor = speed * speed;
+  let squareFactor = currentSpeed * currentSpeed;
   let newFriction = Math.max(0.99 - squareFactor * 0.001, 0.7);
 
   vel.x *= newFriction;
@@ -97,12 +113,20 @@ function updatePlayerVelocity({ dx, dy, distance }) {
 
   if (keys.space) {
     let mouseToCenter = { x: dx / distance, y: dy / distance };
-    let maxForceDistance = 2 * 30;
-    distanceFactor = distance > maxForceDistance ? 1 : Math.min(1, distance / (canvas.width / 2));
+    let maxForceDistance = 250;
+    let minForceDistance = 20;
 
+    if (distance > maxForceDistance) {
+      distanceFactor = 1;
+    } else {
+      let normalizedDistance = distance / (canvas.width * 1 / 5);
+      distanceFactor = Math.min(1, normalizedDistance);
+      distanceFactor = Math.max(0.25, distanceFactor);
+    }
     vel.x += acceleration * distanceFactor * mouseToCenter.x;
     vel.y += acceleration * distanceFactor * mouseToCenter.y;
   }
+  currentSpeed = Math.sqrt(vel.x * vel.x + vel.y * vel.y);
 }
 
 function bouncePlayer() {
@@ -124,19 +148,6 @@ function updatePlayerPosition() {
   player.y += vel.y;
 }
 
-function drawScene() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  drawBackground(ctx, camX, camY, canvas);
-  drawWorldBounds(ctx, camX, camY, worldDimensions.width, worldDimensions.height);
-  ctx.lineWidth = 2;
-  otherPlayers.forEach((player) => drawRotatedShip(ctx, camX, camY, player.x, player.y, player.angle, shipPoints, player.color));
-  drawPowerups(globalPowerUps, ctx, camX, camY);
-  drawMinimap(player, otherPlayers, worldDimensions.width, worldDimensions.height);
-  drawMinimapPowerups(globalPowerUps, worldDimensions.width, worldDimensions.height);
-  drawRotatedShip(ctx, camX, camY, player.x, player.y, player.angle, shipPoints, player.color);
-  renderPowerupLevels(ctx, player, otherPlayers);
-}
-
 function update() {
   updateCamera();
   const playerAngleData = updatePlayerAngle();
@@ -144,8 +155,8 @@ function update() {
   bouncePlayer();
   updatePlayerPosition();
   checkPowerupCollision(player, globalPowerUps, connections);
-  drawScene();
-  updateConnections(player,otherPlayers,connections);
+  drawScene(player, otherPlayers, ctx, camX, camY, worldDimensions, canvas, shipPoints, globalPowerUps);
+  updateConnections(player, otherPlayers, connections);
 
   if (!checkWinner(player, otherPlayers, connections, ctx, canvas)) {
     requestAnimationFrame(update);
