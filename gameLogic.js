@@ -1,22 +1,17 @@
 import { sendPlayerStates, sendPowerups } from "./connectionHandlers.js";
+import { drawWinnerMessage } from "./canvasDrawingFunctions.js";
 //finish game after 2 for easier testing the finish
 let pointsToWin = 2;
 
 export function checkWinner(player, otherPlayers, connections, ctx, canvas) {
   if (player.powerUps >= pointsToWin) {
     sendPlayerStates(player, connections);
-    ctx.font = "70px Arial";
-    ctx.fillStyle = "white";
-    ctx.textAlign = "center";
-    ctx.fillText("Winner! Rivals dreams crushed.", canvas.width / 2, canvas.height / 2);
+    drawWinnerMessage(ctx, canvas, "Winner! Rivals dreams crushed.");
     return true;
   }
   for (let otherPlayer of otherPlayers) {
     if (otherPlayer.powerUps >= pointsToWin) {
-      ctx.font = "70px Arial";
-      ctx.fillStyle = "white";
-      ctx.textAlign = "center";
-      ctx.fillText("Get good scrub! You lose", canvas.width / 2, canvas.height / 2);
+      drawWinnerMessage(ctx, canvas, "Get good scrub! You lose");
       return true;
     }
   }

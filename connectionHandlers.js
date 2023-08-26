@@ -219,3 +219,20 @@ export function getPeer() {
 export function setPeer(newPeer) {
   peer = newPeer;
 }
+
+export function updateConnections(player,otherPlayers,connections) {
+  if (everConnected) {
+    sendPlayerStates(player, connections);
+  } else {
+    connections.forEach((conn) => {
+      if (conn && conn.closed) {
+        console.log("Connection closed with peer:", conn.peer);
+        otherPlayers = otherPlayers.filter((player) => player.id !== conn.peer);
+      } else if (!conn) {
+        console.log("Connection null, removing from otherplayers list and from connections", conn.peer);
+        otherPlayers = otherPlayers.filter((player) => player.id !== conn.peer);
+        connections = connections.filter((player) => player.id !== conn.peer);
+      }
+    });
+  }
+}

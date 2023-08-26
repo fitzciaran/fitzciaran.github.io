@@ -105,7 +105,7 @@ export function drawMinimapPowerups(globalPowerUps, worldWidth, worldHeight) {
   const minimapCanvas = document.getElementById("minimapCanvas");
   const minimapCtx = minimapCanvas.getContext("2d");
 
-  const powerupSize = 2; // Smaller size for powerups on the minimap
+  const powerupSize = 3; // Smaller size for powerups on the minimap
   const scaleX = (minimapCanvas.width - powerupSize) / worldWidth; // Adjust scale
   const scaleY = (minimapCanvas.height - powerupSize) / worldHeight; // Adjust scale
 
@@ -132,4 +132,11 @@ export function renderPowerupLevels(ctx, player, otherPlayers) {
     ctx.fillStyle = player.color; // individual ship color for each player
     ctx.fillText(playerPowerupText, 40, y);
   });
+}
+
+export function drawWinnerMessage(ctx, canvas, message) {
+  ctx.font = "70px Arial";
+  ctx.fillStyle = "white";
+  ctx.textAlign = "center";
+  ctx.fillText(message, canvas.width / 2, canvas.height / 2);
 }
