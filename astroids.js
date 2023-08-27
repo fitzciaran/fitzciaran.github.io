@@ -1,7 +1,7 @@
-
 import {
   setupCanvas,
   drawScene,
+  drawPilots, setupPilotsImages, pilot1, pilot2, drawNameEntry
 } from "./canvasDrawingFunctions.js";
 import { checkWinner, generatePowerups, checkPowerupCollision } from "./gameLogic.js";
 import {
@@ -32,6 +32,10 @@ let otherPlayers = [];
 let globalPowerUps = [];
 let currentSpeed = 0;
 
+//switch this to intro once built that section
+let gameState = 'game';
+let pilotSelected = '';
+
 const player = {
   id: null,
   x: 100 + Math.random() * (worldDimensions.width - 200),
@@ -39,6 +43,8 @@ const player = {
   powerUps: 0,
   color: colors[Math.floor(Math.random() * colors.length)],
   angle: 0,
+  pilot: "",
+  name: "",
 };
 
 export let camX = player.x - canvas.width / 2;
@@ -107,7 +113,13 @@ function updatePlayerAngle() {
 function updatePlayerVelocity({ dx, dy, distance }) {
   let squareFactor = currentSpeed * currentSpeed;
   let newFriction = Math.max(0.99 - squareFactor * 0.001, 0.7);
-
+  let pilotBoostFactor = 1;
+  if (player.pilot == "pilot1") {
+    pilotBoostFactor = 1.5;
+  }
+  else if (player.pilot == "pilot2") {
+    pilotBoostFactor = 0.5;
+  }
   vel.x *= newFriction;
   vel.y *= newFriction;
 
@@ -123,8 +135,8 @@ function updatePlayerVelocity({ dx, dy, distance }) {
       distanceFactor = Math.min(1, normalizedDistance);
       distanceFactor = Math.max(0.25, distanceFactor);
     }
-    vel.x += acceleration * distanceFactor * mouseToCenter.x;
-    vel.y += acceleration * distanceFactor * mouseToCenter.y;
+    vel.x += acceleration * distanceFactor * mouseToCenter.x * pilotBoostFactor;
+    vel.y += acceleration * distanceFactor * mouseToCenter.y * pilotBoostFactor;
   }
   currentSpeed = Math.sqrt(vel.x * vel.x + vel.y * vel.y);
 }
@@ -148,7 +160,7 @@ function updatePlayerPosition() {
   player.y += vel.y;
 }
 
-function update() {
+function updateGame() {
   updateCamera();
   const playerAngleData = updatePlayerAngle();
   updatePlayerVelocity(playerAngleData);
@@ -158,13 +170,125 @@ function update() {
   drawScene(player, otherPlayers, ctx, camX, camY, worldDimensions, canvas, shipPoints, globalPowerUps);
   updateConnections(player, otherPlayers, connections);
 
-  if (!checkWinner(player, otherPlayers, connections, ctx, canvas)) {
-    requestAnimationFrame(update);
+  if (checkWinner(player, otherPlayers, connections, ctx, canvas)) {
+    gameState = "win";
   }
 }
+
+// Call setupPilots once at the start of the game 
+setupPilotsImages(canvas, ctx);
+setupPilots(canvas, ctx);
+
+function setupPilots(canvas, ctx) {
+  pilot1.image.src = 'images/pilot1.gif';
+  pilot2.image.src = 'images/pilot2.gif';
+
+  canvas.addEventListener('mousemove', function (event) {
+    // Check if mouse is over a pilot
+    if (event.clientX > pilot1.x && event.clientX < pilot1.x + pilot1.width &&
+      event.clientY > pilot1.y && event.clientY < pilot1.y + pilot1.height) {
+      pilot1.selected = true;
+    } else {
+      pilot1.selected = false;
+    }
+    if (event.clientX > pilot2.x && event.clientX < pilot2.x + pilot2.width &&
+      event.clientY > pilot2.y && event.clientY < pilot2.y + pilot2.height) {
+      pilot2.selected = true;
+    } else {
+      pilot2.selected = false;
+    }
+
+    // Redraw pilots with new selection state
+    drawPilots(canvas, ctx);
+  });
+
+  canvas.addEventListener('click', function (event) {
+    // Check if a pilot was clicked
+    if (pilot1.selected) {
+      console.log('Pilot 1 selected');
+    }
+    if (pilot2.selected) {
+      console.log('Pilot 2 selected');
+    }
+  });
+}
+
+function updatePilot() {
+  drawPilots(canvas, ctx);
+
+  // Listen for clicks on the canvas
+  canvas.addEventListener('click', function (event) {
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+
+    // Check if the user clicked on pilot 1
+    if (x >= pilot1.x && x <= pilot1.x + pilot1.width && y >= pilot1.y && y <= pilot1.y + pilot1.height) {
+      pilotSelected = 'pilot1';
+    }
+
+    // Check if the user clicked on pilot 2
+    if (x >= pilot2.x && x <= pilot2.x + pilot2.width && y >= pilot2.y && y <= pilot2.y + pilot2.height) {
+      pilotSelected = 'pilot2';
+    }
+
+    // If a pilot was selected, update the player object and change the game state to 'game'
+    if (pilotSelected) {
+      player.pilot = pilotSelected;
+      gameState = 'game';
+    }
+  });
+}
+
+let keysDown = {};
+const max_player_name = 10;
+
+function updateName() {
+  drawNameEntry(canvas, ctx, player.name);
+
+  window.addEventListener('keydown', function (event) {
+    // Check if the key is already down
+    if (keysDown[event.key]) {
+      return;
+    }
+    keysDown[event.key] = true;
+
+    // Check if the key pressed is a printable character
+    if (/^[\x20-\x7E]$/.test(event.key) && player.name.length < 10) {
+      player.name += event.key;
+    }
+    // Check if the key pressed is backspace
+    else if (event.key === 'Backspace') {
+      player.name = player.name.slice(0, -1);
+    }
+    // Check if the key pressed is enter
+    else if (event.key === 'Enter') {
+      gameState = 'pilotSelect';
+    }
+
+    // Redraw name entry
+    drawNameEntry(canvas, ctx);
+  });
+
+  window.addEventListener('keyup', function (event) {
+    // Remove the key from the keysDown object
+    delete keysDown[event.key];
+  });
+}
+
+function update() {
+  if (gameState === 'intro') {
+    updateName();
+  } else if (gameState === 'pilotSelect') {
+    updatePilot();
+  } else if (gameState === 'game') {
+    updateGame();
+  }
+  requestAnimationFrame(update);
+}
+
+update();
 
 export function setGlobalPowerUps(newPowerUps) {
   globalPowerUps = newPowerUps;
 }
-
-update();

@@ -1,4 +1,3 @@
-
 import {
   distanceFactor,
 } from "./astroids.js";
@@ -13,6 +12,8 @@ midBackLayer.src = 'images/parallax-space-stars.png';
 middleLayer.src = 'images/parallax-space-far-planets.png';
 midFrontLayer.src = 'images/parallax-space-ring-planet.png';
 frontLayer.src = 'images/parallax-space-big-planet.png';
+let cursorBlink = true;
+let cursorBlinkInterval = setInterval(() => cursorBlink = !cursorBlink, 500);
 
 // Export a setupCanvas function that initializes the canvas and returns it
 export function setupCanvas() {
@@ -96,7 +97,9 @@ export function drawBackground(ctx, camX, camY, canvas, backLayer, midBackLayer,
   ctx.drawImage(backLayer, backX, backY, newWidth, newHeight);
 
   //ctx.drawImage(backLayer, backX - newWidth, backY, newWidth, newHeight);
-  ctx.drawImage(backLayer, newWidth + backX, backY, newWidth, newHeight);
+
+  //this is an image to the right of the main background to cover the righthand edge (aspect ratio of background doesn't match aspect ratio of the canvas causing this to be needed)
+  ctx.drawImage(backLayer, newWidth + backX - 1, backY, newWidth, newHeight);
 
   //we don't need these because the aspect ratio of current background means it will be the width that will wrap
   // ctx.drawImage(backLayer, backX, backY - newHeight, newWidth, newHeight);
@@ -219,7 +222,7 @@ export function renderPowerupLevels(ctx, player, otherPlayers) {
   const gap = 16; // Gap between lines
   ctx.font = "14px Arial";
   const myPowerupText = `My Powerups: ${player.powerUps}`;
-  ctx.fillStyle = player.color; 
+  ctx.fillStyle = player.color;
   ctx.fillText(myPowerupText, 115.5, topGap - textHeight);
 
   // Draw other players' powerups
@@ -237,11 +240,11 @@ export function renderMyId(ctx, player) {
   const textHeight = 75; // Adjust this to the size of your text
   ctx.font = "14px Arial";
   const myIDText = `My ID: ${player.id}`;
-  ctx.fillStyle = player.color; 
+  ctx.fillStyle = player.color;
   ctx.fillText(myIDText, 558, topGap - textHeight);
 
   const myDistanceFactorText = `distanceFactor ${distanceFactor}`;
-  ctx.fillStyle = player.color; 
+  ctx.fillStyle = player.color;
   ctx.fillText(myDistanceFactorText, 558, topGap + gap - textHeight);
 }
 
@@ -264,4 +267,152 @@ export function drawScene(player, otherPlayers, ctx, camX, camY, worldDimensions
   drawRotatedShip(ctx, camX, camY, player.x, player.y, player.angle, shipPoints, player.color);
   renderPowerupLevels(ctx, player, otherPlayers);
   renderMyId(ctx, player);
+}
+
+export const loreTablet = {
+  x: 0,
+  y: -300,
+  width: 200,
+  height: 400,
+  image: new Image(),
+};
+
+export const pilot1 = {
+  image: new Image(),
+  x: 0,
+  y: 0,
+  width: 100,
+  height: 100,
+  selected: false,
+  lore: "Pilot 1's lore...",
+};
+
+export const pilot2 = {
+  image: new Image(),
+  x: 100,
+  y: 0,
+  width: 100,
+  height: 100,
+  selected: false,
+  lore: "Pilot 2's lore...",
+};
+
+let loreIndex = 0;
+let lineCount = 0;
+let maxCharsPerLine = 20; // Adjust this value based on the width of your tablet
+
+
+export function drawPilots(canvas, ctx) {
+  // Draw background
+  ctx.fillStyle = 'black';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Draw title
+  ctx.font = "30px Arial";
+  ctx.fillStyle = 'white';
+  ctx.fillText("Select Your Pilot", canvas.width / 2, 50);
+
+  // Draw pilot options
+  ctx.drawImage(pilot1.image, pilot1.x, pilot1.y, pilot1.width, pilot1.height);
+  ctx.drawImage(pilot2.image, pilot2.x, pilot2.y, pilot2.width, pilot2.height);
+
+  // Highlight selected pilot
+  if (pilot1.selected) {
+    ctx.strokeStyle = 'yellow';
+    ctx.strokeRect(pilot1.x, pilot1.y, pilot1.width, pilot1.height);
+  }
+  if (pilot2.selected) {
+    ctx.strokeStyle = 'yellow';
+    ctx.strokeRect(pilot2.x, pilot2.y, pilot2.width, pilot2.height);
+  }
+
+  // Draw lore tablet
+  ctx.drawImage(loreTablet.image, loreTablet.x, loreTablet.y, loreTablet.width, loreTablet.height);
+
+  // Reset lore index and line count
+  if (!pilot1.selected && !pilot2.selected) {
+    loreIndex = 0;
+    lineCount = 0;
+  }
+
+  // Animate lore text
+  if (pilot1.selected) {
+    // animateLoreText(ctx, pilot1.lore, loreIndex, lineCount);
+    renderLoreText(ctx, pilot1.lore);
+  }
+  if (pilot2.selected) {
+    // animateLoreText(ctx, pilot2.lore, loreIndex, lineCount);
+    renderLoreText(ctx, pilot2.lore);
+  }
+}
+
+
+function renderLoreText(ctx, lore) {
+  // Set font and color
+  ctx.font = "20px Arial";
+  ctx.fillStyle = 'white';
+  ctx.fillText(lore, loreTablet.x + 45, loreTablet.y + 130);
+
+}
+
+function animateLoreText(ctx, lore, loreIndex, lineCount) {
+  // Set font and color
+  ctx.font = "20px Arial";
+  ctx.fillStyle = 'white';
+
+
+  // Increment lore index
+  while (loreIndex < lore.length - 1) {
+    // Calculate line breaks
+    if (loreIndex % maxCharsPerLine === 0 && loreIndex !== 0) {
+      lineCount++;
+    }
+
+    // Draw text
+    ctx.fillText(lore[loreIndex], loreTablet.x + 50 + loreIndex * 10, loreTablet.y + 130 + (lineCount * 20));
+
+    loreIndex++;
+  }
+}
+
+export function setupPilotsImages(canvas, ctx) {
+  pilot1.image.src = 'images/pilot1.gif';
+  pilot2.image.src = 'images/pilot2.gif';
+  loreTablet.image.src = 'images/space.webp';
+
+  // Center the pilots
+  pilot1.x = (canvas.width / 2) - (pilot1.width * 2);
+  pilot2.x = (canvas.width / 2) + (pilot2.width);
+
+  pilot1.y = (canvas.height / 2) - (pilot1.height);
+  pilot2.y = (canvas.height / 2) - (pilot2.height);
+
+  // Position the lore tablet
+  loreTablet.x = (canvas.width / 2) - (loreTablet.width / 2);
+  loreTablet.y = (canvas.height / 2) - 70;
+}
+
+export function drawNameEntry(canvas, ctx,name) {
+  // Draw background
+  ctx.fillStyle = 'black';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Draw title
+  ctx.font = "30px Arial";
+  ctx.fillStyle = 'white';
+  ctx.fillText("Enter Your Name", canvas.width / 2, 50);
+
+  // Draw name entry box
+  ctx.strokeStyle = 'white';
+  ctx.strokeRect(canvas.width / 2 - 100, canvas.height / 2 - 50, 200, 100);
+
+  // Draw player's name
+  ctx.font = "20px Arial";
+  ctx.fillStyle = 'white';
+  ctx.fillText(name, canvas.width / 2 - 50, canvas.height / 2);
+
+  // Draw text cursor
+  if (cursorBlink) {
+    ctx.fillRect(canvas.width / 2 -50  + ctx.measureText(name).width, canvas.height / 2 - 10, 2, 20);
+  }
 }

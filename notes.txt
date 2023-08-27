@@ -9,6 +9,8 @@ ai ships
 starting menu
 starting lore screens (mk1 style)
 different craft/ pilots
+char select effects/ design
+hide minimap element on charselect screen
 pilot select
 make connection more robust
 make powerup sharing more robust

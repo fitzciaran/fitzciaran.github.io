@@ -36,7 +36,7 @@ export function sendPlayerStates(player, connections) {
       conn.send(data);
       sendCounter++;
       // Log the data every 1000 calls
-      if (sendCounter === 1000) {
+      if (sendCounter === 5000) {
         console.log("sending data:", data);
         sendCounter = 0; // reset the counter
       }
