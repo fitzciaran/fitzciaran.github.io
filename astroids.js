@@ -31,6 +31,7 @@ export let distanceFactor;
 let otherPlayers = [];
 let globalPowerUps = [];
 let currentSpeed = 0;
+let lastTime = Date.now();
 
 export const GameState = {
   PILOT_SELECT: "pilotSelect",
@@ -125,13 +126,13 @@ function updatePlayerAngle() {
   return { dx, dy, distance };
 }
 
-function updatePlayerVelocity({ dx, dy, distance }) {
+function updatePlayerVelocity({ dx, dy, distance }, deltaTime) {
   let squareFactor = currentSpeed * currentSpeed;
-  let newFriction = Math.max(0.99 - squareFactor * 0.001, 0.7);
+  let newFriction = Math.pow(Math.max(0.99 - squareFactor * 0.001, 0.7), deltaTime);
   let pilotBoostFactor = 1;
-  if (player.pilot == "pilot1") {
+  if (player.pilot == PilotName.PILOT_1) {
     pilotBoostFactor = 1.5;
-  } else if (player.pilot == "pilot2") {
+  } else if (player.pilot == PilotName.PILOT_2) {
     pilotBoostFactor = 0.5;
   }
   vel.x *= newFriction;
@@ -140,6 +141,7 @@ function updatePlayerVelocity({ dx, dy, distance }) {
   if (keys.space) {
     let mouseToCenter = { x: dx / distance, y: dy / distance };
     let maxForceDistance = 250;
+    //currently unused
     let minForceDistance = 20;
 
     if (distance > maxForceDistance) {
@@ -148,9 +150,11 @@ function updatePlayerVelocity({ dx, dy, distance }) {
       let normalizedDistance = distance / ((canvas.width * 1) / 5);
       distanceFactor = Math.min(1, normalizedDistance);
       distanceFactor = Math.max(0.25, distanceFactor);
+      distanceFactor -= 0.1;
+      distanceFactor *= (1 /(1-0.1));
     }
-    vel.x += acceleration * distanceFactor * mouseToCenter.x * pilotBoostFactor;
-    vel.y += acceleration * distanceFactor * mouseToCenter.y * pilotBoostFactor;
+    vel.x += acceleration * distanceFactor * mouseToCenter.x * pilotBoostFactor * deltaTime;
+    vel.y += acceleration * distanceFactor * mouseToCenter.y * pilotBoostFactor * deltaTime;
   }
   currentSpeed = Math.sqrt(vel.x * vel.x + vel.y * vel.y);
 }
@@ -169,17 +173,17 @@ function bouncePlayer() {
   }
 }
 
-function updatePlayerPosition() {
-  player.x += vel.x;
-  player.y += vel.y;
+function updatePlayerPosition(deltaTime) {
+  player.x += vel.x * deltaTime;
+  player.y += vel.y * deltaTime;
 }
 
-function updateGame() {
+function updateGame(deltaTime) {
   updateCamera();
   const playerAngleData = updatePlayerAngle();
-  updatePlayerVelocity(playerAngleData);
+  updatePlayerVelocity(playerAngleData, deltaTime);
   bouncePlayer();
-  updatePlayerPosition();
+  updatePlayerPosition(deltaTime);
   checkPowerupCollision(player, globalPowerUps, connections);
   drawScene(player, otherPlayers, ctx, camX, camY, worldDimensions, canvas, shipPoints, globalPowerUps);
   updateConnections(player, otherPlayers, connections);
@@ -272,14 +276,19 @@ export function getPlayerName() {
 export function setPlayerName(newName) {
   player.name = newName;
 }
+
 function update() {
+  let now = Date.now();
+  let deltaTime = (now - lastTime) / 1000 * 60; // Time since last frame in seconds
+  lastTime = now;
+
   if (gameState === GameState.INTRO) {
     // updateName(); does this need to be called every time?
     drawNameCursor(canvas, ctx, player.name); //just
   } else if (gameState === GameState.PILOT_SELECT) {
     updatePilot();
   } else if (gameState === GameState.GAME) {
-    updateGame();
+    updateGame(deltaTime);
   } else if (gameState === GameState.FINISHED) {
     updateWinState();
   }
