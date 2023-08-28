@@ -1,4 +1,12 @@
-import { camX, camY } from "./astroids.js";
+import { camX, camY, getGameState, setGameState, setPilot,getPlayerName, setPlayerName, getCanvas,GameState,PilotName} from "./astroids.js";
+import { pilot1, pilot2 } from "./gameLogic.js";
+import { drawPilots, drawNameEntry } from "./canvasDrawingFunctions.js";
+
+let pilotMouseMoveListener;
+let pilotClickListener;
+let pilotSelected = "";
+let keysDown = {};
+
 
 let keys = {
   up: false,
@@ -8,10 +16,12 @@ let keys = {
   space: false,
 };
 
+const max_player_name = 10;
+
 export let mousePos = { x: 0, y: 0 };
 export { keys, handleInputEvents };
 
-function calculateAngle(mousePos,player) {
+function calculateAngle(mousePos, player) {
   return Math.atan2(mousePos.y - player.y, mousePos.x - player.x);
 }
 
@@ -34,7 +44,7 @@ function handleInputEvents(canvas, player, keys) {
       let coords = getMousePos(canvas, evt);
       mousePos.x = coords.x + camX;
       mousePos.y = coords.y + camY;
-      player.angle = calculateAngle(mousePos,player);
+      player.angle = calculateAngle(mousePos, player);
     },
     false
   );
@@ -54,7 +64,7 @@ function handleInputEvents(canvas, player, keys) {
     if (e.touches) {
       mousePos.x = e.touches[0].clientX + camX;
       mousePos.y = e.touches[0].clientY + camY;
-      player.angle = calculateAngle(mousePos,player);
+      player.angle = calculateAngle(mousePos, player);
     }
   });
 
@@ -72,7 +82,7 @@ function handleInputEvents(canvas, player, keys) {
         let coords = getMousePos(canvas, e.touches[0]);
         mousePos.x = coords.x + camX;
         mousePos.y = coords.y + camY;
-        player.angle = calculateAngle(mousePos,player);
+        player.angle = calculateAngle(mousePos, player);
       }
     },
     { passive: false }
@@ -85,4 +95,131 @@ function getMousePos(canvas, evt) {
     x: evt.clientX - rect.left,
     y: evt.clientY - rect.top,
   };
+}
+
+export function addPilotEventListners(canvas, ctx) {
+  pilotMouseMoveListener = function (event) {
+    if (getGameState() === GameState.PILOT_SELECT) {
+      // Check if mouse is over a pilot
+      if (
+        event.clientX > pilot1.x &&
+        event.clientX < pilot1.x + pilot1.width &&
+        event.clientY > pilot1.y &&
+        event.clientY < pilot1.y + pilot1.height
+      ) {
+        pilot1.selected = true;
+      } else {
+        pilot1.selected = false;
+      }
+      if (
+        event.clientX > pilot2.x &&
+        event.clientX < pilot2.x + pilot2.width &&
+        event.clientY > pilot2.y &&
+        event.clientY < pilot2.y + pilot2.height
+      ) {
+        pilot2.selected = true;
+      } else {
+        pilot2.selected = false;
+      }
+
+      // Redraw pilots with new selection state
+      drawPilots(canvas, ctx);
+    }
+  };
+
+  pilotClickListener = function (event) {
+    if (getGameState() === GameState.PILOT_SELECT) {
+      // Check if a pilot was clicked
+      if (pilot1.selected) {
+        pilotSelected = PilotName.PILOT_1;
+      }
+      if (pilot2.selected) {
+        pilotSelected = PilotName.pilot2;
+      }
+      if (pilot1.selected || pilot2.selected) {
+        // If a pilot was selected, update the player object and change the game state to 'game'
+        setPilot(pilotSelected);
+        setGameState(GameState.GAME);
+      }
+    }
+  };
+
+  canvas.addEventListener("click", pilotClickListener);
+  canvas.addEventListener("mousemove", pilotMouseMoveListener);
+}
+
+export function removePilotsEventListeners(canvas) {
+  canvas.removeEventListener("mousemove", pilotMouseMoveListener);
+  canvas.removeEventListener("click", pilotClickListener);
+}
+
+ function handleNameKeyDown(event) {
+  // Check if the key is already down
+  if (keysDown[event.key]) {
+    return;
+  }
+  keysDown[event.key] = true;
+
+  // Check if the key pressed is a printable character
+  if (/^[\x20-\x7E]$/.test(event.key) && getPlayerName().length < max_player_name ) {
+   // player.name += event.key;
+    setPlayerName(getPlayerName() + event.key);
+  }
+  else if (event.key === "Backspace") {
+    //player.name = player.name.slice(0, -1);
+    setPlayerName(getPlayerName().slice(0, -1));
+  }
+  // Check if the key pressed is enter
+  else if (event.key === "Enter") {
+    setGameState(GameState.PILOT_SELECT);
+  }
+  
+  if(getPlayerName().length >= max_player_name){
+    //inform the user somehow
+  }
+  
+  // Redraw name entry
+  drawNameEntry(getCanvas(), getCanvas().getContext("2d"),getPlayerName());
+}
+
+export function handleNameKeyUp(event) {
+  // Remove the key from the keysDown object
+  delete keysDown[event.key];
+}
+
+export function handleWinStateKeyDown(event) {
+  // Check if the key pressed is enter
+  if (event.key === "Enter") {
+    setGameState(GameState.INTRO);
+  }
+  if (event.key === "R") {
+    setGameState(GameState.INTRO);
+  }
+}
+
+export function handleGameKeyDown(event) {
+  // Handle game-specific keydown events here
+}
+
+export function handleGameKeyUp(event) {
+  // Handle game-specific keyup events here
+}
+
+export function setupNameEventListeners(window) {
+  window.addEventListener("keydown", handleNameKeyDown);
+  window.addEventListener("keyup", handleNameKeyUp);
+}
+export function removeNameEventListeners(window) {
+  window.removeEventListener("mousemove", handleNameKeyDown);
+  window.removeEventListener("click", handleNameKeyUp);
+}
+
+export function setupGameEventListeners() {}
+export function removeGameStateEventListeners() {}
+export function setupWinStateEventListeners() {
+  window.addEventListener("keydown", handleWinStateKeyDown);
+}
+
+export function removeWinStateEventListeners() {
+  window.removeEventListener("keydown", handleWinStateKeyDown);
 }

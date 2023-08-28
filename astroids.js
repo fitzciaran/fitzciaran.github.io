@@ -1,19 +1,19 @@
+import { setupCanvas, drawScene, drawPilots, setupPilotsImages, drawNameEntry, drawWinnerMessage, drawNameCursor } from "./canvasDrawingFunctions.js";
+import { checkWinner, generatePowerups, checkPowerupCollision, endGameMessage, setGameWon, resetPowerLevels, pilot1, pilot2 } from "./gameLogic.js";
+import { peerIds, connections, tryNextId, sendPowerups, attemptConnections, connectToPeers, updateConnections } from "./connectionHandlers.js";
 import {
-  setupCanvas,
-  drawScene,
-  drawPilots, setupPilotsImages, pilot1, pilot2, drawNameEntry
-} from "./canvasDrawingFunctions.js";
-import { checkWinner, generatePowerups, checkPowerupCollision } from "./gameLogic.js";
-import {
-  peerIds,
-  connections,
-  tryNextId,
-  sendPowerups,
-  attemptConnections,
-  connectToPeers,
-  updateConnections,
-} from "./connectionHandlers.js";
-import { keys, handleInputEvents, mousePos } from "./inputHandlers.js";
+  keys,
+  handleInputEvents,
+  mousePos,
+  addPilotEventListners,
+  removePilotsEventListeners,
+  setupNameEventListeners,
+  removeNameEventListeners,
+  setupGameEventListeners,
+  removeGameStateEventListeners,
+  setupWinStateEventListeners,
+  removeWinStateEventListeners,
+} from "./inputHandlers.js";
 
 const { canvas, ctx } = setupCanvas();
 const worldDimensions = { width: 3600, height: 2400 };
@@ -32,9 +32,22 @@ let otherPlayers = [];
 let globalPowerUps = [];
 let currentSpeed = 0;
 
+export const GameState = {
+  PILOT_SELECT: "pilotSelect",
+  INTRO: "intro",
+  FINISHED: "finished",
+  GAME: "game",
+  UNSET: "",
+}
+
+export const PilotName = {
+  PILOT_1: "pilot1",
+  PILOT_2: "pilot2",
+}
+
 //switch this to intro once built that section
-let gameState = 'game';
-let pilotSelected = '';
+let gameState = GameState.UNSET;
+let pilotSelected = "";
 
 const player = {
   id: null,
@@ -72,10 +85,12 @@ handleInputEvents(canvas, player, keys);
 function updateCamera() {
   const targetCamX = player.x - canvas.width / 2;
   let targetCamY;
-  if (player.ySpeed < 0) { // Moving up
-    targetCamY = player.y - canvas.height * 2 / 4;
-  } else { // Moving down or not moving vertically
-    targetCamY = player.y - canvas.height * 2 / 4;
+  if (player.ySpeed < 0) {
+    // Moving up
+    targetCamY = player.y - (canvas.height * 2) / 4;
+  } else {
+    // Moving down or not moving vertically
+    targetCamY = player.y - (canvas.height * 2) / 4;
   }
   let newCamX = camX + (targetCamX - camX) * camSpeedX;
   let newCamY = camY + (targetCamY - camY) * camSpeedY;
@@ -116,8 +131,7 @@ function updatePlayerVelocity({ dx, dy, distance }) {
   let pilotBoostFactor = 1;
   if (player.pilot == "pilot1") {
     pilotBoostFactor = 1.5;
-  }
-  else if (player.pilot == "pilot2") {
+  } else if (player.pilot == "pilot2") {
     pilotBoostFactor = 0.5;
   }
   vel.x *= newFriction;
@@ -131,7 +145,7 @@ function updatePlayerVelocity({ dx, dy, distance }) {
     if (distance > maxForceDistance) {
       distanceFactor = 1;
     } else {
-      let normalizedDistance = distance / (canvas.width * 1 / 5);
+      let normalizedDistance = distance / ((canvas.width * 1) / 5);
       distanceFactor = Math.min(1, normalizedDistance);
       distanceFactor = Math.max(0.25, distanceFactor);
     }
@@ -171,124 +185,110 @@ function updateGame() {
   updateConnections(player, otherPlayers, connections);
 
   if (checkWinner(player, otherPlayers, connections, ctx, canvas)) {
-    gameState = "win";
+    setGameState(GameState.FINISHED);
   }
 }
 
-// Call setupPilots once at the start of the game 
-setupPilotsImages(canvas, ctx);
-setupPilots(canvas, ctx);
+// Call setupPilotsImages once at the start of the game
+setupPilotsImages(canvas);
 
 function setupPilots(canvas, ctx) {
-  pilot1.image.src = 'images/pilot1.gif';
-  pilot2.image.src = 'images/pilot2.gif';
-
-  canvas.addEventListener('mousemove', function (event) {
-    // Check if mouse is over a pilot
-    if (event.clientX > pilot1.x && event.clientX < pilot1.x + pilot1.width &&
-      event.clientY > pilot1.y && event.clientY < pilot1.y + pilot1.height) {
-      pilot1.selected = true;
-    } else {
-      pilot1.selected = false;
-    }
-    if (event.clientX > pilot2.x && event.clientX < pilot2.x + pilot2.width &&
-      event.clientY > pilot2.y && event.clientY < pilot2.y + pilot2.height) {
-      pilot2.selected = true;
-    } else {
-      pilot2.selected = false;
-    }
-
-    // Redraw pilots with new selection state
-    drawPilots(canvas, ctx);
-  });
-
-  canvas.addEventListener('click', function (event) {
-    // Check if a pilot was clicked
-    if (pilot1.selected) {
-      console.log('Pilot 1 selected');
-    }
-    if (pilot2.selected) {
-      console.log('Pilot 2 selected');
-    }
-  });
+  pilot1.image.src = "images/pilot1.gif";
+  pilot2.image.src = "images/pilot2.gif";
+  addPilotEventListners(canvas, ctx);
 }
 
 function updatePilot() {
   drawPilots(canvas, ctx);
-
-  // Listen for clicks on the canvas
-  canvas.addEventListener('click', function (event) {
-    const rect = canvas.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
-
-    // Check if the user clicked on pilot 1
-    if (x >= pilot1.x && x <= pilot1.x + pilot1.width && y >= pilot1.y && y <= pilot1.y + pilot1.height) {
-      pilotSelected = 'pilot1';
-    }
-
-    // Check if the user clicked on pilot 2
-    if (x >= pilot2.x && x <= pilot2.x + pilot2.width && y >= pilot2.y && y <= pilot2.y + pilot2.height) {
-      pilotSelected = 'pilot2';
-    }
-
-    // If a pilot was selected, update the player object and change the game state to 'game'
-    if (pilotSelected) {
-      player.pilot = pilotSelected;
-      gameState = 'game';
-    }
-  });
 }
-
-let keysDown = {};
-const max_player_name = 10;
 
 function updateName() {
   drawNameEntry(canvas, ctx, player.name);
-
-  window.addEventListener('keydown', function (event) {
-    // Check if the key is already down
-    if (keysDown[event.key]) {
-      return;
-    }
-    keysDown[event.key] = true;
-
-    // Check if the key pressed is a printable character
-    if (/^[\x20-\x7E]$/.test(event.key) && player.name.length < 10) {
-      player.name += event.key;
-    }
-    // Check if the key pressed is backspace
-    else if (event.key === 'Backspace') {
-      player.name = player.name.slice(0, -1);
-    }
-    // Check if the key pressed is enter
-    else if (event.key === 'Enter') {
-      gameState = 'pilotSelect';
-    }
-
-    // Redraw name entry
-    drawNameEntry(canvas, ctx);
-  });
-
-  window.addEventListener('keyup', function (event) {
-    // Remove the key from the keysDown object
-    delete keysDown[event.key];
-  });
 }
 
-function update() {
-  if (gameState === 'intro') {
-    updateName();
-  } else if (gameState === 'pilotSelect') {
-    updatePilot();
-  } else if (gameState === 'game') {
-    updateGame();
-  }
-  requestAnimationFrame(update);
-}
+function updateWinState() {
 
-update();
+  drawScene(player, otherPlayers, ctx, camX, camY, worldDimensions, canvas, shipPoints, globalPowerUps);
+  drawWinnerMessage(ctx, canvas, endGameMessage);
+}
 
 export function setGlobalPowerUps(newPowerUps) {
   globalPowerUps = newPowerUps;
 }
+export function getGameState() {
+  return gameState;
+}
+
+export function setGameState(newState) {
+  if (gameState === newState) {
+    return;
+  }
+
+  if (newState === GameState.PILOT_SELECT && gameState !== GameState.PILOT_SELECT) {
+    setupPilots(canvas, ctx);
+  }
+
+  if (newState !== GameState.PILOT_SELECT && gameState === GameState.PILOT_SELECT) {
+    removePilotsEventListeners(canvas);
+  }
+
+  if (newState === GameState.INTRO && gameState !== GameState.INTRO) {
+    setupNameEventListeners(window);
+    updateName();
+  }
+
+  if (newState !== GameState.INTRO && gameState === GameState.INTRO) {
+    removeNameEventListeners(window);
+  }
+
+  if (newState === GameState.FINISHED && gameState !== GameState.FINISHED) {
+    setupWinStateEventListeners(window);
+  }
+
+  if (newState !== GameState.FINISHED && gameState === GameState.FINISHED) {
+    resetPowerLevels(player, otherPlayers, connections);
+    setGameWon(false);
+    removeWinStateEventListeners(window);
+  }
+
+  if (newState === GameState.GAME && gameState !== GameState.GAME) {
+    setupGameEventListeners(window);
+  }
+
+  if (newState !== GameState.GAME && gameState === GameState.GAME) {
+    removeGameStateEventListeners(window);
+  }
+
+  gameState = newState;
+}
+
+export function setPilot(newPilot) {
+  player.pilot = newPilot;
+}
+export function getPlayerName() {
+  return player.name;
+}
+
+export function setPlayerName(newName) {
+  player.name = newName;
+}
+function update() {
+  if (gameState === GameState.INTRO) {
+    // updateName(); does this need to be called every time?
+    drawNameCursor(canvas, ctx, player.name); //just
+  } else if (gameState === GameState.PILOT_SELECT) {
+    updatePilot();
+  } else if (gameState === GameState.GAME) {
+    updateGame();
+  } else if (gameState === GameState.FINISHED) {
+    updateWinState();
+  }
+  requestAnimationFrame(update);
+}
+
+export function getCanvas() {
+  return canvas;
+}
+
+update();
+setGameState(GameState.INTRO);

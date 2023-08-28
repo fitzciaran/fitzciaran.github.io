@@ -1,7 +1,17 @@
-
+put in a click to start first menu real info screen
+finish refactoring game state handler adding / removing for inputHandlers
+looking cursor/text / canvas? position after first game - look at enteryou name text movement too
+reset state variables (find out which) after first loop 
+pilot select state is broken no lore or Highlight
+powerups shouldn't spawn too close to ships (not super important for now)
+create a lot of enums instead of random string passing around
+start building test suite for this project
 shooting stars effect
 gravity black hole - reappear warp
 powerups and black holes disappear after time, blinking out at the end.
+moving power powerUps
+different size different score powerUps
+
 select ship - different stats
 enter name
 lobby
@@ -10,13 +20,11 @@ starting menu
 starting lore screens (mk1 style)
 different craft/ pilots
 char select effects/ design
-hide minimap element on charselect screen
 pilot select
 make connection more robust
 make powerup sharing more robust
 music
 sound effects
-different update loops for different states
 review acceleration
 need some forground objects to get sense of speed
 

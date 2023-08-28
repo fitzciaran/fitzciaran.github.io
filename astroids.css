@@ -6,5 +6,6 @@ canvas {
   position: absolute;
   top: 40px; 
   left: 1070px; 
-  border: 2px solid #000; 
+  /* border: 2px solid #000;  */
+  background: transparent;
 }

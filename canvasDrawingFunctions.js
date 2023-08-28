@@ -1,19 +1,18 @@
-import {
-  distanceFactor,
-} from "./astroids.js";
+import { distanceFactor } from "./astroids.js";
+import { pilot1, pilot2 } from "./gameLogic.js";
 
 let backLayer = new Image();
 let midBackLayer = new Image();
 let middleLayer = new Image();
 let midFrontLayer = new Image();
 let frontLayer = new Image();
-backLayer.src = 'images/parallax-space-backgound.png';
-midBackLayer.src = 'images/parallax-space-stars.png';
-middleLayer.src = 'images/parallax-space-far-planets.png';
-midFrontLayer.src = 'images/parallax-space-ring-planet.png';
-frontLayer.src = 'images/parallax-space-big-planet.png';
+backLayer.src = "images/parallax-space-backgound.png";
+midBackLayer.src = "images/parallax-space-stars.png";
+middleLayer.src = "images/parallax-space-far-planets.png";
+midFrontLayer.src = "images/parallax-space-ring-planet.png";
+frontLayer.src = "images/parallax-space-big-planet.png";
 let cursorBlink = true;
-let cursorBlinkInterval = setInterval(() => cursorBlink = !cursorBlink, 500);
+let cursorBlinkInterval = setInterval(() => (cursorBlink = !cursorBlink), 450);
 
 // Export a setupCanvas function that initializes the canvas and returns it
 export function setupCanvas() {
@@ -76,18 +75,18 @@ export function drawBackground(ctx, camX, camY, canvas, backLayer, midBackLayer,
   let newHeight = backLayer.height * scale;
 
   // Calculate new positions for each layer
-  let backX = camX * backScrollSpeedX % canvas.width;
-  let midBackX = camX * midBackScrollSpeedX % canvas.width;
-  let middleX = camX * middleScrollSpeedX % canvas.width;
+  let backX = (camX * backScrollSpeedX) % canvas.width;
+  let midBackX = (camX * midBackScrollSpeedX) % canvas.width;
+  let middleX = (camX * middleScrollSpeedX) % canvas.width;
   // let midFrontX = camX * midFrontScrollSpeedX % canvas.width;
   // let frontX = camX * frontScrollSpeedX % canvas.width;
   let midFrontX = camX * midFrontScrollSpeedX;
   let frontX = camX * frontScrollSpeedX;
 
   // Calculate new vertical positions for each layer
-  let backY = camY * backScrollSpeedY % canvas.height;
-  let midBackY = camY * midBackScrollSpeedY % canvas.height;
-  let middleY = camY * middleScrollSpeedY % canvas.height;
+  let backY = (camY * backScrollSpeedY) % canvas.height;
+  let midBackY = (camY * midBackScrollSpeedY) % canvas.height;
+  let middleY = (camY * middleScrollSpeedY) % canvas.height;
   // let midFrontY = camY * midFrontScrollSpeedY % canvas.height;
   let midFrontY = camY * midFrontScrollSpeedY;
   // let frontY = camY * frontScrollSpeedY % canvas.height;
@@ -130,7 +129,6 @@ export function drawBackground(ctx, camX, camY, canvas, backLayer, midBackLayer,
   frontOffsetX = 1500; // Adjust as needed
   frontOffsetY = 1050; // Adjust as needed
   ctx.drawImage(frontLayer, frontX + frontOffsetX, frontY + frontOffsetY, frontLayer.width * scale * 0.6, frontLayer.height * scale * 0.6);
-
 }
 
 // Export a drawWorldBounds function that takes the canvas context as an argument
@@ -208,7 +206,7 @@ export function drawMinimapPowerups(globalPowerUps, worldWidth, worldHeight) {
   const powerupSize = 3; // Smaller size for powerups on the minimap
   const scaleX = (minimapCanvas.width - powerupSize) / worldWidth; // Adjust scale
   const scaleY = (minimapCanvas.height - powerupSize) / worldHeight; // Adjust scale
-
+  minimapCtx.fillStyle = minimapCtx.fillRect(0, 0, minimapCanvas.width, minimapCanvas.heightcia);
   // Draw each powerup on the minimap
   globalPowerUps.forEach((powerup) => {
     minimapCtx.fillStyle = powerup.color;
@@ -277,39 +275,18 @@ export const loreTablet = {
   image: new Image(),
 };
 
-export const pilot1 = {
-  image: new Image(),
-  x: 0,
-  y: 0,
-  width: 100,
-  height: 100,
-  selected: false,
-  lore: "Pilot 1's lore...",
-};
-
-export const pilot2 = {
-  image: new Image(),
-  x: 100,
-  y: 0,
-  width: 100,
-  height: 100,
-  selected: false,
-  lore: "Pilot 2's lore...",
-};
-
 let loreIndex = 0;
 let lineCount = 0;
 let maxCharsPerLine = 20; // Adjust this value based on the width of your tablet
 
-
 export function drawPilots(canvas, ctx) {
   // Draw background
-  ctx.fillStyle = 'black';
+  ctx.fillStyle = "black";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   // Draw title
   ctx.font = "30px Arial";
-  ctx.fillStyle = 'white';
+  ctx.fillStyle = "white";
   ctx.fillText("Select Your Pilot", canvas.width / 2, 50);
 
   // Draw pilot options
@@ -318,11 +295,11 @@ export function drawPilots(canvas, ctx) {
 
   // Highlight selected pilot
   if (pilot1.selected) {
-    ctx.strokeStyle = 'yellow';
+    ctx.strokeStyle = "yellow";
     ctx.strokeRect(pilot1.x, pilot1.y, pilot1.width, pilot1.height);
   }
   if (pilot2.selected) {
-    ctx.strokeStyle = 'yellow';
+    ctx.strokeStyle = "yellow";
     ctx.strokeRect(pilot2.x, pilot2.y, pilot2.width, pilot2.height);
   }
 
@@ -346,20 +323,17 @@ export function drawPilots(canvas, ctx) {
   }
 }
 
-
 function renderLoreText(ctx, lore) {
   // Set font and color
   ctx.font = "20px Arial";
-  ctx.fillStyle = 'white';
+  ctx.fillStyle = "white";
   ctx.fillText(lore, loreTablet.x + 45, loreTablet.y + 130);
-
 }
 
 function animateLoreText(ctx, lore, loreIndex, lineCount) {
   // Set font and color
   ctx.font = "20px Arial";
-  ctx.fillStyle = 'white';
-
+  ctx.fillStyle = "white";
 
   // Increment lore index
   while (loreIndex < lore.length - 1) {
@@ -369,50 +343,70 @@ function animateLoreText(ctx, lore, loreIndex, lineCount) {
     }
 
     // Draw text
-    ctx.fillText(lore[loreIndex], loreTablet.x + 50 + loreIndex * 10, loreTablet.y + 130 + (lineCount * 20));
+    ctx.fillText(lore[loreIndex], loreTablet.x + 50 + loreIndex * 10, loreTablet.y + 130 + lineCount * 20);
 
     loreIndex++;
   }
 }
 
-export function setupPilotsImages(canvas, ctx) {
-  pilot1.image.src = 'images/pilot1.gif';
-  pilot2.image.src = 'images/pilot2.gif';
-  loreTablet.image.src = 'images/space.webp';
+export function setupPilotsImages(canvas) {
+  pilot1.image.src = "images/pilot1.gif";
+  pilot2.image.src = "images/pilot2.gif";
+  loreTablet.image.src = "images/space.webp";
 
   // Center the pilots
-  pilot1.x = (canvas.width / 2) - (pilot1.width * 2);
-  pilot2.x = (canvas.width / 2) + (pilot2.width);
+  pilot1.x = canvas.width / 2 - pilot1.width * 2;
+  pilot2.x = canvas.width / 2 + pilot2.width;
 
-  pilot1.y = (canvas.height / 2) - (pilot1.height);
-  pilot2.y = (canvas.height / 2) - (pilot2.height);
+  pilot1.y = canvas.height / 2 - pilot1.height;
+  pilot2.y = canvas.height / 2 - pilot2.height;
 
   // Position the lore tablet
-  loreTablet.x = (canvas.width / 2) - (loreTablet.width / 2);
-  loreTablet.y = (canvas.height / 2) - 70;
+  loreTablet.x = canvas.width / 2 - loreTablet.width / 2;
+  loreTablet.y = canvas.height / 2 - 70;
 }
 
-export function drawNameEntry(canvas, ctx,name) {
+export function drawNameEntry(canvas, ctx, name) {
   // Draw background
-  ctx.fillStyle = 'black';
+  ctx.fillStyle = "black";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+  //for debug
+  ctx.fillStyle = "yellow";
+  ctx.fillRect(0, 0, 10, 10);
+  ctx.fillRect(canvas.width / 2 - 5, 0, 10, 10);
+  ctx.fillRect(canvas.width - 10, 0, 10, 10);
+  ctx.fillRect(canvas.width / 2 - 50, canvas.height / 2, 10, 10);
+
+  let enterNameText = "Enter Your Name";
+  ctx.fillStyle = "black";
   // Draw title
   ctx.font = "30px Arial";
-  ctx.fillStyle = 'white';
-  ctx.fillText("Enter Your Name", canvas.width / 2, 50);
+  ctx.fillStyle = "white";
+  ctx.fillText(enterNameText, canvas.width / 2 - ctx.measureText(enterNameText).width / 2, 50);
 
   // Draw name entry box
-  ctx.strokeStyle = 'white';
+  ctx.strokeStyle = "white";
   ctx.strokeRect(canvas.width / 2 - 100, canvas.height / 2 - 50, 200, 100);
 
   // Draw player's name
   ctx.font = "20px Arial";
-  ctx.fillStyle = 'white';
+  ctx.fillStyle = "white";
   ctx.fillText(name, canvas.width / 2 - 50, canvas.height / 2);
+  drawNameCursor(canvas, ctx, name);
+}
 
+export function drawNameCursor(canvas, ctx, name) {
+ 
+  var forDebug = ctx.measureText(name).width;
   // Draw text cursor
   if (cursorBlink) {
-    ctx.fillRect(canvas.width / 2 -50  + ctx.measureText(name).width, canvas.height / 2 - 10, 2, 20);
+    ctx.fillStyle = "white";
+    // ctx.fillRect(canvas.width / 2 - 50 + ctx.measureText(name).width, canvas.height / 2 - 17, 2, 20);
+  }else{
+    ctx.fillStyle = "black";
   }
+  ctx.fillRect(canvas.width / 2 - 50 + ctx.measureText(name).width, canvas.height / 2 - 17, 2, 20);
+  ctx.fillStyle = "pink";
+  ctx.fillRect(canvas.width / 2 - 50, canvas.height / 2, 10, 10);
 }

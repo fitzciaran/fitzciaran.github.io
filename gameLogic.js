@@ -1,17 +1,43 @@
 import { sendPlayerStates, sendPowerups } from "./connectionHandlers.js";
-import { drawWinnerMessage } from "./canvasDrawingFunctions.js";
+import { setGameState,GameState } from "./astroids.js";
 //finish game after 2 for easier testing the finish
 let pointsToWin = 2;
+export let endGameMessage = "";
+export let gameWon = false;
+export const pilot1 = {
+  image: new Image(),
+  x: 0,
+  y: 0,
+  width: 100,
+  height: 100,
+  selected: false,
+  lore: "Pilot 1's lore...",
+};
+
+export const pilot2 = {
+  image: new Image(),
+  x: 100,
+  y: 0,
+  width: 100,
+  height: 100,
+  selected: false,
+  lore: "Pilot 2's lore...",
+};
 
 export function checkWinner(player, otherPlayers, connections, ctx, canvas) {
   if (player.powerUps >= pointsToWin) {
     sendPlayerStates(player, connections);
-    drawWinnerMessage(ctx, canvas, "Winner! Rivals dreams crushed.");
+    setGameState(GameState.FINISHED);
+    endGameMessage = "Winner! Rivals dreams crushed.";
+    gameWon = true;
     return true;
   }
   for (let otherPlayer of otherPlayers) {
     if (otherPlayer.powerUps >= pointsToWin) {
-      drawWinnerMessage(ctx, canvas, "Get good scrub! You lose");
+      gameWon = false;
+      setGameState(GameState.FINISHED);
+      endGameMessage = "Get good scrub! You lose";
+      // drawWinnerMessage(ctx, canvas, "Get good scrub! You lose");
       return true;
     }
   }
@@ -65,4 +91,8 @@ export function resetPowerLevels(player, otherPlayers, connections) {
 
 function shipHitsBorder(x, y) {
   return x < 0 || y < 0 || x > worldWidth || y > worldHeight;
+}
+
+export function setGameWon(won) {
+  gameWon = won;
 }
