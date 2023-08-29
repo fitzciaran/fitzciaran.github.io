@@ -24,8 +24,7 @@ const shipPoints = [
   { x: 0, y: 10 },
   { x: 10, y: 20 },
 ];
-const acceleration = 0.65;
-const friction = 0.95;
+const acceleration = 0.25;
 let vel = { x: 0, y: 0 };
 export let distanceFactor;
 let otherPlayers = [];
@@ -49,6 +48,8 @@ export const PilotName = {
 //switch this to intro once built that section
 let gameState = GameState.UNSET;
 let pilotSelected = "";
+let accumulator = 0;
+let fixedDeltaTime = 1 / 60; // 60 updates per second
 
 class Player {
   constructor(worldDimensions, colors) {
@@ -82,8 +83,8 @@ const radius = 50;
 const maxDistance = Math.sqrt((canvas.width / 2) ** 2 + (canvas.height / 2) ** 2);
 const bounceFactor = 1.5;
 const offset = 1;
-const camSpeedX = 0.025;
-const camSpeedY = 0.05;
+const camSpeedX = 0.045;
+const camSpeedY = 0.08;
 const minBounceSpeed = 5;
 const frameRate = 1000 / 60; // Frame rate in ms
 
@@ -122,6 +123,23 @@ function updateCamera() {
   camY = Math.max(Math.min(newCamY, worldDimensions.height - canvas.height), 0);
 }
 
+function centerCameraOnPlayer(){
+  const targetCamX = player.x - canvas.width / 2;
+  let targetCamY;
+  if (player.ySpeed < 0) {
+    // Moving up
+    targetCamY = player.y - (canvas.height * 2) / 4;
+  } else {
+    // Moving down or not moving vertically
+    targetCamY = player.y - (canvas.height * 2) / 4;
+  }
+  let newCamX = targetCamX;
+  let newCamY = targetCamY;
+
+  camX = Math.max(Math.min(newCamX, worldDimensions.width - canvas.width), 0);
+  camY = Math.max(Math.min(newCamY, worldDimensions.height - canvas.height), 0);
+}
+
 function updatePlayerAngle() {
   let dx = player.x - mousePos.x;
   let dy = player.y - mousePos.y;
@@ -138,7 +156,7 @@ function updatePlayerVelocity({ dx, dy, distance }, deltaTime) {
   if (player.pilot == PilotName.PILOT_1) {
     pilotBoostFactor = 1.1;
   } else if (player.pilot == PilotName.PILOT_2) {
-    pilotBoostFactor = 0.1;
+    pilotBoostFactor = 0.2;
   }
   vel.x *= newFriction;
   vel.y *= newFriction;
@@ -181,6 +199,8 @@ function updatePlayerPosition(deltaTime) {
 }
 
 function updateGame(deltaTime) {
+  //scale deltaTime
+  deltaTime *= 100;
   updateCamera();
   const playerAngleData = updatePlayerAngle();
   updatePlayerVelocity(playerAngleData, deltaTime);
@@ -254,12 +274,15 @@ export function setGameState(newState) {
   }
 
   if (newState === GameState.GAME && gameState !== GameState.GAME) {
+    fixedDeltaTime = 1 / 60;
     setupGameEventListeners(window);
   }
 
   if (newState !== GameState.GAME && gameState === GameState.GAME) {
+    fixedDeltaTime = 1 / 30; //30 fps is plenty if not in game
     removeGameStateEventListeners(window);
     player.resetState();
+    centerCameraOnPlayer();
     globalPowerUps = [];
   }
 
@@ -279,21 +302,24 @@ export function setPlayerName(newName) {
 
 function update() {
   let now = Date.now();
-  let deltaTime = ((now - lastTime) / 1000) * 60; // Time since last frame in seconds
-  //adjust by scale
-  deltaTime *= 2.5;
+  let deltaTime = ((now - lastTime) / 1000); // Time since last frame in seconds
   lastTime = now;
 
-  if (gameState === GameState.INTRO) {
-    // updateName(); does this need to be called every time?
-    drawNameCursor(canvas, ctx, player.name); //just
-  } else if (gameState === GameState.PILOT_SELECT) {
-    updatePilot();
-  } else if (gameState === GameState.GAME) {
-    updateGame(deltaTime);
-  } else if (gameState === GameState.FINISHED) {
-    updateWinState();
+  accumulator += deltaTime;
+
+  while (accumulator >= fixedDeltaTime) {
+    if (gameState === GameState.INTRO) {
+      drawNameCursor(canvas, ctx, player.name); 
+    } else if (gameState === GameState.PILOT_SELECT) {
+      updatePilot();
+    } else if (gameState === GameState.GAME) {
+      updateGame(fixedDeltaTime);
+    } else if (gameState === GameState.FINISHED) {
+      updateWinState();
+    }
+    accumulator -= fixedDeltaTime;
   }
+
   requestAnimationFrame(update);
 }
 
