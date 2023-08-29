@@ -109,7 +109,7 @@ export function connectToPeers( player,otherPlayers,peerIds,  connections, globa
 
 export function tryNextId(player,peerIds) {
   if (index >= peerIds.length) {
-    console.log("All IDs are in use");
+    console.log("All IDs are in use - trynextid function");
     return;
   }
 

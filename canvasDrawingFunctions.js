@@ -221,6 +221,7 @@ export function renderPowerupLevels(ctx, player, otherPlayers) {
   ctx.font = "14px Arial";
   const myPowerupText = `My Powerups: ${player.powerUps}`;
   ctx.fillStyle = player.color;
+  ctx.textAlign = "start";
   ctx.fillText(myPowerupText, 115.5, topGap - textHeight);
 
   // Draw other players' powerups
@@ -233,6 +234,7 @@ export function renderPowerupLevels(ctx, player, otherPlayers) {
 }
 
 export function renderMyId(ctx, player) {
+  ctx.textAlign = "start";
   const topGap = 100;
   const gap = 16; // Gap between lines
   const textHeight = 75; // Adjust this to the size of your text
@@ -270,8 +272,8 @@ export function drawScene(player, otherPlayers, ctx, camX, camY, worldDimensions
 export const loreTablet = {
   x: 0,
   y: -300,
-  width: 200,
-  height: 400,
+  width: 450,
+  height: 450,
   image: new Image(),
 };
 
@@ -287,7 +289,11 @@ export function drawPilots(canvas, ctx) {
   // Draw title
   ctx.font = "30px Arial";
   ctx.fillStyle = "white";
+  ctx.textAlign = "center";
   ctx.fillText("Select Your Pilot", canvas.width / 2, 50);
+
+  // Draw lore tablet
+  ctx.drawImage(loreTablet.image, loreTablet.x, loreTablet.y, loreTablet.width, loreTablet.height);
 
   // Draw pilot options
   ctx.drawImage(pilot1.image, pilot1.x, pilot1.y, pilot1.width, pilot1.height);
@@ -303,37 +309,57 @@ export function drawPilots(canvas, ctx) {
     ctx.strokeRect(pilot2.x, pilot2.y, pilot2.width, pilot2.height);
   }
 
-  // Draw lore tablet
-  ctx.drawImage(loreTablet.image, loreTablet.x, loreTablet.y, loreTablet.width, loreTablet.height);
-
   // Reset lore index and line count
   if (!pilot1.selected && !pilot2.selected) {
     loreIndex = 0;
     lineCount = 0;
   }
 
+  let x = loreTablet.x + 60;
+  let y = loreTablet.y + 65; // Initial y value
+
   // Animate lore text
   if (pilot1.selected) {
     // animateLoreText(ctx, pilot1.lore, loreIndex, lineCount);
-    renderLoreText(ctx, pilot1.lore);
+    renderLoreText(ctx, pilot1.lore, x, y, 330);
   }
   if (pilot2.selected) {
     // animateLoreText(ctx, pilot2.lore, loreIndex, lineCount);
-    renderLoreText(ctx, pilot2.lore);
+    renderLoreText(ctx, pilot2.lore, x, y, 330);
   }
 }
 
-function renderLoreText(ctx, lore) {
+function renderLoreText(ctx, lore, x, y, maxWidth) {
   // Set font and color
-  ctx.font = "20px Arial";
-  ctx.fillStyle = "white";
-  ctx.fillText(lore, loreTablet.x + 45, loreTablet.y + 130);
+  ctx.font = "23px Gothic";
+  ctx.fillStyle = "coral";
+  ctx.textAlign = "start";
+
+  let words = lore.split(" ");
+  let line = "";
+  let lineHeight = 25; // Line height
+
+  for (let n = 0; n < words.length; n++) {
+    let testLine = line + words[n] + " ";
+    let metrics = ctx.measureText(testLine);
+    let testWidth = metrics.width;
+    if (testWidth > maxWidth && n > 0) {
+      ctx.fillText(line, x, y);
+      line = words[n] + " ";
+      y += lineHeight;
+    } else {
+      line = testLine;
+    }
+  }
+  ctx.fillText(line, x, y);
 }
 
+//wip
 function animateLoreText(ctx, lore, loreIndex, lineCount) {
   // Set font and color
   ctx.font = "20px Arial";
   ctx.fillStyle = "white";
+  ctx.textAlign = "start";
 
   // Increment lore index
   while (loreIndex < lore.length - 1) {
@@ -352,61 +378,59 @@ function animateLoreText(ctx, lore, loreIndex, lineCount) {
 export function setupPilotsImages(canvas) {
   pilot1.image.src = "images/pilot1.gif";
   pilot2.image.src = "images/pilot2.gif";
-  loreTablet.image.src = "images/space.webp";
+  loreTablet.image.src = "images/tablet.png";
 
   // Center the pilots
   pilot1.x = canvas.width / 2 - pilot1.width * 2;
   pilot2.x = canvas.width / 2 + pilot2.width;
 
-  pilot1.y = canvas.height / 2 - pilot1.height;
-  pilot2.y = canvas.height / 2 - pilot2.height;
+  pilot1.y = canvas.height / 6;
+  pilot2.y = canvas.height / 6;
 
   // Position the lore tablet
   loreTablet.x = canvas.width / 2 - loreTablet.width / 2;
-  loreTablet.y = canvas.height / 2 - 70;
+  loreTablet.y = canvas.height / 2 - 100;
 }
 
 export function drawNameEntry(canvas, ctx, name) {
-  // Draw background
+  // Reset context to preserve consistency when this function is called
+  ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset the canvas transform
+  ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
+  ctx.textAlign = "center";
+  // Reset fill and stroke styles
   ctx.fillStyle = "black";
+  ctx.strokeStyle = "black";
+
+  // Reset font
+  ctx.font = "30px Arial";
+
+  // Draw background
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  //for debug
-  ctx.fillStyle = "yellow";
-  ctx.fillRect(0, 0, 10, 10);
-  ctx.fillRect(canvas.width / 2 - 5, 0, 10, 10);
-  ctx.fillRect(canvas.width - 10, 0, 10, 10);
-  ctx.fillRect(canvas.width / 2 - 50, canvas.height / 2, 10, 10);
-
-  let enterNameText = "Enter Your Name";
-  ctx.fillStyle = "black";
-  // Draw title
-  ctx.font = "30px Arial";
   ctx.fillStyle = "white";
-  ctx.fillText(enterNameText, canvas.width / 2 - ctx.measureText(enterNameText).width / 2, 50);
+  let enterNameText = "Enter Your Name";
+  let textWidth = ctx.measureText(enterNameText).width;
+  // Draw title
+  ctx.fillText(enterNameText, canvas.width / 2, 50);
 
   // Draw name entry box
   ctx.strokeStyle = "white";
   ctx.strokeRect(canvas.width / 2 - 100, canvas.height / 2 - 50, 200, 100);
-
+  ctx.textAlign = "start";
   // Draw player's name
   ctx.font = "20px Arial";
-  ctx.fillStyle = "white";
   ctx.fillText(name, canvas.width / 2 - 50, canvas.height / 2);
   drawNameCursor(canvas, ctx, name);
 }
 
 export function drawNameCursor(canvas, ctx, name) {
- 
   var forDebug = ctx.measureText(name).width;
   // Draw text cursor
   if (cursorBlink) {
     ctx.fillStyle = "white";
-    // ctx.fillRect(canvas.width / 2 - 50 + ctx.measureText(name).width, canvas.height / 2 - 17, 2, 20);
-  }else{
+  } else {
     ctx.fillStyle = "black";
   }
   ctx.fillRect(canvas.width / 2 - 50 + ctx.measureText(name).width, canvas.height / 2 - 17, 2, 20);
   ctx.fillStyle = "pink";
-  ctx.fillRect(canvas.width / 2 - 50, canvas.height / 2, 10, 10);
 }

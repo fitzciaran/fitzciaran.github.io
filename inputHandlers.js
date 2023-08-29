@@ -134,7 +134,7 @@ export function addPilotEventListners(canvas, ctx) {
         pilotSelected = PilotName.PILOT_1;
       }
       if (pilot2.selected) {
-        pilotSelected = PilotName.pilot2;
+        pilotSelected = PilotName.PILOT_2;
       }
       if (pilot1.selected || pilot2.selected) {
         // If a pilot was selected, update the player object and change the game state to 'game'
@@ -173,7 +173,7 @@ export function removePilotsEventListeners(canvas) {
   else if (event.key === "Enter") {
     setGameState(GameState.PILOT_SELECT);
   }
-  
+
   if(getPlayerName().length >= max_player_name){
     //inform the user somehow
   }
@@ -192,7 +192,7 @@ export function handleWinStateKeyDown(event) {
   if (event.key === "Enter") {
     setGameState(GameState.INTRO);
   }
-  if (event.key === "R") {
+  if (event.key === "r") {
     setGameState(GameState.INTRO);
   }
 }

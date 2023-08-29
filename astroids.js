@@ -39,27 +39,42 @@ export const GameState = {
   FINISHED: "finished",
   GAME: "game",
   UNSET: "",
-}
+};
 
 export const PilotName = {
   PILOT_1: "pilot1",
   PILOT_2: "pilot2",
-}
+};
 
 //switch this to intro once built that section
 let gameState = GameState.UNSET;
 let pilotSelected = "";
 
-const player = {
-  id: null,
-  x: 100 + Math.random() * (worldDimensions.width - 200),
-  y: 100 + Math.random() * (worldDimensions.height - 200),
-  powerUps: 0,
-  color: colors[Math.floor(Math.random() * colors.length)],
-  angle: 0,
-  pilot: "",
-  name: "",
-};
+class Player {
+  constructor(worldDimensions, colors) {
+    this.id = null;
+    this.x = 100 + Math.random() * (worldDimensions.width - 200);
+    this.y = 100 + Math.random() * (worldDimensions.height - 200);
+    this.powerUps = 0;
+    this.color = colors[Math.floor(Math.random() * colors.length)];
+    this.angle = 0;
+    this.pilot = "";
+    this.name = "";
+  }
+
+  resetState() {
+    this.id = null;
+    this.x = 100 + Math.random() * (worldDimensions.width - 200);
+    this.y = 100 + Math.random() * (worldDimensions.height - 200);
+    this.powerUps = 0;
+    this.color = colors[Math.floor(Math.random() * colors.length)];
+    this.angle = 0;
+    this.pilot = "";
+    this.name = "";
+  }
+}
+
+const player = new Player(worldDimensions, colors);
 
 export let camX = player.x - canvas.width / 2;
 export let camY = player.y - canvas.height / 2;
@@ -70,18 +85,7 @@ const offset = 1;
 const camSpeedX = 0.025;
 const camSpeedY = 0.05;
 const minBounceSpeed = 5;
-
-/* START CONNECTION HANDLERS  */
-tryNextId(player, peerIds);
-
-setTimeout(() => attemptConnections(player, otherPlayers, peerIds, connections, globalPowerUps), 500);
-setInterval(() => connectToPeers(player, otherPlayers, peerIds, connections, globalPowerUps), 6000);
-setInterval(() => generatePowerups(globalPowerUps, connections, worldDimensions.width, worldDimensions.height, colors), 3000);
-setInterval(() => sendPowerups(globalPowerUps, connections), 3000);
-
-/* END CONNECTION HANDLERS  */
-
-handleInputEvents(canvas, player, keys);
+const frameRate = 1000 / 60; // Frame rate in ms
 
 function updateCamera() {
   const targetCamX = player.x - canvas.width / 2;
@@ -128,12 +132,13 @@ function updatePlayerAngle() {
 
 function updatePlayerVelocity({ dx, dy, distance }, deltaTime) {
   let squareFactor = currentSpeed * currentSpeed;
-  let newFriction = Math.pow(Math.max(0.99 - squareFactor * 0.001, 0.7), deltaTime);
+  let newFriction = Math.pow(Math.max(0.99 - squareFactor * 0.0001, 0.95), deltaTime);
+
   let pilotBoostFactor = 1;
   if (player.pilot == PilotName.PILOT_1) {
-    pilotBoostFactor = 1.5;
+    pilotBoostFactor = 1.1;
   } else if (player.pilot == PilotName.PILOT_2) {
-    pilotBoostFactor = 0.5;
+    pilotBoostFactor = 0.1;
   }
   vel.x *= newFriction;
   vel.y *= newFriction;
@@ -141,17 +146,14 @@ function updatePlayerVelocity({ dx, dy, distance }, deltaTime) {
   if (keys.space) {
     let mouseToCenter = { x: dx / distance, y: dy / distance };
     let maxForceDistance = 250;
-    //currently unused
-    let minForceDistance = 20;
+    let minForceDistance = 100;
 
-    if (distance > maxForceDistance) {
-      distanceFactor = 1;
-    } else {
-      let normalizedDistance = distance / ((canvas.width * 1) / 5);
-      distanceFactor = Math.min(1, normalizedDistance);
-      distanceFactor = Math.max(0.25, distanceFactor);
-      distanceFactor -= 0.1;
-      distanceFactor *= (1 /(1-0.1));
+    distanceFactor = 1;
+    if (distance < minForceDistance) {
+      distanceFactor = 0.1; // minimum force
+    } else if (distance < maxForceDistance) {
+      let normalizedDistance = (distance - minForceDistance) / (maxForceDistance - minForceDistance);
+      distanceFactor = 0.1 + normalizedDistance * 0.9; // gradually increase force
     }
     vel.x += acceleration * distanceFactor * mouseToCenter.x * pilotBoostFactor * deltaTime;
     vel.y += acceleration * distanceFactor * mouseToCenter.y * pilotBoostFactor * deltaTime;
@@ -193,9 +195,6 @@ function updateGame(deltaTime) {
   }
 }
 
-// Call setupPilotsImages once at the start of the game
-setupPilotsImages(canvas);
-
 function setupPilots(canvas, ctx) {
   pilot1.image.src = "images/pilot1.gif";
   pilot2.image.src = "images/pilot2.gif";
@@ -211,8 +210,7 @@ function updateName() {
 }
 
 function updateWinState() {
-
-  drawScene(player, otherPlayers, ctx, camX, camY, worldDimensions, canvas, shipPoints, globalPowerUps);
+  //drawScene(player, otherPlayers, ctx, camX, camY, worldDimensions, canvas, shipPoints, globalPowerUps);
   drawWinnerMessage(ctx, canvas, endGameMessage);
 }
 
@@ -261,6 +259,8 @@ export function setGameState(newState) {
 
   if (newState !== GameState.GAME && gameState === GameState.GAME) {
     removeGameStateEventListeners(window);
+    player.resetState();
+    globalPowerUps = [];
   }
 
   gameState = newState;
@@ -279,7 +279,9 @@ export function setPlayerName(newName) {
 
 function update() {
   let now = Date.now();
-  let deltaTime = (now - lastTime) / 1000 * 60; // Time since last frame in seconds
+  let deltaTime = ((now - lastTime) / 1000) * 60; // Time since last frame in seconds
+  //adjust by scale
+  deltaTime *= 2.5;
   lastTime = now;
 
   if (gameState === GameState.INTRO) {
@@ -299,5 +301,21 @@ export function getCanvas() {
   return canvas;
 }
 
-update();
-setGameState(GameState.INTRO);
+window.addEventListener("load", function () {
+  /* START CONNECTION HANDLERS  */
+  tryNextId(player, peerIds);
+
+  setTimeout(() => attemptConnections(player, otherPlayers, peerIds, connections, globalPowerUps), 500);
+  setInterval(() => connectToPeers(player, otherPlayers, peerIds, connections, globalPowerUps), 6000);
+  setInterval(() => generatePowerups(globalPowerUps, connections, worldDimensions.width, worldDimensions.height, colors), 3000);
+  setInterval(() => sendPowerups(globalPowerUps, connections), 3000);
+
+  /* END CONNECTION HANDLERS  */
+
+  handleInputEvents(canvas, player, keys);
+  // Call setupPilotsImages once at the start of the game
+  setupPilotsImages(canvas);
+
+  update();
+  setGameState(GameState.INTRO);
+});
