@@ -299,6 +299,7 @@ export function setGameState(newState) {
   if (newState === GameState.GAME && prevGameState !== GameState.GAME) {
     fixedDeltaTime = 1 / 60;
     setupGameEventListeners(window);
+    setTimeout(() => connectToPeers(player, otherPlayers, peerIds, connections, globalPowerUps), 1000);
   }
 
   if (newState !== GameState.GAME && prevGameState === GameState.GAME) {
@@ -338,7 +339,10 @@ window.addEventListener("load", function () {
   tryNextId(player, peerIds);
 
   setTimeout(() => attemptConnections(player, otherPlayers, peerIds, connections, globalPowerUps), 500);
-  setInterval(() => connectToPeers(player, otherPlayers, peerIds, connections, globalPowerUps), 6000);
+  //do we need to keep doing this??
+  // setInterval(() => connectToPeers(player, otherPlayers, peerIds, connections, globalPowerUps), 6000);
+  setTimeout(() => connectToPeers(player, otherPlayers, peerIds, connections, globalPowerUps), 6000);
+
   setInterval(() => generatePowerups(globalPowerUps, connections, worldDimensions.width, worldDimensions.height, colors), 3000);
   setInterval(() => sendPowerups(globalPowerUps, connections), 3000);
 
