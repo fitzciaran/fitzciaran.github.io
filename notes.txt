@@ -33,3 +33,6 @@ reset camera on new game (check how it's done the first time)
 When a ship collides with one of these the ship should get slightly bigger. 
 We'll need to keep track of all ships size
 When ships collide with each other the biggest should "win" and the smaller should be removed from the game for 3 seconds before respawning at a random location 
+
+some kind of share option - a la wordle 
+instead of p2p maybe make one player the host, first check for existing hosts if not become host and listen... kinda the same but one player gets the host role and controls state

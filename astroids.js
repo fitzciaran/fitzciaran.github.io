@@ -47,46 +47,65 @@ export const PilotName = {
 
 //switch this to intro once built that section
 let gameState = GameState.UNSET;
-let pilotSelected = "";
+// let pilotSelected = "";
 let accumulator = 0;
 let fixedDeltaTime = 1 / 60; // 60 updates per second
 
-class Player {
-  constructor(worldDimensions, colors) {
-    this.id = null;
-    this.x = 100 + Math.random() * (worldDimensions.width - 200);
-    this.y = 100 + Math.random() * (worldDimensions.height - 200);
-    this.powerUps = 0;
-    this.color = colors[Math.floor(Math.random() * colors.length)];
-    this.angle = 0;
-    this.pilot = "";
-    this.name = "";
+export class Player {
+  constructor(id = null, x = null, y = null, powerUps = 0, color = null, angle = 0, pilot = "", name = "", worldDimensions, colors) {
+    this.id = id;
+    this.x = x !== null ? x : 100 + Math.random() * (worldDimensions.width - 200);
+    this.y = y !== null ? y : 100 + Math.random() * (worldDimensions.height - 200);
+    this.powerUps = powerUps;
+    this.color = color !== null ? color : colors[Math.floor(Math.random() * colors.length)];
+    this.angle = angle;
+    this.pilot = pilot;
+    this.name = name;
+    this.worldDimensions = worldDimensions;
+    this.colors = colors;
   }
 
-  resetState() {
+  resetState(keepName) {
     this.id = null;
-    this.x = 100 + Math.random() * (worldDimensions.width - 200);
-    this.y = 100 + Math.random() * (worldDimensions.height - 200);
+    this.x = 100 + Math.random() * (this.worldDimensions.width - 200);
+    this.y = 100 + Math.random() * (this.worldDimensions.height - 200);
     this.powerUps = 0;
-    this.color = colors[Math.floor(Math.random() * colors.length)];
+    this.color = this.colors[Math.floor(Math.random() * this.colors.length)];
     this.angle = 0;
     this.pilot = "";
-    this.name = "";
+    if (!keepName) {
+      this.name = "";
+    }
+  }
+  setPilot(newPilot) {
+    this.pilot = newPilot;
+  }
+
+  getPlayerName() {
+    return this.name;
+  }
+
+  setPlayerName(newName) {
+    this.name = newName;
   }
 }
 
-const player = new Player(worldDimensions, colors);
+export const player = new Player(null, null, null, 0, null, 0, "", "", worldDimensions, colors);
 
 export let camX = player.x - canvas.width / 2;
 export let camY = player.y - canvas.height / 2;
-const radius = 50;
-const maxDistance = Math.sqrt((canvas.width / 2) ** 2 + (canvas.height / 2) ** 2);
+//const radius = 50;
+//const maxDistance = Math.sqrt((canvas.width / 2) ** 2 + (canvas.height / 2) ** 2);
 const bounceFactor = 1.5;
 const offset = 1;
 const camSpeedX = 0.045;
 const camSpeedY = 0.08;
 const minBounceSpeed = 5;
-const frameRate = 1000 / 60; // Frame rate in ms
+//const frameRate = 1000 / 60; // Frame rate in ms
+
+export function getCanvas() {
+  return canvas;
+}
 
 function updateCamera() {
   const targetCamX = player.x - canvas.width / 2;
@@ -123,7 +142,7 @@ function updateCamera() {
   camY = Math.max(Math.min(newCamY, worldDimensions.height - canvas.height), 0);
 }
 
-function centerCameraOnPlayer(){
+function centerCameraOnPlayer() {
   const targetCamX = player.x - canvas.width / 2;
   let targetCamY;
   if (player.ySpeed < 0) {
@@ -226,6 +245,9 @@ function updatePilot() {
 }
 
 function updateName() {
+  const minimapCanvas = document.getElementById("minimapCanvas");
+  const minimapCtx = minimapCanvas.getContext("2d");
+  minimapCtx.clearRect(0, 0, minimapCanvas.width, minimapCanvas.height);
   drawNameEntry(canvas, ctx, player.name);
 }
 
@@ -245,71 +267,59 @@ export function setGameState(newState) {
   if (gameState === newState) {
     return;
   }
-
-  if (newState === GameState.PILOT_SELECT && gameState !== GameState.PILOT_SELECT) {
+  let prevGameState = gameState;
+  gameState = newState;
+  if (newState === GameState.PILOT_SELECT && prevGameState !== GameState.PILOT_SELECT) {
     setupPilots(canvas, ctx);
   }
 
-  if (newState !== GameState.PILOT_SELECT && gameState === GameState.PILOT_SELECT) {
+  if (newState !== GameState.PILOT_SELECT && prevGameState === GameState.PILOT_SELECT) {
     removePilotsEventListeners(canvas);
   }
 
-  if (newState === GameState.INTRO && gameState !== GameState.INTRO) {
+  if (newState === GameState.INTRO && prevGameState !== GameState.INTRO) {
     setupNameEventListeners(window);
     updateName();
   }
 
-  if (newState !== GameState.INTRO && gameState === GameState.INTRO) {
+  if (newState !== GameState.INTRO && prevGameState === GameState.INTRO) {
     removeNameEventListeners(window);
   }
 
-  if (newState === GameState.FINISHED && gameState !== GameState.FINISHED) {
+  if (newState === GameState.FINISHED && prevGameState !== GameState.FINISHED) {
     setupWinStateEventListeners(window);
   }
 
-  if (newState !== GameState.FINISHED && gameState === GameState.FINISHED) {
+  if (newState !== GameState.FINISHED && prevGameState === GameState.FINISHED) {
     resetPowerLevels(player, otherPlayers, connections);
     setGameWon(false);
     removeWinStateEventListeners(window);
   }
 
-  if (newState === GameState.GAME && gameState !== GameState.GAME) {
+  if (newState === GameState.GAME && prevGameState !== GameState.GAME) {
     fixedDeltaTime = 1 / 60;
     setupGameEventListeners(window);
   }
 
-  if (newState !== GameState.GAME && gameState === GameState.GAME) {
+  if (newState !== GameState.GAME && prevGameState === GameState.GAME) {
     fixedDeltaTime = 1 / 30; //30 fps is plenty if not in game
     removeGameStateEventListeners(window);
-    player.resetState();
+    player.resetState(true);
     centerCameraOnPlayer();
     globalPowerUps = [];
   }
-
-  gameState = newState;
-}
-
-export function setPilot(newPilot) {
-  player.pilot = newPilot;
-}
-export function getPlayerName() {
-  return player.name;
-}
-
-export function setPlayerName(newName) {
-  player.name = newName;
 }
 
 function update() {
   let now = Date.now();
-  let deltaTime = ((now - lastTime) / 1000); // Time since last frame in seconds
+  let deltaTime = (now - lastTime) / 1000; // Time since last frame in seconds
   lastTime = now;
 
   accumulator += deltaTime;
 
   while (accumulator >= fixedDeltaTime) {
     if (gameState === GameState.INTRO) {
-      drawNameCursor(canvas, ctx, player.name); 
+      drawNameCursor(canvas, ctx, player.name);
     } else if (gameState === GameState.PILOT_SELECT) {
       updatePilot();
     } else if (gameState === GameState.GAME) {
@@ -321,10 +331,6 @@ function update() {
   }
 
   requestAnimationFrame(update);
-}
-
-export function getCanvas() {
-  return canvas;
 }
 
 window.addEventListener("load", function () {

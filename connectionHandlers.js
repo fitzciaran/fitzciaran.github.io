@@ -1,5 +1,5 @@
 import { resetPowerLevels } from "./gameLogic.js";
-import { setGlobalPowerUps } from "./astroids.js";
+import { setGlobalPowerUps, Player } from "./astroids.js";
 
 export let everConnected = false;
 export let connections = [];
@@ -29,6 +29,8 @@ export function sendPlayerStates(player, connections) {
     angle: player.angle,
     color: player.color,
     powerUps: player.powerUps,
+    name:player.name,
+    pilot:player.pilot,
   };
   //console.log("Sending data:", data); // Log any data sent
   connections.forEach((conn) => {
@@ -136,21 +138,25 @@ export function tryNextId(player,peerIds) {
   });
 }
 
-function addConnectionHandlers( player, otherPlayers,conn, connections, globalPowerUps) {
+function addConnectionHandlers(player, otherPlayers, conn, connections, globalPowerUps) {
   console.log("adding connection handlers");
   conn.on("open", function () {
     console.log("Connection opened with peer:", conn.peer);
     connections.push(conn);
     let existingOtherPlayer = otherPlayers.some((player) => player.id === conn.peer);
     if (!existingOtherPlayer) {
-      let otherPlayerData = {
-        id: conn.peer,
-        x: -200,
-        y: -200,
-        angle: 0,
-        color: "blue",
-        powerUps: 0,
-      };
+      let otherPlayerData = new Player(
+        conn.peer,
+        -200,
+        -200,
+        0,
+        "blue",
+        0,
+        "",
+        "",
+        player.worldDimensions,
+        player.colors
+      );
       otherPlayers.push(otherPlayerData);
     }
 
@@ -193,6 +199,8 @@ function handleData(data, otherPlayers, globalPowerUps) {
     player.angle = data.angle;
     player.color = data.color;
     player.powerUps = data.powerUps;
+    player.name = data.name;
+    player.pilot = data.pilot;
   }
   // If the player is not found, add them to the array
   else if (data.id) {
@@ -229,10 +237,11 @@ export function updateConnections(player, otherPlayers, connections) {
   if (everConnected) {
     sendPlayerStates(player, connections);
   } else {
-    connections.forEach((conn) => {
+    connections.forEach((conn, index) => {
       if (conn && conn.closed) {
         console.log("Connection closed with peer:", conn.peer);
         otherPlayers = otherPlayers.filter((player) => player.id !== conn.peer);
+        connections.splice(index, 1); // Remove the connection from the connections array
       } else if (!conn) {
         console.log("Connection null, removing from otherplayers list and from connections", conn.peer);
         otherPlayers = otherPlayers.filter((player) => player.id !== conn.peer);
@@ -241,6 +250,7 @@ export function updateConnections(player, otherPlayers, connections) {
     });
   }
 }
+
 export function getPlayerId(){
   return id;
 }

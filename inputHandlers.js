@@ -1,4 +1,4 @@
-import { camX, camY, getGameState, setGameState, setPilot,getPlayerName, setPlayerName, getCanvas,GameState,PilotName} from "./astroids.js";
+import { camX, camY, getGameState, setGameState, getCanvas,GameState,PilotName,player} from "./astroids.js";
 import { pilot1, pilot2 } from "./gameLogic.js";
 import { drawPilots, drawNameEntry } from "./canvasDrawingFunctions.js";
 
@@ -138,7 +138,7 @@ export function addPilotEventListners(canvas, ctx) {
       }
       if (pilot1.selected || pilot2.selected) {
         // If a pilot was selected, update the player object and change the game state to 'game'
-        setPilot(pilotSelected);
+        player.setPilot(pilotSelected);
         setGameState(GameState.GAME);
       }
     }
@@ -161,25 +161,25 @@ export function removePilotsEventListeners(canvas) {
   keysDown[event.key] = true;
 
   // Check if the key pressed is a printable character
-  if (/^[\x20-\x7E]$/.test(event.key) && getPlayerName().length < max_player_name ) {
+  if (/^[\x20-\x7E]$/.test(event.key) && player.getPlayerName().length < max_player_name ) {
    // player.name += event.key;
-    setPlayerName(getPlayerName() + event.key);
+    player.setPlayerName(player.getPlayerName() + event.key);
   }
   else if (event.key === "Backspace") {
     //player.name = player.name.slice(0, -1);
-    setPlayerName(getPlayerName().slice(0, -1));
+    player.setPlayerName(player.getPlayerName().slice(0, -1));
   }
   // Check if the key pressed is enter
   else if (event.key === "Enter") {
     setGameState(GameState.PILOT_SELECT);
   }
 
-  if(getPlayerName().length >= max_player_name){
+  if(player.getPlayerName().length >= max_player_name){
     //inform the user somehow
   }
   
   // Redraw name entry
-  drawNameEntry(getCanvas(), getCanvas().getContext("2d"),getPlayerName());
+  drawNameEntry(getCanvas(), getCanvas().getContext("2d"),player.getPlayerName());
 }
 
 export function handleNameKeyUp(event) {

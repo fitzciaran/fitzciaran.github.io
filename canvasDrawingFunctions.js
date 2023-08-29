@@ -150,6 +150,13 @@ export function drawMinimap(player, otherPlayers, worldWidth, worldHeight) {
   // Clear the minimap
   minimapCtx.clearRect(0, 0, minimapCanvas.width, minimapCanvas.height);
 
+  // Draw a semi-transparent background with a border
+  minimapCtx.fillStyle = "rgba(0, 128, 0, 0.2)"; // Semi-transparent green
+  minimapCtx.fillRect(0, 0, minimapCanvas.width, minimapCanvas.height);
+  minimapCtx.strokeStyle = "rgba(255, 255, 255, 0.8)"; // White border
+  minimapCtx.lineWidth = 3; // Border width
+  minimapCtx.strokeRect(0, 0, minimapCanvas.width, minimapCanvas.height);
+
   // Draw the player's ship on the minimap
   minimapCtx.fillStyle = player.color;
   minimapCtx.fillRect(player.x * scaleX, player.y * scaleY, dotSize, dotSize);
@@ -206,7 +213,7 @@ export function drawMinimapPowerups(globalPowerUps, worldWidth, worldHeight) {
   const powerupSize = 3; // Smaller size for powerups on the minimap
   const scaleX = (minimapCanvas.width - powerupSize) / worldWidth; // Adjust scale
   const scaleY = (minimapCanvas.height - powerupSize) / worldHeight; // Adjust scale
-  minimapCtx.fillStyle = minimapCtx.fillRect(0, 0, minimapCanvas.width, minimapCanvas.heightcia);
+ 
   // Draw each powerup on the minimap
   globalPowerUps.forEach((powerup) => {
     minimapCtx.fillStyle = powerup.color;
@@ -219,17 +226,20 @@ export function renderPowerupLevels(ctx, player, otherPlayers) {
   const textHeight = 75; // Adjust this to the size of your text
   const gap = 16; // Gap between lines
   ctx.font = "14px Arial";
-  const myPowerupText = `My Powerups: ${player.powerUps}`;
+  let textWidth = ctx.measureText(player.name).width;
+  const myPowerupText = `${player.name}: ${player.powerUps}`;
   ctx.fillStyle = player.color;
   ctx.textAlign = "start";
-  ctx.fillText(myPowerupText, 115.5, topGap - textHeight);
+  ctx.fillText(myPowerupText, 199.5 - textWidth * 0.99, topGap - textHeight);
 
   // Draw other players' powerups
   otherPlayers.forEach((player, index) => {
-    const playerPowerupText = `Player ${player.id.slice(0, 7)} Powerups: ${player.powerUps}`; // Showing only the first 7 digits of id for readability
+    // const playerPowerupText = `Player ${player.id.slice(0, 7)} Powerups: ${player.powerUps}`; // Showing only the first 7 digits of id for readability
+    const playerPowerupText = `${player.name}: ${player.powerUps}`; 
+    let textWidth = ctx.measureText(player.name).width;
     const y = topGap - textHeight + (1 + index) * gap; // calculate y position for each player's text
     ctx.fillStyle = player.color; // individual ship color for each player
-    ctx.fillText(playerPowerupText, 40, y);
+    ctx.fillText(playerPowerupText, 200 - textWidth, y);
   });
 }
 
@@ -409,7 +419,6 @@ export function drawNameEntry(canvas, ctx, name) {
 
   ctx.fillStyle = "white";
   let enterNameText = "Enter Your Name";
-  let textWidth = ctx.measureText(enterNameText).width;
   // Draw title
   ctx.fillText(enterNameText, canvas.width / 2, 50);
 
