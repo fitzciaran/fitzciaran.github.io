@@ -29,10 +29,24 @@ sound effects
 review acceleration
 need some forground objects to get sense of speed
 reset camera on new game (check how it's done the first time)
+simple lobby system could just be selecting from a list of lobbies and that sets which array of id's you use - from there it works the same p2p as now
 
 When a ship collides with one of these the ship should get slightly bigger. 
 We'll need to keep track of all ships size
 When ships collide with each other the biggest should "win" and the smaller should be removed from the game for 3 seconds before respawning at a random location 
+or the front of the ship stabs?
+show the game at all times with name entry and ship selection together
+kill bonus 
+some kind of win conidtion
+keep camera more centered need to keep visability
+shrinking level - could be all around or could be left to right to require progress
 
 some kind of share option - a la wordle 
 instead of p2p maybe make one player the host, first check for existing hosts if not become host and listen... kinda the same but one player gets the host role and controls state
+    this is master peer lets try this
+    todo continue work on this.
+might have to do a proper server for master game state
+on screen arrow to direct to offscreen oppoents
+draw oppoents name on craft in the world
+color select on craft select
+

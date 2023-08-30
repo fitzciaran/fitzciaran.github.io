@@ -54,8 +54,8 @@ let fixedDeltaTime = 1 / 60; // 60 updates per second
 export class Player {
   constructor(id = null, x = null, y = null, powerUps = 0, color = null, angle = 0, pilot = "", name = "", worldDimensions, colors) {
     this.id = id;
-    this.x = x !== null ? x : 100 + Math.random() * (worldDimensions.width - 200);
-    this.y = y !== null ? y : 100 + Math.random() * (worldDimensions.height - 200);
+    this.x = x !== null ? x : 600 + Math.random() * (worldDimensions.width - 1200);
+    this.y = y !== null ? y : 600 + Math.random() * (worldDimensions.height - 1200);
     this.powerUps = powerUps;
     this.color = color !== null ? color : colors[Math.floor(Math.random() * colors.length)];
     this.angle = angle;
@@ -217,16 +217,22 @@ function updatePlayerPosition(deltaTime) {
   player.y += vel.y * deltaTime;
 }
 
-function updateGame(deltaTime) {
+function updateGame(deltaTime, playerActive) {
   //scale deltaTime
   deltaTime *= 100;
-  updateCamera();
-  const playerAngleData = updatePlayerAngle();
-  updatePlayerVelocity(playerAngleData, deltaTime);
-  bouncePlayer();
-  updatePlayerPosition(deltaTime);
-  checkPowerupCollision(player, globalPowerUps, connections);
-  drawScene(player, otherPlayers, ctx, camX, camY, worldDimensions, canvas, shipPoints, globalPowerUps);
+  if (playerActive) {
+    updateCamera();
+    const playerAngleData = updatePlayerAngle();
+    updatePlayerVelocity(playerAngleData, deltaTime);
+    bouncePlayer();
+    updatePlayerPosition(deltaTime);
+    checkPowerupCollision(player, globalPowerUps, connections);
+  }
+  if (playerActive) {
+    drawScene(player, otherPlayers, ctx, camX, camY, worldDimensions, canvas, shipPoints, globalPowerUps);
+  } else {
+    drawScene(null, otherPlayers, ctx, camX, camY, worldDimensions, canvas, shipPoints, globalPowerUps);
+  }
   updateConnections(player, otherPlayers, connections);
 
   if (checkWinner(player, otherPlayers, connections, ctx, canvas)) {
@@ -238,6 +244,7 @@ function setupPilots(canvas, ctx) {
   pilot1.image.src = "images/pilot1.gif";
   pilot2.image.src = "images/pilot2.gif";
   addPilotEventListners(canvas, ctx);
+  pilot1.selected = true;
 }
 
 function updatePilot() {
@@ -248,7 +255,7 @@ function updateName() {
   const minimapCanvas = document.getElementById("minimapCanvas");
   const minimapCtx = minimapCanvas.getContext("2d");
   minimapCtx.clearRect(0, 0, minimapCanvas.width, minimapCanvas.height);
-  drawNameEntry(canvas, ctx, player.name);
+  drawNameEntry(canvas, ctx, player.name,canvas.width / 2 - 100,80);
 }
 
 function updateWinState() {
@@ -278,6 +285,7 @@ export function setGameState(newState) {
   }
 
   if (newState === GameState.INTRO && prevGameState !== GameState.INTRO) {
+    setupPilots(canvas, ctx);
     setupNameEventListeners(window);
     updateName();
   }
@@ -297,14 +305,16 @@ export function setGameState(newState) {
   }
 
   if (newState === GameState.GAME && prevGameState !== GameState.GAME) {
-    fixedDeltaTime = 1 / 60;
-    setupGameEventListeners(window);
+    // fixedDeltaTime = 1 / 60;
+    // setupGameEventListeners(window);
     setTimeout(() => connectToPeers(player, otherPlayers, peerIds, connections, globalPowerUps), 1000);
+    removePilotsEventListeners(canvas);
   }
 
   if (newState !== GameState.GAME && prevGameState === GameState.GAME) {
-    fixedDeltaTime = 1 / 30; //30 fps is plenty if not in game
-    removeGameStateEventListeners(window);
+    //for now moving to showing game underneath all the time
+    //  fixedDeltaTime = 1 / 30; //30 fps is plenty if not in game
+    //  removeGameStateEventListeners(window);
     player.resetState(true);
     centerCameraOnPlayer();
     globalPowerUps = [];
@@ -319,15 +329,22 @@ function update() {
   accumulator += deltaTime;
 
   while (accumulator >= fixedDeltaTime) {
+    if (gameState != GameState.GAME) {
+      //since we show the ongoing game at all times alway do this
+      updateGame(fixedDeltaTime, false);
+    }
     if (gameState === GameState.INTRO) {
+      updateName();
       drawNameCursor(canvas, ctx, player.name);
+      updatePilot();
     } else if (gameState === GameState.PILOT_SELECT) {
       updatePilot();
     } else if (gameState === GameState.GAME) {
-      updateGame(fixedDeltaTime);
+      updateGame(fixedDeltaTime, true);
     } else if (gameState === GameState.FINISHED) {
       updateWinState();
     }
+
     accumulator -= fixedDeltaTime;
   }
 
@@ -353,5 +370,6 @@ window.addEventListener("load", function () {
   setupPilotsImages(canvas);
 
   update();
+  setupGameEventListeners(window);
   setGameState(GameState.INTRO);
 });

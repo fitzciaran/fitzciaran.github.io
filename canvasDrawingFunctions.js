@@ -157,10 +157,11 @@ export function drawMinimap(player, otherPlayers, worldWidth, worldHeight) {
   minimapCtx.lineWidth = 3; // Border width
   minimapCtx.strokeRect(0, 0, minimapCanvas.width, minimapCanvas.height);
 
-  // Draw the player's ship on the minimap
-  minimapCtx.fillStyle = player.color;
-  minimapCtx.fillRect(player.x * scaleX, player.y * scaleY, dotSize, dotSize);
-
+  if (player != null) {
+    // Draw the player's ship on the minimap
+    minimapCtx.fillStyle = player.color;
+    minimapCtx.fillRect(player.x * scaleX, player.y * scaleY, dotSize, dotSize);
+  }
   // Draw other players on the minimap
   otherPlayers.forEach((player) => {
     minimapCtx.fillStyle = player.color;
@@ -213,7 +214,7 @@ export function drawMinimapPowerups(globalPowerUps, worldWidth, worldHeight) {
   const powerupSize = 3; // Smaller size for powerups on the minimap
   const scaleX = (minimapCanvas.width - powerupSize) / worldWidth; // Adjust scale
   const scaleY = (minimapCanvas.height - powerupSize) / worldHeight; // Adjust scale
- 
+
   // Draw each powerup on the minimap
   globalPowerUps.forEach((powerup) => {
     minimapCtx.fillStyle = powerup.color;
@@ -226,17 +227,23 @@ export function renderPowerupLevels(ctx, player, otherPlayers) {
   const textHeight = 75; // Adjust this to the size of your text
   const gap = 16; // Gap between lines
   ctx.font = "14px Arial";
-  let textWidth = ctx.measureText(player.name).width;
-  const myPowerupText = `${player.name}: ${player.powerUps}`;
-  ctx.fillStyle = player.color;
-  ctx.textAlign = "start";
-  ctx.fillText(myPowerupText, 199.5 - textWidth * 0.99, topGap - textHeight);
 
+  if (player != null) {
+    let textWidth = ctx.measureText(player.name).width;
+    const myPowerupText = `${player.name}: ${player.powerUps}`;
+    ctx.fillStyle = player.color;
+    ctx.textAlign = "start";
+    ctx.fillText(myPowerupText, 199.5 - textWidth * 0.99, topGap - textHeight);
+  }
   // Draw other players' powerups
   otherPlayers.forEach((player, index) => {
     // const playerPowerupText = `Player ${player.id.slice(0, 7)} Powerups: ${player.powerUps}`; // Showing only the first 7 digits of id for readability
-    const playerPowerupText = `${player.name}: ${player.powerUps}`; 
-    let textWidth = ctx.measureText(player.name).width;
+    let playerName = player.name;
+    if (playerName == null || playerName == "") {
+      playerName = "Unknown";
+    }
+    const playerPowerupText = playerName + `: ${player.powerUps}`;
+    let textWidth = ctx.measureText(playerName).width;
     const y = topGap - textHeight + (1 + index) * gap; // calculate y position for each player's text
     ctx.fillStyle = player.color; // individual ship color for each player
     ctx.fillText(playerPowerupText, 200 - textWidth, y);
@@ -274,9 +281,12 @@ export function drawScene(player, otherPlayers, ctx, camX, camY, worldDimensions
   drawPowerups(globalPowerUps, ctx, camX, camY);
   drawMinimap(player, otherPlayers, worldDimensions.width, worldDimensions.height);
   drawMinimapPowerups(globalPowerUps, worldDimensions.width, worldDimensions.height);
-  drawRotatedShip(ctx, camX, camY, player.x, player.y, player.angle, shipPoints, player.color);
+  if (player != null) {
+    drawRotatedShip(ctx, camX, camY, player.x, player.y, player.angle, shipPoints, player.color);
+
+    renderMyId(ctx, player);
+  }
   renderPowerupLevels(ctx, player, otherPlayers);
-  renderMyId(ctx, player);
 }
 
 export const loreTablet = {
@@ -292,9 +302,9 @@ let lineCount = 0;
 let maxCharsPerLine = 20; // Adjust this value based on the width of your tablet
 
 export function drawPilots(canvas, ctx) {
-  // Draw background
+  // or now don't Draw background let the game show in the background
   ctx.fillStyle = "black";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  // ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   // Draw title
   ctx.font = "30px Arial";
@@ -402,37 +412,76 @@ export function setupPilotsImages(canvas) {
   loreTablet.y = canvas.height / 2 - 100;
 }
 
-export function drawNameEntry(canvas, ctx, name) {
+export function drawNameEntry(canvas, ctx, name, x, y) {
   // Reset context to preserve consistency when this function is called
   ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset the canvas transform
-  ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
+  // ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
   ctx.textAlign = "center";
   // Reset fill and stroke styles
   ctx.fillStyle = "black";
   ctx.strokeStyle = "black";
 
   // Reset font
-  ctx.font = "30px Arial";
+  ctx.font = "12px Arial";
 
   // Draw background
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  // ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   ctx.fillStyle = "white";
   let enterNameText = "Enter Your Name";
   // Draw title
-  ctx.fillText(enterNameText, canvas.width / 2, 50);
+  ctx.fillText(enterNameText, canvas.width / 2, y + 15);
 
   // Draw name entry box
   ctx.strokeStyle = "white";
-  ctx.strokeRect(canvas.width / 2 - 100, canvas.height / 2 - 50, 200, 100);
+  ctx.strokeRect(x, y, 200, 100);
   ctx.textAlign = "start";
   // Draw player's name
   ctx.font = "20px Arial";
-  ctx.fillText(name, canvas.width / 2 - 50, canvas.height / 2);
-  drawNameCursor(canvas, ctx, name);
+  ctx.fillText(name, x + 50, y + 50);
+  drawNameCursor(canvas, ctx, name, x + ctx.measureText(name).width + 50.5, y + 34);
+
+  // Draw play button
+  let buttonX = x + 50;
+  let buttonY = y + 70;
+  let buttonWidth = 100;
+  let buttonHeight = 20;
+  let radius = 10; // Radius for rounded corners
+
+  // Create gradient
+  let gradient;
+  try{
+  gradient = ctx.createLinearGradient(buttonX, buttonY, buttonX, buttonY + buttonHeight);
+  gradient.addColorStop(0, "green");
+  gradient.addColorStop(1, "darkgreen");
+
+  ctx.fillStyle = gradient;
+  }catch(Exception){
+    console.log("gradient issue");
+  }
+  // Draw rounded rectangle
+  ctx.beginPath();
+  ctx.moveTo(buttonX + radius, buttonY);
+  ctx.lineTo(buttonX + buttonWidth - radius, buttonY);
+  ctx.arcTo(buttonX + buttonWidth, buttonY, buttonX + buttonWidth, buttonY + radius, radius);
+  ctx.lineTo(buttonX + buttonWidth, buttonY + buttonHeight - radius);
+  ctx.arcTo(buttonX + buttonWidth, buttonY + buttonHeight, buttonX + buttonWidth - radius, buttonY + buttonHeight, radius);
+  ctx.lineTo(buttonX + radius, buttonY + buttonHeight);
+  ctx.arcTo(buttonX, buttonY + buttonHeight, buttonX, buttonY + buttonHeight - radius, radius);
+  ctx.lineTo(buttonX, buttonY + radius);
+  ctx.arcTo(buttonX, buttonY, buttonX + radius, buttonY, radius);
+  ctx.closePath();
+  ctx.fill();
+
+  // Write "Play" on the button
+  ctx.fillStyle = "white";
+  ctx.font = "12px Arial";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("Play", buttonX + buttonWidth / 2, buttonY + buttonHeight / 2);
 }
 
-export function drawNameCursor(canvas, ctx, name) {
+export function drawNameCursor(canvas, ctx, name, x, y) {
   var forDebug = ctx.measureText(name).width;
   // Draw text cursor
   if (cursorBlink) {
@@ -440,6 +489,6 @@ export function drawNameCursor(canvas, ctx, name) {
   } else {
     ctx.fillStyle = "black";
   }
-  ctx.fillRect(canvas.width / 2 - 50 + ctx.measureText(name).width, canvas.height / 2 - 17, 2, 20);
+  ctx.fillRect(x, y, 2, 20);
   ctx.fillStyle = "pink";
 }
