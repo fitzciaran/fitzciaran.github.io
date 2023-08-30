@@ -1,5 +1,5 @@
-import { resetPowerLevels } from "./gameLogic.js";
-import { setGlobalPowerUps, Player } from "./astroids.js";
+import { resetPowerLevels,updateEnemies, updatePowerups,pointsToWin,checkWinner } from "./gameLogic.js";
+import { setGlobalPowerUps, Player, player, otherPlayers } from "./astroids.js";
 
 export let everConnected = false;
 export let connections = [];
@@ -13,13 +13,14 @@ export let peerIds = [
   "b6ef962d-14a8-40e4-8a1e-226a438a345d",
 ];
 
-let masterPeerId = peerIds[0]; // The first peer is the master
+let masterPeerId = peerIds[0]; // start off with the first peer as the master
 
 shuffleArray(peerIds);
 let index = 0;
 let handleCounter = 0;
 let sendCounter = 0;
 let peer;
+let connectedPeers = [];
 
 export function sendPlayerStates(player, connections) {
   // Check if connection is open before sending data
@@ -33,6 +34,7 @@ export function sendPlayerStates(player, connections) {
     powerUps: player.powerUps,
     name: player.name,
     pilot: player.pilot,
+    isMaster: player.isMaster,
   };
   //console.log("Sending data:", data); // Log any data sent
   connections.forEach((conn) => {
@@ -48,12 +50,14 @@ export function sendPlayerStates(player, connections) {
   });
 }
 
-export function sendGameState(connections) {
+export function sendGameState(globalPowerUps, connections) {
   // Send game state to other player
   let data = {
     gameState: true,
+    globalPowerUps: globalPowerUps,
     //enemies and stuff here
   };
+ 
   //console.log("Sending data:", data); // Log any data sent
   connections.forEach((conn) => {
     if (conn && conn.open) {
@@ -69,15 +73,16 @@ export function sendGameState(connections) {
 }
 
 export function sendPowerups(globalPowerUps, connections) {
-  let powerUpData = {
-    globalPowerUps: globalPowerUps,
-  };
+  // let powerUpData = {
+  //   globalPowerUps: globalPowerUps,
+  // };
 
-  connections.forEach((conn) => {
-    if (conn && conn.open) {
-      conn.send(powerUpData);
-    }
-  });
+  // connections.forEach((conn) => {
+  //   if (conn && conn.open) {
+  //     conn.send(powerUpData);
+  //   }
+  // });
+  console.log("tried old send powerups");
 }
 
 // Wait for a short delay to allow time for the connections to be attempted
@@ -87,10 +92,29 @@ export function attemptConnections(player, otherPlayers, peerIds, connections, g
     return;
   }
 
+  // peer.on("connection", function (conn) {
+  //   console.log("Connection made with peer:", conn.peer);
+  //   addConnectionHandlers(player, otherPlayers, conn, connections, globalPowerUps);
+  //   everConnected = true;
+  // });
+
   peer.on("connection", function (conn) {
     console.log("Connection made with peer:", conn.peer);
-    addConnectionHandlers(player, otherPlayers, conn, connections, globalPowerUps);
     everConnected = true;
+    //todo not sure if we need to move out this below line
+    addConnectionHandlers(player, otherPlayers, conn, connections, globalPowerUps);
+    if (!connectedPeers.includes(conn.peer)) {
+      connectedPeers.push(conn.peer);
+    }
+    connectedPeers.sort();
+
+    masterPeerId = chooseNewMasterPeer(player, otherPlayers);
+    conn.on("close", function () {
+      console.log("Connection closed with peer:", conn.peer);
+      connectedPeers = connectedPeers.filter((id) => id !== conn.peer);
+      connectedPeers.sort();
+      masterPeerId = chooseNewMasterPeer(player, otherPlayers);
+    });
   });
 
   peer.on("error", function (err) {
@@ -101,12 +125,16 @@ export function attemptConnections(player, otherPlayers, peerIds, connections, g
     console.log("Disconnected from server");
 
     // If the master peer has disconnected, choose a new master peer
-    if (player.id === masterPeerId) {
-      masterPeerId = chooseNewMasterPeer();
-    }
+    // if (isPlayerMasterPeer(player)) {
+    masterPeerId = chooseNewMasterPeer(player, otherPlayers);
+    //  }
   });
 
   connectToPeers(player, otherPlayers, peerIds, connections, globalPowerUps);
+}
+
+export function isPlayerMasterPeer(player) {
+  return player.id === masterPeerId;
 }
 
 export function connectToPeers(player, otherPlayers, peerIds, connections, globalPowerUps) {
@@ -148,6 +176,10 @@ export function tryNextId(player, peerIds) {
   peer.on("open", function () {
     // If the ID is already in use, this will not be called
     player.id = id;
+    //when we connect initially we set ourselves as master
+    masterPeerId = id;
+    // Add the local player's ID to the connectedPeers array
+    connectedPeers.push(id);
     console.log("My peer ID is: " + id);
   });
 
@@ -180,7 +212,8 @@ function addConnectionHandlers(player, otherPlayers, conn, connections, globalPo
     resetPowerLevels(player, otherPlayers, connections);
 
     // Send the current powerups to the new peer
-    sendPowerups(globalPowerUps, connections);
+    //don't need to under master peer system
+    //sendPowerups(globalPowerUps, connections);
   });
 
   conn.on("error", function (err) {
@@ -200,6 +233,9 @@ function addConnectionHandlers(player, otherPlayers, conn, connections, globalPo
     } else {
       console.log("Received unexpected data:", data);
     }
+    // If there is a conflict between the local game state and the received game state,
+    // update the local game state to match the received game state
+    resolveConflicts(data, player, globalPowerUps, otherPlayers);
   });
 }
 
@@ -221,6 +257,9 @@ function handleData(data, otherPlayers, globalPowerUps) {
   // If the player is not found, add them to the array
   else if (data.id) {
     otherPlayers.push(data);
+    if(data.powerUps > pointsToWin){
+      checkWinner(player, otherPlayers, connections);
+    }
   }
   // Only update the powerups if the received data contains different powerups
   if (data.globalPowerUps && JSON.stringify(globalPowerUps) !== JSON.stringify(data.globalPowerUps)) {
@@ -249,11 +288,12 @@ export function setPeer(newPeer) {
   peer = newPeer;
 }
 
+//todo this is now also updating game if master peer, need to separate this
 export function updateConnections(player, otherPlayers, connections) {
   if (everConnected) {
     sendPlayerStates(player, connections);
-    if (player.id === masterPeerId) {
-      updateGame();
+    if (isPlayerMasterPeer(player)) {
+      masterPeerUpdateGame;
     }
   } else {
     connections.forEach((conn, index) => {
@@ -274,23 +314,37 @@ export function getPlayerId() {
   return id;
 }
 
-export function updateGame() {
+export function masterPeerUpdateGame() {
   // This peer is the master, so it runs the game logic for shared objects
   updateEnemies();
   updatePowerups();
-
+  
   // Send the game state to all other peers
   sendGameState(connections);
 }
 
-function updateEnemies() {
-  // Update the positions, velocities, etc. of the enemies
+function chooseNewMasterPeer(player, otherPlayers) {
+  masterPeerId = connectedPeers[0];
+  if (masterPeerId === player.id) {
+    player.setPlayerIsMaster(true);
+  } else {
+    player.setPlayerIsMaster(false);
+  }
+  otherPlayers.forEach((otherPlayer) => {
+    if (masterPeerId === otherPlayer.id) {
+      otherPlayer.setPlayerIsMaster(true);
+    } else {
+      otherPlayer.setPlayerIsMaster(false);
+    }
+  });
+
+  return masterPeerId;
 }
 
-function updatePowerups() {
-  // Update the positions, velocities, etc. of the powerups
-}
-function chooseNewMasterPeer() {
-  // Choose a new master peer (e.g., the peer with the lowest ID)
-  return Math.min(...peerIds);
+function resolveConflicts(data, player, powerups, otherPlayers) {
+  // If there is a conflict between the local game state and the received game state,
+  // update the local game state to match the received game state
+  if(player.id == null){
+    tryNextId(player, peerIds);
+  }
 }

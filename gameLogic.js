@@ -1,7 +1,8 @@
-import { sendPlayerStates, sendPowerups } from "./connectionHandlers.js";
-import { setGameState,GameState } from "./astroids.js";
+import { sendPlayerStates, sendGameState, isPlayerMasterPeer } from "./connectionHandlers.js";
+import { setGameState, GameState,player,setGlobalPowerUps,getGlobalPowerUps } from "./astroids.js";
 //finish game after 2 for easier testing the finish
-let pointsToWin = 2;
+export let pointsToWin = 2;
+let maxPowerups = 10;
 export let endGameMessage = "";
 export let gameWon = false;
 export const pilot1 = {
@@ -24,7 +25,7 @@ export const pilot2 = {
   lore: "Bumble, the hero nobody asked for, and who just won't go away. He's got a unique talent for tripping over absolutely nothing and a flying skill that's... well, let's just call it 'creative'. He might not have Orion's strength, or any gazelle's grace, or even the reflexes of a half-asleep sloth, but boy, does he have determination. And a knack for surviving situations he really shouldn't. Bumble is proof that some people have no potential.",
 };
 
-export function checkWinner(player, otherPlayers, connections, ctx, canvas) {
+export function checkWinner(player, otherPlayers, connections) {
   if (player.powerUps >= pointsToWin) {
     sendPlayerStates(player, connections);
     setGameState(GameState.FINISHED);
@@ -45,8 +46,11 @@ export function checkWinner(player, otherPlayers, connections, ctx, canvas) {
 }
 
 export function generatePowerups(globalPowerUps, connections, worldWidth, worldHeight, colors) {
-  // Check if there are less than 2 powerups
-  if (globalPowerUps.length < 2) {
+  if (!isPlayerMasterPeer(player)) {
+    return;
+  }
+  // Check if there are less than max powerups powerups
+  if (globalPowerUps.length < maxPowerups) {
     // Generate a new dot with random x and y within the world
     let powerup = {
       x: (Math.random() * 0.8 + 0.1) * worldWidth,
@@ -54,13 +58,17 @@ export function generatePowerups(globalPowerUps, connections, worldWidth, worldH
       color: colors[Math.floor(Math.random() * colors.length)],
     };
     globalPowerUps.push(powerup);
-
+    setGlobalPowerUps(globalPowerUps);
     // Send the powerups every time you generate one
-    sendPowerups(globalPowerUps, connections);
+    // sendPowerups(globalPowerUps, connections);
+    sendGameState(globalPowerUps, connections);
   }
 }
 
 export function checkPowerupCollision(playerToCheck, globalPowerUps, connections) {
+  // if (!isPlayerMasterPeer(player)) {
+  //   return;
+  // }
   for (let i = 0; i < globalPowerUps.length; i++) {
     let dx = playerToCheck.x - globalPowerUps[i].x;
     let dy = playerToCheck.y - globalPowerUps[i].y;
@@ -70,7 +78,9 @@ export function checkPowerupCollision(playerToCheck, globalPowerUps, connections
       // assuming the radius of both ship and powerup is 10
       playerToCheck.powerUps += 1;
       globalPowerUps.splice(i, 1);
-      sendPowerups(globalPowerUps, connections);
+      // sendPowerups(globalPowerUps, connections);
+      setGlobalPowerUps(globalPowerUps);
+      sendGameState(globalPowerUps, connections);
       break; // exit the loop to avoid possible index errors
     }
   }
@@ -95,4 +105,14 @@ function shipHitsBorder(x, y) {
 
 export function setGameWon(won) {
   gameWon = won;
+}
+
+export function updateEnemies() {
+  // Update the positions, velocities, etc. of the enemies
+}
+
+export function updatePowerups() {
+  // Update the positions, velocities, etc. of the powerups
+
+  //setGlobalPowerUps(getGlobalPowerUps());
 }

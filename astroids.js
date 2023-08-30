@@ -1,6 +1,6 @@
 import { setupCanvas, drawScene, drawPilots, setupPilotsImages, drawNameEntry, drawWinnerMessage, drawNameCursor } from "./canvasDrawingFunctions.js";
-import { checkWinner, generatePowerups, checkPowerupCollision, endGameMessage, setGameWon, resetPowerLevels, pilot1, pilot2 } from "./gameLogic.js";
-import { peerIds, connections, tryNextId, sendPowerups, attemptConnections, connectToPeers, updateConnections } from "./connectionHandlers.js";
+import { checkWinner, generatePowerups, checkPowerupCollision, endGameMessage, setGameWon, resetPowerLevels, pilot1, pilot2,updateEnemies, updatePowerups } from "./gameLogic.js";
+import { peerIds, connections, tryNextId, sendPowerups, attemptConnections, connectToPeers, sendPlayerStates,updateConnections } from "./connectionHandlers.js";
 import {
   keys,
   handleInputEvents,
@@ -27,8 +27,7 @@ const shipPoints = [
 const acceleration = 0.25;
 let vel = { x: 0, y: 0 };
 export let distanceFactor;
-let otherPlayers = [];
-let globalPowerUps = [];
+
 let currentSpeed = 0;
 let lastTime = Date.now();
 
@@ -63,10 +62,13 @@ export class Player {
     this.name = name;
     this.worldDimensions = worldDimensions;
     this.colors = colors;
+    this.lives = 1;
+    this.isMaster = true;
   }
 
   resetState(keepName) {
-    this.id = null;
+    //don't think we ever want to abandon id
+    //this.id = null;
     this.x = 100 + Math.random() * (this.worldDimensions.width - 200);
     this.y = 100 + Math.random() * (this.worldDimensions.height - 200);
     this.powerUps = 0;
@@ -88,18 +90,29 @@ export class Player {
   setPlayerName(newName) {
     this.name = newName;
   }
+
+  getPlayerIsMaster() {
+    return this.isMaster;
+  }
+
+  setPlayerIsMaster(isMaster) {
+    this.isMaster = isMaster;
+  }
 }
 
 export const player = new Player(null, null, null, 0, null, 0, "", "", worldDimensions, colors);
-
+export let otherPlayers = [];
+let globalPowerUps = [];
 export let camX = player.x - canvas.width / 2;
 export let camY = player.y - canvas.height / 2;
 //const radius = 50;
 //const maxDistance = Math.sqrt((canvas.width / 2) ** 2 + (canvas.height / 2) ** 2);
 const bounceFactor = 1.5;
 const offset = 1;
-const camSpeedX = 0.045;
-const camSpeedY = 0.08;
+// const camSpeedX = 0.045;
+// const camSpeedY = 0.08;
+const camSpeedX = 0.065;
+const camSpeedY = 0.11;
 const minBounceSpeed = 5;
 //const frameRate = 1000 / 60; // Frame rate in ms
 
@@ -226,16 +239,34 @@ function updateGame(deltaTime, playerActive) {
     updatePlayerVelocity(playerAngleData, deltaTime);
     bouncePlayer();
     updatePlayerPosition(deltaTime);
-    checkPowerupCollision(player, globalPowerUps, connections);
+    
   }
+
+  if (playerActive) {
+    // Detect collisions with powerups or other ships
+    detectCollisions(player, globalPowerUps, otherPlayers);
+
+    if (player.getPlayerIsMaster()) {
+      // This peer is the master, so it runs the game logic for shared objects
+      updateEnemies();
+      updatePowerups();
+
+      // The master peer also detects collisions between all ships and powerups
+      otherPlayers.forEach((otherPlayer) => {
+        detectCollisions(otherPlayer, globalPowerUps, otherPlayers);
+      });
+    }
+  }
+
   if (playerActive) {
     drawScene(player, otherPlayers, ctx, camX, camY, worldDimensions, canvas, shipPoints, globalPowerUps);
   } else {
     drawScene(null, otherPlayers, ctx, camX, camY, worldDimensions, canvas, shipPoints, globalPowerUps);
   }
+  
   updateConnections(player, otherPlayers, connections);
 
-  if (checkWinner(player, otherPlayers, connections, ctx, canvas)) {
+  if (checkWinner(player, otherPlayers, connections)) {
     setGameState(GameState.FINISHED);
   }
 }
@@ -255,7 +286,7 @@ function updateName() {
   const minimapCanvas = document.getElementById("minimapCanvas");
   const minimapCtx = minimapCanvas.getContext("2d");
   minimapCtx.clearRect(0, 0, minimapCanvas.width, minimapCanvas.height);
-  drawNameEntry(canvas, ctx, player.name,canvas.width / 2 - 100,80);
+  drawNameEntry(canvas, ctx, player.name, canvas.width / 2 - 100, 80);
 }
 
 function updateWinState() {
@@ -265,6 +296,10 @@ function updateWinState() {
 
 export function setGlobalPowerUps(newPowerUps) {
   globalPowerUps = newPowerUps;
+}
+
+export function getGlobalPowerUps() {
+  return globalPowerUps;
 }
 export function getGameState() {
   return gameState;
@@ -296,11 +331,16 @@ export function setGameState(newState) {
 
   if (newState === GameState.FINISHED && prevGameState !== GameState.FINISHED) {
     setupWinStateEventListeners(window);
+    if (player.getPlayerIsMaster()) {
+      sendPlayerStates(player, connections);
+    }
   }
 
   if (newState !== GameState.FINISHED && prevGameState === GameState.FINISHED) {
     resetPowerLevels(player, otherPlayers, connections);
     setGameWon(false);
+    pilot2.selected = false;
+    pilot1.selected = true;
     removeWinStateEventListeners(window);
   }
 
@@ -344,7 +384,6 @@ function update() {
     } else if (gameState === GameState.FINISHED) {
       updateWinState();
     }
-
     accumulator -= fixedDeltaTime;
   }
 
@@ -361,7 +400,9 @@ window.addEventListener("load", function () {
   setTimeout(() => connectToPeers(player, otherPlayers, peerIds, connections, globalPowerUps), 6000);
 
   setInterval(() => generatePowerups(globalPowerUps, connections, worldDimensions.width, worldDimensions.height, colors), 3000);
-  setInterval(() => sendPowerups(globalPowerUps, connections), 3000);
+
+  //don;t need to under master system
+  //setInterval(() => sendPowerups(globalPowerUps, connections), 3000);
 
   /* END CONNECTION HANDLERS  */
 
@@ -373,3 +414,10 @@ window.addEventListener("load", function () {
   setupGameEventListeners(window);
   setGameState(GameState.INTRO);
 });
+
+//probably move this to game logic
+function detectCollisions(player, globalPowerUps, otherPlayers) {
+  // Detect collisions between the player's ship and the powerups or other ships
+  // If a collision is detected, update the game state accordingly
+  checkPowerupCollision(player, globalPowerUps, connections);
+}

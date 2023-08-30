@@ -124,7 +124,7 @@ export function addPilotEventListners(canvas, ctx) {
       }
 
       // Redraw pilots with new selection state
-      drawPilots(canvas, ctx);
+      //drawPilots(canvas, ctx);
     }
   };
 
@@ -143,6 +143,7 @@ export function addPilotEventListners(canvas, ctx) {
     if (event.clientX > buttonX && event.clientX < buttonX + buttonWidth && event.clientY > buttonY && event.clientY < buttonY + buttonHeight) {
       // Play button has been clicked
       selectPilot();
+      setGameState(GameState.GAME);
     }
   };
 
@@ -162,7 +163,6 @@ function selectPilot() {
     if (pilot1.selected || pilot2.selected) {
       // If a pilot was selected, update the player object and change the game state to 'game'
       player.setPilot(pilotSelected);
-      setGameState(GameState.GAME);
     }
   }
 }
@@ -192,6 +192,7 @@ function handleNameKeyDown(event) {
     // setGameState(GameState.PILOT_SELECT);
     //setGameState(GameState.GAME);
     selectPilot();
+    setGameState(GameState.GAME);
   }
 
   if (player.getPlayerName().length >= max_player_name) {
@@ -199,7 +200,7 @@ function handleNameKeyDown(event) {
   }
 
   // Redraw name entry
-  drawNameEntry(getCanvas(), getCanvas().getContext("2d"), player.getPlayerName(), canvas.width / 2 - 100, 80);
+  drawNameEntry(getCanvas(), getCanvas().getContext("2d"), player.getPlayerName(), getCanvas().width / 2 - 100, 80);
 }
 
 export function handleNameKeyUp(event) {
@@ -210,7 +211,7 @@ export function handleNameKeyUp(event) {
 export function handleWinStateKeyDown(event) {
   // Check if the key pressed is enter
   if (event.key === "Enter") {
-    setGameState(GameState.INTRO);
+    setGameState(GameState.GAME);
   }
   if (event.key === "r") {
     setGameState(GameState.INTRO);
@@ -230,8 +231,8 @@ export function setupNameEventListeners(window) {
   window.addEventListener("keyup", handleNameKeyUp);
 }
 export function removeNameEventListeners(window) {
-  window.removeEventListener("mousemove", handleNameKeyDown);
-  window.removeEventListener("click", handleNameKeyUp);
+  window.removeEventListener("keydown", handleNameKeyDown);
+  window.removeEventListener("keyup", handleNameKeyUp);
 }
 
 export function setupGameEventListeners() {}

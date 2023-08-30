@@ -45,8 +45,10 @@ some kind of share option - a la wordle
 instead of p2p maybe make one player the host, first check for existing hosts if not become host and listen... kinda the same but one player gets the host role and controls state
     this is master peer lets try this
     todo continue work on this.
+    secret button to become master or to give up master status for testing
 might have to do a proper server for master game state
 on screen arrow to direct to offscreen oppoents
 draw oppoents name on craft in the world
 color select on craft select
-
+table of current leaders
+make ships bigger

@@ -1,5 +1,6 @@
 import { distanceFactor } from "./astroids.js";
 import { pilot1, pilot2 } from "./gameLogic.js";
+import { isPlayerMasterPeer } from "./connectionHandlers.js";
 
 let backLayer = new Image();
 let midBackLayer = new Image();
@@ -250,7 +251,7 @@ export function renderPowerupLevels(ctx, player, otherPlayers) {
   });
 }
 
-export function renderMyId(ctx, player) {
+export function renderDebugInfo(ctx, player) {
   ctx.textAlign = "start";
   const topGap = 100;
   const gap = 16; // Gap between lines
@@ -259,10 +260,14 @@ export function renderMyId(ctx, player) {
   const myIDText = `My ID: ${player.id}`;
   ctx.fillStyle = player.color;
   ctx.fillText(myIDText, 558, topGap - textHeight);
-
+  //also render some other useful debug stuff
   const myDistanceFactorText = `distanceFactor ${distanceFactor}`;
   ctx.fillStyle = player.color;
   ctx.fillText(myDistanceFactorText, 558, topGap + gap - textHeight);
+
+  const isMasterText = `is Master =  ${isPlayerMasterPeer(player)}`;
+  ctx.fillStyle = player.color;
+  ctx.fillText(isMasterText, 558, topGap + gap* 2 - textHeight);
 }
 
 export function drawWinnerMessage(ctx, canvas, message) {
@@ -270,6 +275,16 @@ export function drawWinnerMessage(ctx, canvas, message) {
   ctx.fillStyle = "white";
   ctx.textAlign = "center";
   ctx.fillText(message, canvas.width / 2, canvas.height / 2);
+
+  ctx.font = "20px Arial";
+  ctx.fillStyle = "white";
+  ctx.textAlign = "center";
+  ctx.fillText("press enter to play again", canvas.width / 2, canvas.height / 2 + 40);
+
+  ctx.font = "20px Arial";
+  ctx.fillStyle = "white";
+  ctx.textAlign = "center";
+  ctx.fillText("press r to return to main menu", canvas.width / 2, canvas.height / 2 + 65);
 }
 
 export function drawScene(player, otherPlayers, ctx, camX, camY, worldDimensions, canvas, shipPoints, globalPowerUps) {
@@ -283,8 +298,7 @@ export function drawScene(player, otherPlayers, ctx, camX, camY, worldDimensions
   drawMinimapPowerups(globalPowerUps, worldDimensions.width, worldDimensions.height);
   if (player != null) {
     drawRotatedShip(ctx, camX, camY, player.x, player.y, player.angle, shipPoints, player.color);
-
-    renderMyId(ctx, player);
+    renderDebugInfo(ctx, player);
   }
   renderPowerupLevels(ctx, player, otherPlayers);
 }
@@ -439,8 +453,9 @@ export function drawNameEntry(canvas, ctx, name, x, y) {
   // Draw player's name
   ctx.font = "20px Arial";
   ctx.fillText(name, x + 50, y + 50);
-  drawNameCursor(canvas, ctx, name, x + ctx.measureText(name).width + 50.5, y + 34);
-
+  if (document.hasFocus()) {
+    drawNameCursor(canvas, ctx, name, x + ctx.measureText(name).width + 50.5, y + 38);
+  }
   // Draw play button
   let buttonX = x + 50;
   let buttonY = y + 70;
@@ -450,13 +465,13 @@ export function drawNameEntry(canvas, ctx, name, x, y) {
 
   // Create gradient
   let gradient;
-  try{
-  gradient = ctx.createLinearGradient(buttonX, buttonY, buttonX, buttonY + buttonHeight);
-  gradient.addColorStop(0, "green");
-  gradient.addColorStop(1, "darkgreen");
+  try {
+    gradient = ctx.createLinearGradient(buttonX, buttonY, buttonX, buttonY + buttonHeight);
+    gradient.addColorStop(0, "green");
+    gradient.addColorStop(1, "darkgreen");
 
-  ctx.fillStyle = gradient;
-  }catch(Exception){
+    ctx.fillStyle = gradient;
+  } catch (Exception) {
     console.log("gradient issue");
   }
   // Draw rounded rectangle
@@ -487,8 +502,8 @@ export function drawNameCursor(canvas, ctx, name, x, y) {
   if (cursorBlink) {
     ctx.fillStyle = "white";
   } else {
-    ctx.fillStyle = "black";
+    ctx.fillStyle = "transparent";
   }
   ctx.fillRect(x, y, 2, 20);
-  ctx.fillStyle = "pink";
+  //ctx.fillStyle = "pink";
 }
