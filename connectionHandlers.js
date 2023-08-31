@@ -1,4 +1,4 @@
-import { resetPowerLevels,updateEnemies, updatePowerups,pointsToWin,checkWinner } from "./gameLogic.js";
+import { resetPowerLevels, updateEnemies, updatePowerups, pointsToWin, checkWinner, detectCollisions } from "./gameLogic.js";
 import { setGlobalPowerUps, Player, player, otherPlayers } from "./astroids.js";
 
 export let everConnected = false;
@@ -21,6 +21,18 @@ let handleCounter = 0;
 let sendCounter = 0;
 let peer;
 let connectedPeers = [];
+let connectionBackOffTime = 0;
+let firebaseConfig = {
+  apiKey: "AIzaSyAKNQY57EwlQ6TAf13wSx4eba4NK-MAN88",
+  authDomain: "p2p-game-test.firebaseapp.com",
+  projectId: "p2p-game-test",
+  storageBucket: "p2p-game-test.appspot.com",
+  messagingSenderId: "849363353418",
+  appId: "1:849363353418:web:13c04c4ac2ef99c88b4bb3",
+};
+firebase.initializeApp(firebaseConfig);
+
+let db = firebase.firestore();
 
 export function sendPlayerStates(player, connections) {
   // Check if connection is open before sending data
@@ -57,7 +69,7 @@ export function sendGameState(globalPowerUps, connections) {
     globalPowerUps: globalPowerUps,
     //enemies and stuff here
   };
- 
+
   //console.log("Sending data:", data); // Log any data sent
   connections.forEach((conn) => {
     if (conn && conn.open) {
@@ -72,31 +84,14 @@ export function sendGameState(globalPowerUps, connections) {
   });
 }
 
-export function sendPowerups(globalPowerUps, connections) {
-  // let powerUpData = {
-  //   globalPowerUps: globalPowerUps,
-  // };
-
-  // connections.forEach((conn) => {
-  //   if (conn && conn.open) {
-  //     conn.send(powerUpData);
-  //   }
-  // });
-  console.log("tried old send powerups");
-}
-
 // Wait for a short delay to allow time for the connections to be attempted
 export function attemptConnections(player, otherPlayers, peerIds, connections, globalPowerUps) {
   if (player.id === null) {
     console.log("All IDs are in use");
+    connectionBackOffTime = (connectionBackOffTime + 500) * 2;
+    setTimeout(() => tryNextId(player, peerIds), connectionBackOffTime);
     return;
   }
-
-  // peer.on("connection", function (conn) {
-  //   console.log("Connection made with peer:", conn.peer);
-  //   addConnectionHandlers(player, otherPlayers, conn, connections, globalPowerUps);
-  //   everConnected = true;
-  // });
 
   peer.on("connection", function (conn) {
     console.log("Connection made with peer:", conn.peer);
@@ -190,8 +185,11 @@ export function tryNextId(player, peerIds) {
       index++;
 
       tryNextId(player, peerIds);
+    } else if (err.type === "browser-incompatible") {
+      console.log("browser incompatible:", err);
+      //console.log("Other error:");
     } else {
-      // console.log("Other error:", err);
+      //console.log("Other error:", err);
       //console.log("Other error:");
     }
   });
@@ -206,6 +204,10 @@ function addConnectionHandlers(player, otherPlayers, conn, connections, globalPo
     if (!existingOtherPlayer) {
       let otherPlayerData = new Player(conn.peer, -200, -200, 0, "blue", 0, "", "", player.worldDimensions, player.colors);
       otherPlayers.push(otherPlayerData);
+      if (!connectedPeers.includes(otherPlayerData.id)) {
+        connectedPeers.push(otherPlayerData.id);
+      }
+      connectedPeers.sort();
     }
 
     // Reset all powerUps when a new peer connects
@@ -229,7 +231,7 @@ function addConnectionHandlers(player, otherPlayers, conn, connections, globalPo
   conn.on("data", function (data) {
     //console.log("Received data:", data);
     if ((data && data.id) || (data && data.globalPowerUps)) {
-      handleData(data, otherPlayers, globalPowerUps);
+      handleData(player, otherPlayers, globalPowerUps, data);
     } else {
       console.log("Received unexpected data:", data);
     }
@@ -239,26 +241,37 @@ function addConnectionHandlers(player, otherPlayers, conn, connections, globalPo
   });
 }
 
-function handleData(data, otherPlayers, globalPowerUps) {
+function handleData(player, otherPlayers, globalPowerUps, data) {
   //console.log("handling data:");
-  // Find the player in the array
-  let player = otherPlayers.find((player) => player.id === data.id);
+  // Find the otherPlayer in the array
+  let otherPlayer = otherPlayers.find((player) => player.id === data.id);
 
   // If the player is found, update their data
-  if (player) {
-    player.x = data.x;
-    player.y = data.y;
-    player.angle = data.angle;
-    player.color = data.color;
-    player.powerUps = data.powerUps;
-    player.name = data.name;
-    player.pilot = data.pilot;
+  if (otherPlayer) {
+    otherPlayer.x = data.x;
+    otherPlayer.y = data.y;
+    otherPlayer.angle = data.angle;
+    otherPlayer.color = data.color;
+    otherPlayer.powerUps = data.powerUps;
+    otherPlayer.name = data.name;
+    otherPlayer.pilot = data.pilot;
+    otherPlayer.isMaster = data.isMaster;
+
+    if (player.getPlayerIsMaster() && otherPlayer.isMaster) {
+      resolveConflicts(data, player, globalPowerUps, otherPlayers);
+    }
   }
   // If the player is not found, add them to the array
   else if (data.id) {
     otherPlayers.push(data);
-    if(data.powerUps > pointsToWin){
-      checkWinner(player, otherPlayers, connections);
+    if (!connectedPeers.includes(data.id)) {
+      connectedPeers.push(data.id);
+    }
+    connectedPeers.sort();
+
+    masterPeerId = chooseNewMasterPeer(player, otherPlayers);
+    if (data.powerUps > pointsToWin) {
+      checkWinner(otherPlayer, otherPlayers, connections);
     }
   }
   // Only update the powerups if the received data contains different powerups
@@ -289,11 +302,11 @@ export function setPeer(newPeer) {
 }
 
 //todo this is now also updating game if master peer, need to separate this
-export function updateConnections(player, otherPlayers, connections) {
+export function updateConnections(player, otherPlayers, connections, globalPowerUps) {
   if (everConnected) {
     sendPlayerStates(player, connections);
     if (isPlayerMasterPeer(player)) {
-      masterPeerUpdateGame;
+      masterPeerUpdateGame(globalPowerUps);
     }
   } else {
     connections.forEach((conn, index) => {
@@ -314,13 +327,18 @@ export function getPlayerId() {
   return id;
 }
 
-export function masterPeerUpdateGame() {
+export function masterPeerUpdateGame(globalPowerUps) {
   // This peer is the master, so it runs the game logic for shared objects
   updateEnemies();
   updatePowerups();
-  
+
+  // The master peer also detects collisions between all ships and powerups
+  otherPlayers.forEach((otherPlayer) => {
+    detectCollisions(otherPlayer, globalPowerUps, otherPlayers, connections);
+  });
+
   // Send the game state to all other peers
-  sendGameState(connections);
+  sendGameState(globalPowerUps, connections);
 }
 
 function chooseNewMasterPeer(player, otherPlayers) {
@@ -344,7 +362,63 @@ function chooseNewMasterPeer(player, otherPlayers) {
 function resolveConflicts(data, player, powerups, otherPlayers) {
   // If there is a conflict between the local game state and the received game state,
   // update the local game state to match the received game state
-  if(player.id == null){
+  if (player.id == null) {
     tryNextId(player, peerIds);
   }
+  masterPeerId = chooseNewMasterPeer(player, otherPlayers);
+}
+
+export function addScore(category, name, score) {
+  var collection = db.collection(category);
+
+  // Get the current top 10 scores
+  collection
+    .orderBy("score", "desc")
+    .limit(10)
+    .get()
+    .then((querySnapshot) => {
+      var lowestScore = null;
+
+      querySnapshot.forEach((doc) => {
+        if (lowestScore == null || doc.data().score < lowestScore) {
+          lowestScore = doc.data().score;
+        }
+      });
+
+      // If the new score is in the top 10, add it to the database
+      if (lowestScore == null || score > lowestScore) {
+        collection
+          .add({
+            name: name,
+            score: score,
+            date: firebase.firestore.FieldValue.serverTimestamp(),
+          })
+          .then(function (docRef) {
+            console.log("Score written with ID: ", docRef.id);
+          })
+          .catch(function (error) {
+            console.error("Error adding score: ", error);
+          });
+      }
+    });
+}
+
+export function getTopScores(category, X) {
+  return new Promise((resolve, reject) => {
+      var scores = [];
+      db.collection(category)
+          .orderBy("score", "desc")
+          .limit(X)
+          .get()
+          .then((querySnapshot) => {
+              querySnapshot.forEach((doc) => {
+                  var data = doc.data();
+                  scores.push(`Name: ${data.name}, Score: ${data.score}`);
+              });
+              resolve(scores);
+          })
+          .catch((error) => {
+              reject(error);
+          });
+  });
 }

@@ -1,5 +1,5 @@
-import { sendPlayerStates, sendGameState, isPlayerMasterPeer } from "./connectionHandlers.js";
-import { setGameState, GameState,player,setGlobalPowerUps,getGlobalPowerUps } from "./astroids.js";
+import { sendPlayerStates, sendGameState, isPlayerMasterPeer, addScore } from "./connectionHandlers.js";
+import { setGameState, GameState, player, setGlobalPowerUps, getGlobalPowerUps } from "./astroids.js";
 //finish game after 2 for easier testing the finish
 export let pointsToWin = 2;
 let maxPowerups = 10;
@@ -30,6 +30,12 @@ export function checkWinner(player, otherPlayers, connections) {
     sendPlayerStates(player, connections);
     setGameState(GameState.FINISHED);
     endGameMessage = "Winner! Rivals dreams crushed.";
+    var date = new Date();
+    var dateString = date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate();
+    //todo update this when have a real notion of score - for now random for testing
+    //will only be adding if/when it is in the top 10 for a category.
+    var score = Math.floor(Math.random() * 100) + 1;
+    addScore("daily-" + dateString, player.name, score);
     gameWon = true;
     return true;
   }
@@ -50,7 +56,7 @@ export function generatePowerups(globalPowerUps, connections, worldWidth, worldH
     return;
   }
   // Check if there are less than max powerups powerups
-  if (globalPowerUps.length < maxPowerups) {
+  while (globalPowerUps.length < maxPowerups) {
     // Generate a new dot with random x and y within the world
     let powerup = {
       x: (Math.random() * 0.8 + 0.1) * worldWidth,
@@ -113,6 +119,10 @@ export function updateEnemies() {
 
 export function updatePowerups() {
   // Update the positions, velocities, etc. of the powerups
-
   //setGlobalPowerUps(getGlobalPowerUps());
+}
+export function detectCollisions(player, globalPowerUps, otherPlayers, connections) {
+  // Detect collisions between the player's ship and the powerups or other ships
+  // If a collision is detected, update the game state accordingly
+  checkPowerupCollision(player, globalPowerUps, connections);
 }

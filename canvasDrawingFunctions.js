@@ -1,6 +1,6 @@
 import { distanceFactor } from "./astroids.js";
 import { pilot1, pilot2 } from "./gameLogic.js";
-import { isPlayerMasterPeer } from "./connectionHandlers.js";
+import { isPlayerMasterPeer, getTopScores } from "./connectionHandlers.js";
 
 let backLayer = new Image();
 let midBackLayer = new Image();
@@ -14,13 +14,22 @@ midFrontLayer.src = "images/parallax-space-ring-planet.png";
 frontLayer.src = "images/parallax-space-big-planet.png";
 let cursorBlink = true;
 let cursorBlinkInterval = setInterval(() => (cursorBlink = !cursorBlink), 450);
+var topDailyScoresString = "";
 
 // Export a setupCanvas function that initializes the canvas and returns it
 export function setupCanvas() {
   const canvas = document.getElementById("gameCanvas");
   const ctx = canvas.getContext("2d");
-  canvas.width = 1200;
-  canvas.height = 600;
+  canvas.style.position = "absolute"; // positioning the canvas to start from the top left corner.
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  // Adding event listener to handle window resizing
+  window.addEventListener("resize", function () {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  });
+
   return { canvas, ctx };
 }
 
@@ -98,8 +107,15 @@ export function drawBackground(ctx, camX, camY, canvas, backLayer, midBackLayer,
 
   //ctx.drawImage(backLayer, backX - newWidth, backY, newWidth, newHeight);
 
-  //this is an image to the right of the main background to cover the righthand edge (aspect ratio of background doesn't match aspect ratio of the canvas causing this to be needed)
+  //this is an image to the right of the main background to cover the righthand edge ( if aspect ratio of background doesn't match aspect ratio of the canvas causing this to be needed)
   ctx.drawImage(backLayer, newWidth + backX - 1, backY, newWidth, newHeight);
+
+  //these are an images below the main background to cover the bottom edge offset because they don't match up top to bottom ( if aspect ratio of background doesn't match aspect ratio of the canvas causing this to be needed)
+  // ctx.drawImage(backLayer, newWidth + backX - 1, backY + newHeight - 1, newWidth, newHeight);
+  ctx.drawImage(backLayer, backX + 760 - newWidth + 1, backY + newHeight - 12.5, newWidth, newHeight);
+  ctx.drawImage(backLayer, backX + 760, backY + newHeight - 12.5, newWidth, newHeight);
+
+  //this is an image below and to the right of the main background to cover the bottom edge  ( if aspect ratio of background doesn't match aspect ratio of the canvas causing this to be needed)
 
   //we don't need these because the aspect ratio of current background means it will be the width that will wrap
   // ctx.drawImage(backLayer, backX, backY - newHeight, newWidth, newHeight);
@@ -267,7 +283,27 @@ export function renderDebugInfo(ctx, player) {
 
   const isMasterText = `is Master =  ${isPlayerMasterPeer(player)}`;
   ctx.fillStyle = player.color;
-  ctx.fillText(isMasterText, 558, topGap + gap* 2 - textHeight);
+  ctx.fillText(isMasterText, 558, topGap + gap * 2 - textHeight);
+
+  if (topDailyScoresString != "") {
+    var scores = topDailyScoresString.split("; ");
+    for (var i = 0; i < scores.length; i++) {
+        ctx.fillText(scores[i], 558, topGap + gap * (3 + i) - textHeight);
+    }
+}
+}
+
+export function updateTopScoresInfo() {
+  var date = new Date();
+  var dateString = date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate();
+
+  getTopScores("daily-" + dateString, 5)
+    .then((scores) => {
+      topDailyScoresString = scores.join("; ");
+    })
+    .catch((error) => {
+      console.error("Error getting scores: ", error);
+    });
 }
 
 export function drawWinnerMessage(ctx, canvas, message) {
@@ -452,9 +488,28 @@ export function drawNameEntry(canvas, ctx, name, x, y) {
   ctx.textAlign = "start";
   // Draw player's name
   ctx.font = "20px Arial";
-  ctx.fillText(name, x + 50, y + 50);
+  let nameAdjustment = 30;
+  // ctx.fillText(name, x + nameAdjustment, y + 50);
+  // if (document.hasFocus()) {
+  //   drawNameCursor(canvas, ctx, name, x + ctx.measureText(name).width + nameAdjustment, y + 38);
+  // }
+
+  // Calculate the center of the box
+  let centerX = x + 100;
+  let centerY = y + 50;
+
+  // Calculate the width of the text
+  let textWidth = ctx.measureText(name).width;
+
+  // Calculate the start position of the text so that it's centered in the box
+  let textStartX = centerX - textWidth / 2;
+
+  // Draw player's name
+  ctx.fillText(name, textStartX, centerY);
+
+  // Draw the cursor just to the right of the text
   if (document.hasFocus()) {
-    drawNameCursor(canvas, ctx, name, x + ctx.measureText(name).width + 50.5, y + 38);
+    drawNameCursor(canvas, ctx, name, textStartX + textWidth, centerY - 12);
   }
   // Draw play button
   let buttonX = x + 50;
@@ -504,6 +559,7 @@ export function drawNameCursor(canvas, ctx, name, x, y) {
   } else {
     ctx.fillStyle = "transparent";
   }
-  ctx.fillRect(x, y, 2, 20);
+  //adjust by 0.5 so cursor just to the right of the text
+  ctx.fillRect(x + 0.5, y, 2, 20);
   //ctx.fillStyle = "pink";
 }

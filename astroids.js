@@ -1,6 +1,27 @@
-import { setupCanvas, drawScene, drawPilots, setupPilotsImages, drawNameEntry, drawWinnerMessage, drawNameCursor } from "./canvasDrawingFunctions.js";
-import { checkWinner, generatePowerups, checkPowerupCollision, endGameMessage, setGameWon, resetPowerLevels, pilot1, pilot2,updateEnemies, updatePowerups } from "./gameLogic.js";
-import { peerIds, connections, tryNextId, sendPowerups, attemptConnections, connectToPeers, sendPlayerStates,updateConnections } from "./connectionHandlers.js";
+import { setupCanvas, drawScene, drawPilots, setupPilotsImages, drawNameEntry, drawWinnerMessage, drawNameCursor,updateTopScoresInfo } from "./canvasDrawingFunctions.js";
+import {
+  checkWinner,
+  generatePowerups,
+  checkPowerupCollision,
+  endGameMessage,
+  setGameWon,
+  resetPowerLevels,
+  pilot1,
+  pilot2,
+  updateEnemies,
+  updatePowerups,
+  detectCollisions,
+} from "./gameLogic.js";
+import {
+  peerIds,
+  connections,
+  tryNextId,
+  attemptConnections,
+  connectToPeers,
+  sendPlayerStates,
+  updateConnections,
+  masterPeerUpdateGame,
+} from "./connectionHandlers.js";
 import {
   keys,
   handleInputEvents,
@@ -17,6 +38,7 @@ import {
 
 const { canvas, ctx } = setupCanvas();
 const worldDimensions = { width: 3600, height: 2400 };
+
 const colors = ["red", "blue", "green", "yellow", "purple", "orange", "pink", "violet", "maroon", "crimson", "white"];
 const shipPoints = [
   { x: 0, y: -20 },
@@ -53,7 +75,7 @@ let fixedDeltaTime = 1 / 60; // 60 updates per second
 export class Player {
   constructor(id = null, x = null, y = null, powerUps = 0, color = null, angle = 0, pilot = "", name = "", worldDimensions, colors) {
     this.id = id;
-    this.x = x !== null ? x : 600 + Math.random() * (worldDimensions.width - 1200);
+    this.x = x !== null ? x : 1200 + Math.random() * (worldDimensions.width - 2400);
     this.y = y !== null ? y : 600 + Math.random() * (worldDimensions.height - 1200);
     this.powerUps = powerUps;
     this.color = color !== null ? color : colors[Math.floor(Math.random() * colors.length)];
@@ -239,22 +261,15 @@ function updateGame(deltaTime, playerActive) {
     updatePlayerVelocity(playerAngleData, deltaTime);
     bouncePlayer();
     updatePlayerPosition(deltaTime);
-    
   }
 
-  if (playerActive) {
+  if (playerActive || player.getPlayerIsMaster()) {
     // Detect collisions with powerups or other ships
-    detectCollisions(player, globalPowerUps, otherPlayers);
+    detectCollisions(player, globalPowerUps, otherPlayers,connections);
 
     if (player.getPlayerIsMaster()) {
       // This peer is the master, so it runs the game logic for shared objects
-      updateEnemies();
-      updatePowerups();
-
-      // The master peer also detects collisions between all ships and powerups
-      otherPlayers.forEach((otherPlayer) => {
-        detectCollisions(otherPlayer, globalPowerUps, otherPlayers);
-      });
+      masterPeerUpdateGame(globalPowerUps);
     }
   }
 
@@ -263,8 +278,8 @@ function updateGame(deltaTime, playerActive) {
   } else {
     drawScene(null, otherPlayers, ctx, camX, camY, worldDimensions, canvas, shipPoints, globalPowerUps);
   }
-  
-  updateConnections(player, otherPlayers, connections);
+
+  updateConnections(player, otherPlayers, connections,globalPowerUps);
 
   if (checkWinner(player, otherPlayers, connections)) {
     setGameState(GameState.FINISHED);
@@ -347,6 +362,8 @@ export function setGameState(newState) {
   if (newState === GameState.GAME && prevGameState !== GameState.GAME) {
     // fixedDeltaTime = 1 / 60;
     // setupGameEventListeners(window);
+    //for now just do this at game start, in future do this periodically
+    updateTopScoresInfo();
     setTimeout(() => connectToPeers(player, otherPlayers, peerIds, connections, globalPowerUps), 1000);
     removePilotsEventListeners(canvas);
   }
@@ -415,9 +432,6 @@ window.addEventListener("load", function () {
   setGameState(GameState.INTRO);
 });
 
-//probably move this to game logic
-function detectCollisions(player, globalPowerUps, otherPlayers) {
-  // Detect collisions between the player's ship and the powerups or other ships
-  // If a collision is detected, update the game state accordingly
-  checkPowerupCollision(player, globalPowerUps, connections);
-}
+window.addEventListener("resize", function (event) {
+  setupCanvas();
+});

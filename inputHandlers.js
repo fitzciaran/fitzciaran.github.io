@@ -15,7 +15,7 @@ let keys = {
   space: false,
 };
 
-const max_player_name = 10;
+const max_player_name = 15;
 
 export let mousePos = { x: 0, y: 0 };
 export { keys, handleInputEvents };
@@ -142,8 +142,9 @@ export function addPilotEventListners(canvas, ctx) {
     // Check if the mouse click is within the bounds of the play button
     if (event.clientX > buttonX && event.clientX < buttonX + buttonWidth && event.clientY > buttonY && event.clientY < buttonY + buttonHeight) {
       // Play button has been clicked
-      selectPilot();
-      setGameState(GameState.GAME);
+      // selectPilot();
+      // setGameState(GameState.GAME);
+      startGame();
     }
   };
 
@@ -191,8 +192,7 @@ function handleNameKeyDown(event) {
   else if (event.key === "Enter") {
     // setGameState(GameState.PILOT_SELECT);
     //setGameState(GameState.GAME);
-    selectPilot();
-    setGameState(GameState.GAME);
+    startGame();
   }
 
   if (player.getPlayerName().length >= max_player_name) {
@@ -201,6 +201,14 @@ function handleNameKeyDown(event) {
 
   // Redraw name entry
   drawNameEntry(getCanvas(), getCanvas().getContext("2d"), player.getPlayerName(), getCanvas().width / 2 - 100, 80);
+}
+
+function startGame() {
+  if (player.getPlayerName() == "") {
+    player.setPlayerName(getRandomName());
+  }
+  selectPilot();
+  setGameState(GameState.GAME);
 }
 
 export function handleNameKeyUp(event) {
@@ -243,4 +251,29 @@ export function setupWinStateEventListeners() {
 
 export function removeWinStateEventListeners() {
   window.removeEventListener("keydown", handleWinStateKeyDown);
+}
+
+function getRandomName() {
+  const prefixes = ["Astro", "Galaxy", "Star", "Cosmo", "Rocket", "Lunar", "Solar", "Quasar", "Pulsar", "Meteor","Poopy","Sneaky","Stinky","Drunk"];
+  const suffixes = ["Rider", "Pilot", "Crusher", "Dasher", "Blaster", "Buster", "Zoomer", "Flyer", "Racer", "Striker","Butthole","Tosser","Wanker","Killer","Chubb"];
+
+  // Generate a random index for prefix and suffix
+  const prefixIndex = Math.floor(Math.random() * prefixes.length);
+  const suffixIndex = Math.floor(Math.random() * suffixes.length);
+
+  // Generate a random number between 10 and 99
+  const randomNumber = Math.floor(Math.random() * 90) + 10;
+
+  // Concatenate prefix, suffix and random number to form the name
+  let randomName = prefixes[prefixIndex] + suffixes[suffixIndex] + randomNumber;
+
+  // If the name is longer than 10 characters, regenerate it
+  while (randomName.length > max_player_name) {
+    const prefixIndex = Math.floor(Math.random() * prefixes.length);
+    const suffixIndex = Math.floor(Math.random() * suffixes.length);
+    const randomNumber = Math.floor(Math.random() * 90) + 10;
+    randomName = prefixes[prefixIndex] + suffixes[suffixIndex] + randomNumber;
+  }
+
+  return randomName;
 }
