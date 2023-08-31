@@ -1,8 +1,7 @@
 put in a click to start first menu real info screen
-finish refactoring game state handler adding / removing for inputHandlers
-looking cursor/text / canvas? position after first game - look at enteryou name text movement too
-reset state variables (find out which) after first loop 
-pilot select state is broken no lore or Highlight
+
+pilot select should be one image and click through options
+should be able to select color and....other stuff?
 powerups shouldn't spawn too close to ships (not super important for now)
 create a lot of enums instead of random string passing around
 start building test suite for this project
@@ -13,7 +12,8 @@ moving power powerUps
 different size different score powerUps
 lobby selection
 1 player mode?
-select ship - different stats
+select ship - different stats - different... special?
+    specials... invicible, knock away in radius,mines?
 enter name
 lobby
 ai ships
@@ -22,8 +22,7 @@ starting lore screens (mk1 style)
 different craft/ pilots
 char select effects/ design
 pilot select
-make connection more robust
-make powerup sharing more robust
+
 music
 sound effects
 review acceleration
@@ -43,6 +42,28 @@ shrinking level - could be all around or could be left to right to require progr
 
 some kind of share option - a la wordle 
 
+enemies - lose point if touched
+different types ^
+PvE?
+general racing 
+    like this - power up could be speed boost, or have separate boosts and power ups are mk style
+    drafting mechanic?
+    "jumps?"
+    lap records
+    daily/all time leaderboards
+procedural level generation?
+
+basic carfootball style game?
+
+some kind of starting state whether for ^ or other
+
+new challenger approaches when connect to someone
+some kind of run game with the mouse / ship mechanic/physics we have
+sumo mechanic
+how to p2p with run style game
+maybe colliding just kills both players?
+maybe other things to avoid too - like not "fake players" but general enviroment obstacle
+
 secret button to become master or to give up master status for testing - might be unneccesary
 might have to do a proper server for master game state - daily leaderboards
 on screen arrow to direct to offscreen oppoents
@@ -52,7 +73,9 @@ table of current leaders
 make ships bigger
 maybe always provide thrust at low level - with limited click boost - need rechargable boost meter. - lean into these for char differences
 
-share connection list so everyone matches
+share connection list so everyone matches - master only shares list of connected id's - if master shares an id not in list add it, if master is missing one maybe need a push to master.
+issue when master disconnects.. or not quite disconnects but stops being active, maybe some kind of timer and if no message disconnect... might need to send a message to others to disconnect from it too...?
+
 deal with null id (peers not working) better, probably make master, maybe more.
 a new challenge screen when someone joins?
 getting pulled in the direction of a few different types of games currently ... thats fine for now tho
