@@ -36,7 +36,7 @@ When ships collide with each other the biggest should "win" and the smaller shou
 or the front of the ship stabs?
 show the game at all times with name entry and ship selection together
 kill bonus 
-some kind of win conidtion
+some kind of win condition?
 keep camera more centered need to keep visability
 shrinking level - could be all around or could be left to right to require progress
 
@@ -75,7 +75,13 @@ maybe always provide thrust at low level - with limited click boost - need recha
 
 share connection list so everyone matches - master only shares list of connected id's - if master shares an id not in list add it, if master is missing one maybe need a push to master.
 issue when master disconnects.. or not quite disconnects but stops being active, maybe some kind of timer and if no message disconnect... might need to send a message to others to disconnect from it too...?
+or at least check connections/otherPlayers list for one's that should be removed (how to check "inactive" - could maintain a "ticks since last message" variable)
 
 deal with null id (peers not working) better, probably make master, maybe more.
 a new challenge screen when someone joins?
 getting pulled in the direction of a few different types of games currently ... thats fine for now tho
+rollback prediction for other players? or even for ai that master is processing?
+
+camera follow host before the game starts?
+move player processing logic into the player object so can use for bots.
+maybe move player inputs into player logic for same reason

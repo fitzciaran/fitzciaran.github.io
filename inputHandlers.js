@@ -1,6 +1,7 @@
 import { camX, camY, getGameState, setGameState, getCanvas, GameState, PilotName, player } from "./astroids.js";
-import { pilot1, pilot2 } from "./gameLogic.js";
 import { drawPilots, drawNameEntry } from "./canvasDrawingFunctions.js";
+import { pilot1, pilot2, calculateAngle,getRandomName,max_player_name } from "./gameLogic.js";
+
 
 let pilotMouseMoveListener;
 let pilotClickListener;
@@ -15,24 +16,20 @@ let keys = {
   space: false,
 };
 
-const max_player_name = 15;
-
 export let mousePos = { x: 0, y: 0 };
-export { keys, handleInputEvents };
+export { handleInputEvents };
 
-function calculateAngle(mousePos, player) {
-  return Math.atan2(mousePos.y - player.y, mousePos.x - player.x);
-}
-
-function handleInputEvents(canvas, player, keys) {
+function handleInputEvents(canvas, player) {
   window.addEventListener("keydown", function (e) {
     if (e.code === "Space") {
+      player.space = true;
       keys.space = true;
     }
   });
 
   window.addEventListener("keyup", function (e) {
     if (e.code === "Space") {
+      player.space = false;
       keys.space = false;
     }
   });
@@ -43,31 +40,39 @@ function handleInputEvents(canvas, player, keys) {
       let coords = getMousePos(canvas, evt);
       mousePos.x = coords.x + camX;
       mousePos.y = coords.y + camY;
-      player.angle = calculateAngle(mousePos, player);
+      player.mousePosX = mousePos.x;
+      player.mousePosY = mousePos.y;
+      player.angle = calculateAngle(player);
     },
     false
   );
 
   canvas.addEventListener("mousedown", function (e) {
+    player.space = true;
     keys.space = true;
   });
 
   canvas.addEventListener("mouseup", function (e) {
+    player.space = false;
     keys.space = false;
   });
 
   canvas.addEventListener("touchstart", function (e) {
+    player.space = true;
     keys.space = true;
 
     // Update mouse position on touch start
     if (e.touches) {
       mousePos.x = e.touches[0].clientX + camX;
       mousePos.y = e.touches[0].clientY + camY;
-      player.angle = calculateAngle(mousePos, player);
+      player.mousePosX = mousePos.x;
+      player.mousePosY = mousePos.y;
+      player.angle = calculateAngle(player);
     }
   });
 
   canvas.addEventListener("touchend", function (e) {
+    player.space = false;
     keys.space = false;
   });
 
@@ -81,7 +86,9 @@ function handleInputEvents(canvas, player, keys) {
         let coords = getMousePos(canvas, e.touches[0]);
         mousePos.x = coords.x + camX;
         mousePos.y = coords.y + camY;
-        player.angle = calculateAngle(mousePos, player);
+        player.mousePosX = mousePos.x;
+        player.mousePosY = mousePos.y;
+        player.angle = calculateAngle(player);
       }
     },
     { passive: false }
@@ -251,29 +258,4 @@ export function setupWinStateEventListeners() {
 
 export function removeWinStateEventListeners() {
   window.removeEventListener("keydown", handleWinStateKeyDown);
-}
-
-function getRandomName() {
-  const prefixes = ["Astro", "Galaxy", "Star", "Cosmo", "Rocket", "Lunar", "Solar", "Quasar", "Pulsar", "Meteor","Poopy","Sneaky","Stinky","Drunk"];
-  const suffixes = ["Rider", "Pilot", "Crusher", "Dasher", "Blaster", "Buster", "Zoomer", "Flyer", "Racer", "Striker","Butthole","Tosser","Wanker","Killer","Chubb"];
-
-  // Generate a random index for prefix and suffix
-  const prefixIndex = Math.floor(Math.random() * prefixes.length);
-  const suffixIndex = Math.floor(Math.random() * suffixes.length);
-
-  // Generate a random number between 10 and 99
-  const randomNumber = Math.floor(Math.random() * 90) + 10;
-
-  // Concatenate prefix, suffix and random number to form the name
-  let randomName = prefixes[prefixIndex] + suffixes[suffixIndex] + randomNumber;
-
-  // If the name is longer than 10 characters, regenerate it
-  while (randomName.length > max_player_name) {
-    const prefixIndex = Math.floor(Math.random() * prefixes.length);
-    const suffixIndex = Math.floor(Math.random() * suffixes.length);
-    const randomNumber = Math.floor(Math.random() * 90) + 10;
-    randomName = prefixes[prefixIndex] + suffixes[suffixIndex] + randomNumber;
-  }
-
-  return randomName;
 }

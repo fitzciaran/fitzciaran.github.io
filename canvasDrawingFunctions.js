@@ -1,6 +1,6 @@
-import { distanceFactor } from "./astroids.js";
-import { pilot1, pilot2 } from "./gameLogic.js";
 import { isPlayerMasterPeer, getTopScores } from "./connectionHandlers.js";
+import { pilot1, pilot2 } from "./gameLogic.js";
+
 
 let backLayer = new Image();
 let midBackLayer = new Image();
@@ -28,11 +28,26 @@ export function setupCanvas() {
   window.addEventListener("resize", function () {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
+
+    //since we can now scale the canvas need to adjust the positions
+    centerPilots(canvas);
   });
 
   return { canvas, ctx };
 }
 
+function centerPilots(canvas) {
+  // Center the pilots
+  pilot1.x = canvas.width / 2 - pilot1.width * 2;
+  pilot2.x = canvas.width / 2 + pilot2.width;
+
+  pilot1.y = canvas.height / 6;
+  pilot2.y = canvas.height / 6;
+
+  // Position the lore tablet
+  loreTablet.x = canvas.width / 2 - loreTablet.width / 2;
+  loreTablet.y = canvas.height / 2 - 100;
+}
 // Export a Basic function that takes the canvas context as an argument as well as camera position
 export function drawBasicBackground(ctx, camX, camY, canvas) {
   ctx.fillStyle = "#999";
@@ -112,8 +127,24 @@ export function drawBackground(ctx, camX, camY, canvas, backLayer, midBackLayer,
 
   //these are an images below the main background to cover the bottom edge offset because they don't match up top to bottom ( if aspect ratio of background doesn't match aspect ratio of the canvas causing this to be needed)
   // ctx.drawImage(backLayer, newWidth + backX - 1, backY + newHeight - 1, newWidth, newHeight);
-  ctx.drawImage(backLayer, backX + 760 - newWidth + 1, backY + newHeight - 12.5, newWidth, newHeight);
-  ctx.drawImage(backLayer, backX + 760, backY + newHeight - 12.5, newWidth, newHeight);
+  // Calculate the aspect ratio difference
+  let backAspectRatio = 272 / 160;
+  let canvasAspectRatio = canvas.width / canvas.height;
+  const aspectRatioDiff = backAspectRatio - canvasAspectRatio;
+
+  // Calculate offsets based on the aspect ratio difference and window dimensions
+  let xOffset = 630;
+  let yOffset = 12.5;
+  //xOffset += (Math.abs(aspectRatioDiff) * window.innerHeight) / 2;
+  if (aspectRatioDiff > 0) {
+    // If background is taller, adjust yOffset
+    // yOffset += (aspectRatioDiff * window.innerWidth) / 2;
+  } else if (aspectRatioDiff < 0) {
+    // If background is wider, adjust xOffset
+    //xOffset += (Math.abs(aspectRatioDiff) * window.innerHeight) / 2;
+  }
+  ctx.drawImage(backLayer, backX + xOffset - newWidth + 1, backY + newHeight - yOffset, newWidth, newHeight);
+  ctx.drawImage(backLayer, backX + xOffset, backY + newHeight - yOffset, newWidth, newHeight);
 
   //this is an image below and to the right of the main background to cover the bottom edge  ( if aspect ratio of background doesn't match aspect ratio of the canvas causing this to be needed)
 
@@ -156,7 +187,7 @@ export function drawWorldBounds(ctx, camX, camY, worldWidth, worldHeight) {
 }
 
 // Export a drawMinimap function
-export function drawMinimap(player, otherPlayers, worldWidth, worldHeight) {
+function drawMinimap(player, otherPlayers, bots, worldWidth, worldHeight) {
   const minimapCanvas = document.getElementById("minimapCanvas");
   const minimapCtx = minimapCanvas.getContext("2d");
 
@@ -184,9 +215,21 @@ export function drawMinimap(player, otherPlayers, worldWidth, worldHeight) {
     minimapCtx.fillStyle = player.color;
     minimapCtx.fillRect(player.x * scaleX, player.y * scaleY, dotSize, dotSize);
   });
+
+   // Draw other players on the minimap
+   bots.forEach((bot) => {
+    minimapCtx.fillStyle = bot.color;
+    minimapCtx.fillRect(bot.x * scaleX, bot.y * scaleY, dotSize, dotSize);
+  });
 }
 
-export function drawRotatedShip(ctx, camX, camY, centerX, centerY, angle, points, color) {
+function drawRotatedShip(ctx, camX, camY, player, points) {
+  let centerX = player.x;
+  let centerY = player.y;
+  let angle = player.angle;
+  let color = player.color;
+  let name = player.name;
+
   ctx.beginPath();
 
   // Move to the first point after rotating
@@ -204,6 +247,16 @@ export function drawRotatedShip(ctx, camX, camY, centerX, centerY, angle, points
   ctx.closePath();
   ctx.strokeStyle = color;
   ctx.stroke();
+  ctx.closePath();
+  // Calculate position for the name (above the unrotated center of the ship)
+  const namePositionX = centerX - camX;
+  const namePositionY = centerY - camY - 15; // You can adjust this value for the desired distance
+
+  // Draw the name
+  ctx.fillStyle = color;
+  ctx.font = "14px Arial"; // Adjust font size and family as needed
+  ctx.textAlign = "center";
+  ctx.fillText(name, namePositionX, namePositionY);
 }
 
 // Rotate a point (x, y) by a certain angle
@@ -239,7 +292,7 @@ export function drawMinimapPowerups(globalPowerUps, worldWidth, worldHeight) {
   });
 }
 
-export function renderPowerupLevels(ctx, player, otherPlayers) {
+export function renderPowerupLevels(ctx, player, otherPlayers,bots) {
   const topGap = 100;
   const textHeight = 75; // Adjust this to the size of your text
   const gap = 16; // Gap between lines
@@ -265,6 +318,19 @@ export function renderPowerupLevels(ctx, player, otherPlayers) {
     ctx.fillStyle = player.color; // individual ship color for each player
     ctx.fillText(playerPowerupText, 200 - textWidth, y);
   });
+
+  bots.forEach((bot, index) => {
+    // const playerPowerupText = `Player ${player.id.slice(0, 7)} Powerups: ${player.powerUps}`; // Showing only the first 7 digits of id for readability
+    let playerName = bot.name;
+    if (playerName == null || playerName == "") {
+      playerName = "Unknown";
+    }
+    const playerPowerupText = playerName + `: ${bot.powerUps}`;
+    let textWidth = ctx.measureText(playerName).width;
+    const y = topGap - textHeight + (1 + index + otherPlayers.length) * gap; // calculate y position for each player's text
+    ctx.fillStyle = bot.color; // individual ship color for each player
+    ctx.fillText(playerPowerupText, 200 - textWidth, y);
+  });
 }
 
 export function renderDebugInfo(ctx, player) {
@@ -277,7 +343,7 @@ export function renderDebugInfo(ctx, player) {
   ctx.fillStyle = player.color;
   ctx.fillText(myIDText, 558, topGap - textHeight);
   //also render some other useful debug stuff
-  const myDistanceFactorText = `distanceFactor ${distanceFactor}`;
+  const myDistanceFactorText = `distanceFactor ${player.distanceFactor}`;
   ctx.fillStyle = player.color;
   ctx.fillText(myDistanceFactorText, 558, topGap + gap - textHeight);
 
@@ -288,9 +354,9 @@ export function renderDebugInfo(ctx, player) {
   if (topDailyScoresString != "") {
     var scores = topDailyScoresString.split("; ");
     for (var i = 0; i < scores.length; i++) {
-        ctx.fillText(scores[i], 558, topGap + gap * (3 + i) - textHeight);
+      ctx.fillText(scores[i], 558, topGap + gap * (3 + i) - textHeight);
     }
-}
+  }
 }
 
 export function updateTopScoresInfo() {
@@ -323,20 +389,21 @@ export function drawWinnerMessage(ctx, canvas, message) {
   ctx.fillText("press r to return to main menu", canvas.width / 2, canvas.height / 2 + 65);
 }
 
-export function drawScene(player, otherPlayers, ctx, camX, camY, worldDimensions, canvas, shipPoints, globalPowerUps) {
+export function drawScene(player, otherPlayers, bots, ctx, camX, camY, worldDimensions, canvas, shipPoints, globalPowerUps) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   drawBackground(ctx, camX, camY, canvas, backLayer, midBackLayer, middleLayer, midFrontLayer, frontLayer);
   drawWorldBounds(ctx, camX, camY, worldDimensions.width, worldDimensions.height);
   ctx.lineWidth = 2;
-  otherPlayers.forEach((player) => drawRotatedShip(ctx, camX, camY, player.x, player.y, player.angle, shipPoints, player.color));
+  otherPlayers.forEach((player) => drawRotatedShip(ctx, camX, camY, player, shipPoints));
+  bots.forEach((bot) => drawRotatedShip(ctx, camX, camY, bot, shipPoints));
   drawPowerups(globalPowerUps, ctx, camX, camY);
-  drawMinimap(player, otherPlayers, worldDimensions.width, worldDimensions.height);
+  drawMinimap(player, otherPlayers, bots, worldDimensions.width, worldDimensions.height);
   drawMinimapPowerups(globalPowerUps, worldDimensions.width, worldDimensions.height);
   if (player != null) {
-    drawRotatedShip(ctx, camX, camY, player.x, player.y, player.angle, shipPoints, player.color);
+    drawRotatedShip(ctx, camX, camY, player, shipPoints);
     renderDebugInfo(ctx, player);
   }
-  renderPowerupLevels(ctx, player, otherPlayers);
+  renderPowerupLevels(ctx, player, otherPlayers,bots);
 }
 
 export const loreTablet = {
@@ -449,17 +516,7 @@ export function setupPilotsImages(canvas) {
   pilot1.image.src = "images/pilot1.gif";
   pilot2.image.src = "images/pilot2.gif";
   loreTablet.image.src = "images/tablet.png";
-
-  // Center the pilots
-  pilot1.x = canvas.width / 2 - pilot1.width * 2;
-  pilot2.x = canvas.width / 2 + pilot2.width;
-
-  pilot1.y = canvas.height / 6;
-  pilot2.y = canvas.height / 6;
-
-  // Position the lore tablet
-  loreTablet.x = canvas.width / 2 - loreTablet.width / 2;
-  loreTablet.y = canvas.height / 2 - 100;
+  centerPilots(canvas);
 }
 
 export function drawNameEntry(canvas, ctx, name, x, y) {

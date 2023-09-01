@@ -1,5 +1,6 @@
-import { sendPlayerStates, sendGameState, isPlayerMasterPeer, addScore } from "./connectionHandlers.js";
-import { setGameState, GameState, player, setGlobalPowerUps, getGlobalPowerUps } from "./astroids.js";
+import { setGameState, GameState, player, setGlobalPowerUps, getGlobalPowerUps, bots, Player, otherPlayers } from "./astroids.js";
+import { sendPlayerStates, sendGameState, isPlayerMasterPeer, addScore, sendBotsState } from "./connectionHandlers.js";
+
 //finish game after 2 for easier testing the finish
 export let pointsToWin = 2;
 let maxPowerups = 10;
@@ -25,9 +26,11 @@ export const pilot2 = {
   lore: "Bumble, the hero nobody asked for, and who just won't go away. He's got a unique talent for tripping over absolutely nothing and a flying skill that's... well, let's just call it 'creative'. He might not have Orion's strength, or any gazelle's grace, or even the reflexes of a half-asleep sloth, but boy, does he have determination. And a knack for surviving situations he really shouldn't. Bumble is proof that some people have no potential.",
 };
 
-export function checkWinner(player, otherPlayers, connections) {
+export const max_player_name = 15;
+
+export function checkWinner(player, otherPlayers) {
   if (player.powerUps >= pointsToWin) {
-    sendPlayerStates(player, connections);
+    sendPlayerStates(player);
     setGameState(GameState.FINISHED);
     endGameMessage = "Winner! Rivals dreams crushed.";
     var date = new Date();
@@ -51,7 +54,7 @@ export function checkWinner(player, otherPlayers, connections) {
   return false;
 }
 
-export function generatePowerups(globalPowerUps, connections, worldWidth, worldHeight, colors) {
+export function generatePowerups(globalPowerUps, worldWidth, worldHeight, colors) {
   if (!isPlayerMasterPeer(player)) {
     return;
   }
@@ -66,12 +69,13 @@ export function generatePowerups(globalPowerUps, connections, worldWidth, worldH
     globalPowerUps.push(powerup);
     setGlobalPowerUps(globalPowerUps);
     // Send the powerups every time you generate one
-    // sendPowerups(globalPowerUps, connections);
-    sendGameState(globalPowerUps, connections);
+    // sendPowerups(globalPowerUps);
+
+    //cf test do we need this sendGameState(globalPowerUps);
   }
 }
 
-export function checkPowerupCollision(playerToCheck, globalPowerUps, connections) {
+export function checkPowerupCollision(playerToCheck, globalPowerUps) {
   // if (!isPlayerMasterPeer(player)) {
   //   return;
   // }
@@ -82,17 +86,21 @@ export function checkPowerupCollision(playerToCheck, globalPowerUps, connections
 
     if (distance < 20) {
       // assuming the radius of both ship and powerup is 10
-      playerToCheck.powerUps += 1;
+      if (playerToCheck.ticksSincePowerUpCollection == -1) {
+        playerToCheck.powerUps += 1;
+        playerToCheck.ticksSincePowerUpCollection = 0;
+      }
       globalPowerUps.splice(i, 1);
-      // sendPowerups(globalPowerUps, connections);
+      // sendPowerups(globalPowerUps);
       setGlobalPowerUps(globalPowerUps);
-      sendGameState(globalPowerUps, connections);
+      //cf test do we need this looks like yes
+      //sendGameState(globalPowerUps);
       break; // exit the loop to avoid possible index errors
     }
   }
 }
 
-export function resetPowerLevels(player, otherPlayers, connections) {
+export function resetPowerLevels(player, otherPlayers) {
   // Reset my powerUps
   player.powerUps = 0;
 
@@ -102,7 +110,7 @@ export function resetPowerLevels(player, otherPlayers, connections) {
   });
 
   // Send updated powerUps to other players
-  sendPlayerStates(player, connections);
+  sendPlayerStates(player);
 }
 
 function shipHitsBorder(x, y) {
@@ -113,16 +121,117 @@ export function setGameWon(won) {
   gameWon = won;
 }
 
-export function updateEnemies() {
+export function updateEnemies(deltaTime) {
   // Update the positions, velocities, etc. of the enemies
 }
 
-export function updatePowerups() {
+export function updateBots(deltaTime) {
+  // Reset powerUps of other players
+  bots.forEach((bot) => {
+    if (bot != null) {
+      bot.updateBotInputs();
+      bot.updateTick(deltaTime);
+    } else {
+      console.log("how is bot null?");
+    }
+  });
+}
+
+export function updatePowerups(deltaTime) {
   // Update the positions, velocities, etc. of the powerups
   //setGlobalPowerUps(getGlobalPowerUps());
 }
-export function detectCollisions(player, globalPowerUps, otherPlayers, connections) {
+export function detectCollisions(player, globalPowerUps) {
   // Detect collisions between the player's ship and the powerups or other ships
   // If a collision is detected, update the game state accordingly
-  checkPowerupCollision(player, globalPowerUps, connections);
+  checkPowerupCollision(player, globalPowerUps);
+}
+
+export function calculateAngle(player) {
+  return Math.atan2(player.mousePosY - player.y, player.mousePosX - player.x);
+}
+
+export function masterPeerUpdateGame(globalPowerUps, bots, deltaTime) {
+  // This peer is the master, so it runs the game logic for shared objects
+
+  //eventually run this based on how many bots and existing players in total currently
+  createBots();
+  updateBots(deltaTime);
+  updateEnemies(deltaTime);
+  updatePowerups(deltaTime);
+
+  // The master peer also detects collisions between all ships and powerups
+  otherPlayers.forEach((otherPlayer) => {
+    detectCollisions(otherPlayer, globalPowerUps, otherPlayers);
+  });
+
+  // Send the game state to all other peers
+  sendGameState(globalPowerUps);
+  sendBotsState(bots);
+}
+
+//for now just create 1
+export function createBots() {
+  if (bots != null && bots[0] == null) {
+    let bot = new Player("zz1234", null, null, 0, "yellow", 0, "", getRandomName());
+    bot.isBot = true;
+    // bot.name = getRandomName();
+    bots.push(bot);
+  }
+}
+
+export function getRandomName() {
+  const prefixes = [
+    "Astro",
+    "Galaxy",
+    "Star",
+    "Cosmo",
+    "Rocket",
+    "Lunar",
+    "Solar",
+    "Quasar",
+    "Pulsar",
+    "Meteor",
+    "Poopy",
+    "Sneaky",
+    "Stinky",
+    "Drunk",
+  ];
+  const suffixes = [
+    "Rider",
+    "Pilot",
+    "Crusher",
+    "Dasher",
+    "Blaster",
+    "Buster",
+    "Zoomer",
+    "Flyer",
+    "Racer",
+    "Striker",
+    "Butthole",
+    "Tosser",
+    "Wanker",
+    "Killer",
+    "Chubb",
+  ];
+
+  // Generate a random index for prefix and suffix
+  const prefixIndex = Math.floor(Math.random() * prefixes.length);
+  const suffixIndex = Math.floor(Math.random() * suffixes.length);
+
+  // Generate a random number between 10 and 99
+  const randomNumber = Math.floor(Math.random() * 90) + 10;
+
+  // Concatenate prefix, suffix and random number to form the name
+  let randomName = prefixes[prefixIndex] + suffixes[suffixIndex] + randomNumber;
+
+  // If the name is longer than 10 characters, regenerate it
+  while (randomName.length > max_player_name) {
+    const prefixIndex = Math.floor(Math.random() * prefixes.length);
+    const suffixIndex = Math.floor(Math.random() * suffixes.length);
+    const randomNumber = Math.floor(Math.random() * 90) + 10;
+    randomName = prefixes[prefixIndex] + suffixes[suffixIndex] + randomNumber;
+  }
+
+  return randomName;
 }
