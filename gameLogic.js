@@ -1,8 +1,8 @@
 import { setGameState, GameState, player, setGlobalPowerUps, getGlobalPowerUps, bots, Player, otherPlayers } from "./astroids.js";
 import { sendPlayerStates, sendGameState, isPlayerMasterPeer, addScore, sendBotsState } from "./connectionHandlers.js";
 
-//finish game after 2 for easier testing the finish
-export let pointsToWin = 2;
+//finish game after 5 for easier testing the finish
+export let pointsToWin = 5;
 let maxPowerups = 10;
 export let endGameMessage = "";
 export let gameWon = false;
@@ -87,6 +87,7 @@ export function checkPowerupCollision(playerToCheck, globalPowerUps) {
     if (distance < 20) {
       // assuming the radius of both ship and powerup is 10
       if (playerToCheck.ticksSincePowerUpCollection == -1) {
+        //may need to make this an array of "recently collected / iteracted stuff" to be more robust in the future rather than a simple power up timer
         playerToCheck.powerUps += 1;
         playerToCheck.ticksSincePowerUpCollection = 0;
       }
@@ -126,13 +127,13 @@ export function updateEnemies(deltaTime) {
 }
 
 export function updateBots(deltaTime) {
-  // Reset powerUps of other players
   bots.forEach((bot) => {
-    if (bot != null) {
+    // Check if bot is an instance of the Player class
+    if (bot != null && bot instanceof Player) {
       bot.updateBotInputs();
       bot.updateTick(deltaTime);
     } else {
-      console.log("how is bot null?");
+      console.log("Bot is not an instance of the Player class.");
     }
   });
 }
@@ -170,13 +171,18 @@ export function masterPeerUpdateGame(globalPowerUps, bots, deltaTime) {
   sendBotsState(bots);
 }
 
-//for now just create 1
+//for now just create 4
 export function createBots() {
   if (bots != null && bots[0] == null) {
-    let bot = new Player("zz1234", null, null, 0, "yellow", 0, "", getRandomName());
-    bot.isBot = true;
-    // bot.name = getRandomName();
-    bots.push(bot);
+    let botID = 1234;
+    while (bots != null && bots.length < 4) {
+      // let bot = new Player(botID, null, null, 0, "yellow", 0, "", getRandomName());
+      let bot = new Player(botID, null, null, 0, null, 0, "", getRandomName());
+      bot.isBot = true;
+      // bot.name = getRandomName();
+      botID += 1;
+      bots.push(bot);
+    }
   }
 }
 
@@ -234,4 +240,11 @@ export function getRandomName() {
   }
 
   return randomName;
+}
+
+export function shuffleArray(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]]; // Swap elements at i and j
+  }
 }

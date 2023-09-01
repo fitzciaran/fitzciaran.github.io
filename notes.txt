@@ -67,7 +67,7 @@ maybe other things to avoid too - like not "fake players" but general enviroment
 secret button to become master or to give up master status for testing - might be unneccesary
 might have to do a proper server for master game state - daily leaderboards
 on screen arrow to direct to offscreen oppoents
-draw oppoents name on craft in the world
+update UI of drawn oppoents name on craft in the world
 color select on craft select
 table of current leaders
 make ships bigger
@@ -75,13 +75,18 @@ maybe always provide thrust at low level - with limited click boost - need recha
 
 share connection list so everyone matches - master only shares list of connected id's - if master shares an id not in list add it, if master is missing one maybe need a push to master.
 issue when master disconnects.. or not quite disconnects but stops being active, maybe some kind of timer and if no message disconnect... might need to send a message to others to disconnect from it too...?
-or at least check connections/otherPlayers list for one's that should be removed (how to check "inactive" - could maintain a "ticks since last message" variable)
+or at least check connections/otherPlayers list for one's that should be removed (how to check "inactive" - could maintain a "ticks since last message" variable or maybe better to timestamp the last update sent)
 
 deal with null id (peers not working) better, probably make master, maybe more.
-a new challenge screen when someone joins?
+a new challenger approaches  screen when someone joins?
 getting pulled in the direction of a few different types of games currently ... thats fine for now tho
 rollback prediction for other players? or even for ai that master is processing?
 
 camera follow host before the game starts?
 move player processing logic into the player object so can use for bots.
 maybe move player inputs into player logic for same reason
+
+bots can appear jittery on non-master peers
+add bot collision with power ups and players
+add player to player collision (decide what happens)
+add bot states, and sometimes randomly switch between states.

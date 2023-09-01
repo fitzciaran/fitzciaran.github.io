@@ -1,3 +1,4 @@
+import { BotState } from "./astroids.js";
 import { isPlayerMasterPeer, getTopScores } from "./connectionHandlers.js";
 import { pilot1, pilot2 } from "./gameLogic.js";
 
@@ -333,7 +334,7 @@ export function renderPowerupLevels(ctx, player, otherPlayers,bots) {
   });
 }
 
-export function renderDebugInfo(ctx, player) {
+export function renderDebugInfo(ctx, player,bots) {
   ctx.textAlign = "start";
   const topGap = 100;
   const gap = 16; // Gap between lines
@@ -357,6 +358,15 @@ export function renderDebugInfo(ctx, player) {
       ctx.fillText(scores[i], 558, topGap + gap * (3 + i) - textHeight);
     }
   }
+  bots.forEach((bot, index) => {
+    let botInfo;
+    if(bot.botState == BotState.FOLLOW_PLAYER){
+    botInfo =  `bot state: ${bot.botState} following: ${bot.followingPlayer.name} `;
+    }else{
+      botInfo =  `bot state: ${bot.botState} aiming: ${bot.randomTarget.x},${bot.randomTarget.y} `;
+    }
+    ctx.fillText(botInfo, 958, topGap + gap * ( index) - textHeight);
+  });
 }
 
 export function updateTopScoresInfo() {
@@ -401,7 +411,7 @@ export function drawScene(player, otherPlayers, bots, ctx, camX, camY, worldDime
   drawMinimapPowerups(globalPowerUps, worldDimensions.width, worldDimensions.height);
   if (player != null) {
     drawRotatedShip(ctx, camX, camY, player, shipPoints);
-    renderDebugInfo(ctx, player);
+    renderDebugInfo(ctx, player,bots);
   }
   renderPowerupLevels(ctx, player, otherPlayers,bots);
 }

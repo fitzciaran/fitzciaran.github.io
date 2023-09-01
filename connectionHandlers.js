@@ -46,7 +46,7 @@ let db = firebase.firestore();
 
 export function sendPlayerStates(player) {
   // Check if connection is open before sending data
-  // Send game state to other player
+  // Send player state to other players
   let data = {
     id: player.id,
     x: player.x,
@@ -58,6 +58,7 @@ export function sendPlayerStates(player) {
     pilot: player.pilot,
     isMaster: player.isMaster,
     ticksSincePowerUpCollection: player.ticksSincePowerUpCollection,
+    timeOfLastActive: player.timeOfLastActive,
   };
   //console.log("Sending data:", data); // Log any data sent
   connections.forEach((conn) => {
@@ -115,6 +116,57 @@ export function sendBotsState(bots) {
       }
     }
   });
+}
+
+
+function handleData(player, otherPlayers, globalPowerUps, data) {
+  //console.log("handling data:");
+  // Find the otherPlayer in the array
+  let otherPlayer = otherPlayers.find((player) => player.id === data.id);
+
+  // If the player is found, update their data
+  if (otherPlayer) {
+    otherPlayer.x = data.x;
+    otherPlayer.y = data.y;
+    otherPlayer.angle = data.angle;
+    otherPlayer.color = data.color;
+    otherPlayer.powerUps = data.powerUps;
+    otherPlayer.name = data.name;
+    otherPlayer.pilot = data.pilot;
+    otherPlayer.isMaster = data.isMaster;
+    otherPlayer.ticksSincePowerUpCollection = data.ticksSincePowerUpCollection;
+    otherPlayer.timeOfLastActive = data.timeOfLastActive;
+
+    if (player.getPlayerIsMaster() && otherPlayer.isMaster) {
+      resolveConflicts(data, player, globalPowerUps, otherPlayers);
+    }
+  }
+  // If the player is not found, add them to the array
+  else if (data.id) {
+    otherPlayers.push(data);
+    if (!connectedPeers.includes(data.id)) {
+      connectedPeers.push(data.id);
+    }
+    connectedPeers.sort();
+
+    masterPeerId = chooseNewMasterPeer(player, otherPlayers);
+    if (data.powerUps > pointsToWin) {
+      checkWinner(otherPlayer, otherPlayers);
+    }
+  }
+  // Only update the powerups if the received data contains different powerups
+  if (data.globalPowerUps && JSON.stringify(globalPowerUps) !== JSON.stringify(data.globalPowerUps)) {
+    setGlobalPowerUps(data.globalPowerUps);
+  }
+  if(data.bots){
+    setBots(data.bots);
+  }
+  handleCounter++;
+  // Log the data every 1000 calls
+  if (handleCounter === 1000) {
+    console.log("handling data:", data);
+    handleCounter = 0; // reset the counter
+  }
 }
 
 // Wait for a short delay to allow time for the connections to be attempted
@@ -275,54 +327,6 @@ function addConnectionHandlers(player, otherPlayers, conn, globalPowerUps) {
   });
 }
 
-function handleData(player, otherPlayers, globalPowerUps, data) {
-  //console.log("handling data:");
-  // Find the otherPlayer in the array
-  let otherPlayer = otherPlayers.find((player) => player.id === data.id);
-
-  // If the player is found, update their data
-  if (otherPlayer) {
-    otherPlayer.x = data.x;
-    otherPlayer.y = data.y;
-    otherPlayer.angle = data.angle;
-    otherPlayer.color = data.color;
-    otherPlayer.powerUps = data.powerUps;
-    otherPlayer.name = data.name;
-    otherPlayer.pilot = data.pilot;
-    otherPlayer.isMaster = data.isMaster;
-    otherPlayer.ticksSincePowerUpCollection = data.ticksSincePowerUpCollection;
-
-    if (player.getPlayerIsMaster() && otherPlayer.isMaster) {
-      resolveConflicts(data, player, globalPowerUps, otherPlayers);
-    }
-  }
-  // If the player is not found, add them to the array
-  else if (data.id) {
-    otherPlayers.push(data);
-    if (!connectedPeers.includes(data.id)) {
-      connectedPeers.push(data.id);
-    }
-    connectedPeers.sort();
-
-    masterPeerId = chooseNewMasterPeer(player, otherPlayers);
-    if (data.powerUps > pointsToWin) {
-      checkWinner(otherPlayer, otherPlayers);
-    }
-  }
-  // Only update the powerups if the received data contains different powerups
-  if (data.globalPowerUps && JSON.stringify(globalPowerUps) !== JSON.stringify(data.globalPowerUps)) {
-    setGlobalPowerUps(data.globalPowerUps);
-  }
-  if(data.bots){
-    setBots(data.bots);
-  }
-  handleCounter++;
-  // Log the data every 1000 calls
-  if (handleCounter === 1000) {
-    console.log("handling data:", data);
-    handleCounter = 0; // reset the counter
-  }
-}
 
 function shuffleArray(array) {
   for (let i = array.length - 1; i > 0; i--) {
@@ -370,10 +374,14 @@ function chooseNewMasterPeer(player, otherPlayers) {
     player.setPlayerIsMaster(false);
   }
   otherPlayers.forEach((otherPlayer) => {
-    if (masterPeerId === otherPlayer.id) {
-      otherPlayer.setPlayerIsMaster(true);
+    if (otherPlayer instanceof Player) {
+      if (masterPeerId === otherPlayer.id) {
+        otherPlayer.setPlayerIsMaster(true);
+      } else {
+        otherPlayer.setPlayerIsMaster(false);
+      }
     } else {
-      otherPlayer.setPlayerIsMaster(false);
+      console.error("otherPlayer is not an instance of Player:", otherPlayer);
     }
   });
 

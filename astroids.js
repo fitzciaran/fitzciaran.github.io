@@ -22,6 +22,7 @@ import {
   updatePowerups,
   detectCollisions,
   masterPeerUpdateGame,
+  shuffleArray,
 } from "./gameLogic.js";
 import {
   handleInputEvents,
@@ -39,7 +40,7 @@ import {
 const { canvas, ctx } = setupCanvas();
 const worldDimensions = { width: 3600, height: 2400 };
 
-const colors = ["red", "blue", "green", "yellow", "purple", "orange", "pink", "violet", "maroon", "crimson", "white"];
+const colors = ["red", "blue", "SpringGreen", "green","lime", "cyan",  "indigo", "purple", "orange", "pink", "MediumVioletRed", "violet", "maroon", "crimson", "white"];
 const shipPoints = [
   { x: 0, y: -20 },
   { x: -10, y: 20 },
@@ -61,6 +62,11 @@ export const GameState = {
 export const PilotName = {
   PILOT_1: "pilot1",
   PILOT_2: "pilot2",
+};
+
+export const BotState = {
+  FOLLOW_PLAYER: "followPlayer",
+  RANDOM: "random",
 };
 
 //switch this to intro once built that section
@@ -91,14 +97,20 @@ export class Player {
     this.space = false;
     this.ticksSincePowerUpCollection = -1;
     this.previousAngleDifference = 0;
-    this.previousTurnDirection  = 0;
+    this.previousTurnDirection = 0;
+    this.botState = BotState.FOLLOW_PLAYER;
+    this.followingPlayer = "";
+    this.timeOfLastMessage = "";
+    this.timeOfLastActive = "";
+    this.randomTarget = { x: 0, y: 0 };
+    this.targetedBy = [];
   }
 
   resetState(keepName) {
     //don't think we ever want to abandon id
     //this.id = null;
-    this.x = 100 + Math.random() * (worldDimensions.width - 200);
-    this.y = 100 + Math.random() * (worldDimensions.height - 200);
+    this.x = 1200 + Math.random() * (worldDimensions.width - 2400);
+    this.y = 600 + Math.random() * (worldDimensions.height - 1200);
     this.powerUps = 0;
     this.color = colors[Math.floor(Math.random() * colors.length)];
     this.angle = 0;
@@ -106,7 +118,14 @@ export class Player {
     if (!keepName) {
       this.name = "";
     }
+    this.followingPlayer = "";
+    this.timeOfLastMessage = "";
+    this.timeOfLastActive = "";
+    this.randomTarget = { x: 0, y: 0 };
+    this.targetedBy = [];
+    this.space = false;
   }
+
   setPilot(newPilot) {
     this.pilot = newPilot;
   }
@@ -146,7 +165,11 @@ export class Player {
     let dy = this.y - this.mousePosY;
     let distance = Math.sqrt(dx * dx + dy * dy);
     this.angle = Math.atan2(dy, dx) + Math.PI / 2;
-    this.playerAngleData = { dx, dy, distance };
+    if (isNaN(dx) || isNaN(dy) || isNaN(distance)) {
+      console.log("player angle NaN data");
+    } else {
+      this.playerAngleData = { dx, dy, distance };
+    }
   }
 
   updatePlayerVelocity(deltaTime) {
@@ -167,7 +190,7 @@ export class Player {
 
     if (this.space) {
       let mouseToCenter = { x: dx / distance, y: dy / distance };
-      if (distance == 0) {
+      if (distance == 0 || isNaN(distance)) {
         mouseToCenter = { x: 0, y: 0 };
       }
       let maxForceDistance = 250;
@@ -193,6 +216,9 @@ export class Player {
     if (this.vel.x !== null && !isNaN(this.vel.x) && this.vel.y !== null && !isNaN(this.vel.y)) {
       this.x += this.vel.x * deltaTime;
       this.y += this.vel.y * deltaTime;
+      if (this.vel.x != 0 && this.vel.y != 0) {
+        this.timeOfLastActive = Date.now();
+      }
     } else {
       console.log("Invalid velocity values: x =", this.vel.x, "y =", this.vel.y);
     }
@@ -226,192 +252,147 @@ export class Player {
     }
   }
   updateBotInputs() {
-    //for testing just aim towards the player(master player is running this code)
-    let targetX = player.x;
-    let targetY = player.y;
+    if (this.botState == BotState.FOLLOW_PLAYER) {
+      if (this.followingPlayer == "") {
+        let allPlayers = [...otherPlayers, player];
+        shuffleArray(allPlayers);
+        let playerToFollow = null;
+        // Reset powerUps of other players
+        allPlayers.forEach((candidate) => {
+          //we are not targing any player currently so if we find we're in their array of followers remove ourselves
+          candidate.targetedBy = candidate.targetedBy.filter((id) => id !== this.id);
+          let candidateHowLongSinceActive = candidate.howLongSinceActive();
+          if (candidateHowLongSinceActive < 300 && candidate.targetedBy.length < 2) {
+            playerToFollow = candidate;
+            // playerToFollow.targetedBy += 1;
+            playerToFollow.targetedBy.push(this.id);
+            this.followingPlayer = playerToFollow;
+            //we'll skip updating inputs on this tick, picking a target is enough
+            return;
+          } else {
+            console.log(candidate.name + " is inactive not targeting");
+          }
+        });
+      }
+      if (this.followingPlayer == "") {
+        this.botState = BotState.RANDOM;
+        return;
+      }
+      //for testing just aim towards the player(master player is running this code)
+      let targetX = this.followingPlayer.x;
+      let targetY = this.followingPlayer.y;
+      this.aimAtTarget(targetX, targetY);
+    } else if (this.botState == BotState.RANDOM) {
+      if (this.randomTarget.x == 0 && this.randomTarget.y == 0) {
+        this.randomTarget.x = 100 + Math.random() * (worldDimensions.width - 200);
+        this.randomTarget.y = 100 + Math.random() * (worldDimensions.height - 200);
+      }
+      let targetX = this.randomTarget.x;
+      let targetY = this.randomTarget.y;
+      this.aimAtTarget(targetX, targetY);
+    }
+  }
+
+  aimAtTarget(targetX, targetY) {
     let currentX = this.x;
     let currentY = this.y;
 
     // Calculate the distance between the target and current points
     let distance = Math.sqrt((targetX - currentX) ** 2 + (targetY - currentY) ** 2);
 
-    // If distance is closer than 300, adjust the target randomly
-    if (distance < 300) {
-      // Define the range for adjustment, for example +/- 50 in both x and y directions
-      let adjustmentRange = 50;
+    if (distance < 100) {
+      //once we get there move on to a new target
 
-      // Calculate random adjustments within the range
-      let randomAdjustmentX = Math.random() * adjustmentRange * 2 - adjustmentRange;
-      let randomAdjustmentY = Math.random() * adjustmentRange * 2 - adjustmentRange;
-
-      // Update the target point with the random adjustments
-      targetX += randomAdjustmentX;
-      targetY += randomAdjustmentY;
+      if (this.followingPlayer && this.followingPlayer.targetedBy.length > 0) {
+        // this.followingPlayer.targetedBy -= 1;
+        this.followingPlayer.targetedBy = this.followingPlayer.targetedBy.filter((id) => id !== this.id);
+      } else {
+        console.log("followingPlayer null ");
+      }
+      this.followingPlayer = "";
+      this.randomTarget.x = 0;
+      this.randomTarget.y = 0;
+      //randomly choose new state
+      if (Math.random() > 0.7) {
+        this.botState = BotState.FOLLOW_PLAYER;
+      } else {
+        this.botState = BotState.RANDOM;
+      }
     }
-  //eventually this can just be a "target" state of multiple that the bot can switch between (probably should only target active players)
-  //another state could be head towards a point until get close at which point a new random point is selected.
-    let mousePos = this.mousePosToPositionAwayFromTarget(targetX, targetY, 200, this.mousePosX, this.mousePosY);
-    this.mousePosX = mousePos.X;
-    this.mousePosY = mousePos.Y;
-    this.space = true;
+    // If distance is closer than 300, adjust the target randomly
+    // if (distance < 300) {
+    //   // Define the range for adjustment, for example +/- 50 in both x and y directions
+    //   let adjustmentRange = 50;
 
-    //this.updatePlayerAngle();
+    //   // Calculate random adjustments within the range
+    //   let randomAdjustmentX = Math.random() * adjustmentRange * 2 - adjustmentRange;
+    //   let randomAdjustmentY = Math.random() * adjustmentRange * 2 - adjustmentRange;
+
+    //   // Update the target point with the random adjustments
+    //   targetX += randomAdjustmentX;
+    //   targetY += randomAdjustmentY;
+    // }
+    //eventually this can just be a "target" state of multiple that the bot can switch between (probably should only target active players)
+    //another state could be head towards a point until get close at which point a new random point is selected.
+    let mousePos = this.mousePosToPositionAwayFromTarget(targetX, targetY, 200, this.mousePosX, this.mousePosY);
+    if (!isNaN(mousePos.X) && !isNaN(mousePos.Y)) {
+      this.mousePosX = mousePos.X;
+      this.mousePosY = mousePos.Y;
+    } else {
+      console.log("mousePos NaN");
+    }
+    this.space = true;
   }
 
   mousePosToPositionAwayFromTarget(targetX, targetY, distanceFromCurrent, currentMousePosX, currentMousePosY) {
     let deltaX = targetX - this.x;
     let deltaY = targetY - this.y;
-  
+
     // Calculate the distance between the target and current position
     let distance = Math.sqrt(deltaX ** 2 + deltaY ** 2);
-  
+
     // Calculate the normalized direction vector
     let directionX = deltaX / distance;
     let directionY = deltaY / distance;
-  
+
     // Calculate the new mouse position
     let mousePosX = this.x - directionX * distanceFromCurrent;
     let mousePosY = this.y - directionY * distanceFromCurrent;
-  
+
     let currentAngle = Math.atan2(currentMousePosY - this.y, currentMousePosX - this.x);
     let desiredAngle = Math.atan2(mousePosY - this.y, mousePosX - this.x);
-  
-    // Define the maximum angle change, for example, +/- 0.1 radians
-    let maxAngleChange = 0.2;
-  
+
     // Calculate the angle difference
     let angleDifference = desiredAngle - currentAngle;
-  
+
     // Wrap the angle difference between -π and π
     if (angleDifference > Math.PI) {
       angleDifference -= 2 * Math.PI;
     } else if (angleDifference < -Math.PI) {
       angleDifference += 2 * Math.PI;
     }
-  
-    // Check if the angle change needs to be the other way based on previous turn direction
-    if (
-      (angleDifference > 0 && this.previousTurnDirection < 0) ||
-      (angleDifference < 0 && this.previousTurnDirection > 0)
-    ) {
-      // Do not update the angle for this tick
-      angleDifference = 0;
-    } else {
-      // Limit the angle difference to the maximum angle change
-      angleDifference = Math.min(maxAngleChange, Math.max(-maxAngleChange, angleDifference));
-  
-      // Update the previous turn direction
-      this.previousTurnDirection = Math.sign(angleDifference);
-    }
-  
-    // Remember the angle difference for next tick
-    this.previousAngleDifference = angleDifference;
-  
-    // Calculate the adjusted angle
-    let adjustedAngle = currentAngle + angleDifference;
-  
-    // Calculate the new mouse position based on the adjusted angle and the desired distance from the current position
-    mousePosX = this.x + Math.cos(adjustedAngle) * distanceFromCurrent;
-    mousePosY = this.y + Math.sin(adjustedAngle) * distanceFromCurrent;
-  
+
+    // Interpolate between the current angle and the desired angle
+    let interpolationFactor = 0.4; // Adjust this value to change the speed of the turn
+    let interpolatedAngle = currentAngle + angleDifference * interpolationFactor;
+
+    // Calculate the new mouse position based on the interpolated angle and the desired distance from the current position
+    mousePosX = this.x + Math.cos(interpolatedAngle) * distanceFromCurrent;
+    mousePosY = this.y + Math.sin(interpolatedAngle) * distanceFromCurrent;
+
     return { X: mousePosX, Y: mousePosY };
+  }
+  howLongSinceActive() {
+    if (this.timeOfLastActive) {
+      const currentTime = Date.now();
+      const timeDifference = currentTime - this.timeOfLastActive;
+      return timeDifference;
+    } else {
+      return 5000;
+    }
   }
 }
 
-// function mousePosToPositionAwayFromTarget(targetX, targetY, currentX, currentY, distanceFromCurrent, currentMousePosX, currentMousePosY) {
-//   let deltaX = targetX - currentX;
-//   let deltaY = targetY - currentY;
-
-//   // Calculate the distance between the target and current position
-//   let distance = Math.sqrt(deltaX ** 2 + deltaY ** 2);
-
-//   // Calculate the normalized direction vector
-//   let directionX = deltaX / distance;
-//   let directionY = deltaY / distance;
-
-//   // Calculate the new mouse position
-//   let mousePosX = currentX - directionX * distanceFromCurrent;
-//   let mousePosY = currentY - directionY * distanceFromCurrent;
-  
-//   let currentAngle = Math.atan2(currentY - currentMousePosY, currentX - currentMousePosX);
-
-//   let desiredAngle = Math.atan2(currentY - mousePosY,  currentX - mousePosX);
-//   // Define the maximum angle change, for example, +/- 0.1 radians
-//   let maxAngleChange = 0.0000000000001;
-
-//   // Limit the angle change to the maximum angle change
-//   let adjustedAngle = currentAngle + Math.min(maxAngleChange, Math.max(-maxAngleChange, desiredAngle - currentAngle));
-
-//   // Calculate the new mouse position based on the adjusted angle and the desired distance from the current position
-//   mousePosX = currentX + Math.cos(adjustedAngle) * distanceFromCurrent;
-//   mousePosY = currentY + Math.sin(adjustedAngle) * distanceFromCurrent;
-
-//   return { X: mousePosX, Y: mousePosY };
-// }
-
-// function mousePosToPositionAwayFromTarget(targetX, targetY, currentX, currentY, distanceFromCurrent, currentMousePosX, currentMousePosY) {
-//   let deltaX = targetX - currentX;
-//   let deltaY = targetY - currentY;
-
-//   // Calculate the distance between the target and current position
-//   let distance = Math.sqrt(deltaX ** 2 + deltaY ** 2);
-
-//   // Calculate the normalized direction vector
-//   let directionX = deltaX / distance;
-//   let directionY = deltaY / distance;
-
-//   // Calculate the new mouse position
-//   let mousePosX = currentX - directionX * distanceFromCurrent;
-//   let mousePosY = currentY - directionY * distanceFromCurrent;
-
-//   let currentAngle = Math.atan2(currentMousePosY - currentY, currentMousePosX - currentX);
-//   let desiredAngle = Math.atan2(mousePosY - currentY, mousePosX - currentX);
-
-//   // Define the maximum angle change, for example, +/- 0.1 radians
-//   let maxAngleChange = 0.15;
-
-//   // Calculate the angle difference
-//   let angleDifference = desiredAngle - currentAngle;
-
-//   // Wrap the angle difference between -π and π
-//   if (angleDifference > Math.PI) {
-//     angleDifference -= 2 * Math.PI;
-//   } else if (angleDifference < -Math.PI) {
-//     angleDifference += 2 * Math.PI;
-//   }
-
-//   // Limit the angle difference to the maximum angle change
-//   angleDifference = Math.min(maxAngleChange, Math.max(-maxAngleChange, angleDifference));
-
-//   // Calculate the adjusted angle
-//   let adjustedAngle = currentAngle + angleDifference;
-
-//   // Calculate the new mouse position based on the adjusted angle and the desired distance from the current position
-//   mousePosX = currentX + Math.cos(adjustedAngle) * distanceFromCurrent;
-//   mousePosY = currentY + Math.sin(adjustedAngle) * distanceFromCurrent;
-
-//   return { X: mousePosX, Y: mousePosY };
-// }
-
-// function mousePosToAimTowardsTarget(targetX, targetY, currentX, currentY, distanceFromCurrent, currentMousePosX, currentMousePosY) {
-//   // Calculate the current angle between the mouse position and the target point
-//   let currentAngle = Math.atan2(targetY - currentMousePosY, targetX - currentMousePosX);
-
-//   // Calculate the desired angle towards the target point
-//   let desiredAngle = Math.atan2(targetY - currentY, targetX - currentX);
-
-//   // Define the maximum angle change, for example, +/- 0.1 radians
-//   let maxAngleChange = 0.1;
-
-//   // Limit the angle change to the maximum angle change
-//   let adjustedAngle = currentAngle + Math.min(maxAngleChange, Math.max(-maxAngleChange, desiredAngle - currentAngle));
-
-//   // Calculate the new mouse position based on the adjusted angle and the desired distance from the current position
-//   let mousePosX = currentX + Math.cos(adjustedAngle) * distanceFromCurrent;
-//   let mousePosY = currentY + Math.sin(adjustedAngle) * distanceFromCurrent;
-
-//   return { X: mousePosX, Y: mousePosY };
-// }
 export const player = new Player(null, null, null, 0, null, 0, "", "");
 export let otherPlayers = [];
 export let bots = [];
@@ -520,6 +501,7 @@ function updateGame(deltaTime, playerActive) {
   }
 }
 function camFollowPlayer(deltaTime) {
+  //could choose spectaror who is active? but need to stick with one once choosen so maintain a playerToSpectate varible and only check if they become invalid.
   if (otherPlayers != null && otherPlayers[0] != null) {
     updateCamera(otherPlayers[0], deltaTime);
   }
