@@ -1,5 +1,5 @@
 import { camX, camY, getGameState, setGameState, getCanvas, GameState, PilotName, player } from "./astroids.js";
-import { drawPilots, drawNameEntry } from "./canvasDrawingFunctions.js";
+import { drawNameEntry } from "./canvasDrawingFunctions.js";
 import { pilot1, pilot2, calculateAngle,getRandomName,max_player_name } from "./gameLogic.js";
 
 
@@ -129,9 +129,6 @@ export function addPilotEventListners(canvas, ctx) {
       } else {
         //pilot2.selected = false;
       }
-
-      // Redraw pilots with new selection state
-      //drawPilots(canvas, ctx);
     }
   };
 

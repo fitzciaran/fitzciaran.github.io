@@ -29,6 +29,8 @@ export const pilot2 = {
 export const max_player_name = 15;
 
 export function checkWinner(player, otherPlayers) {
+  //for now won't have a winner in this sense still thinking about what the game should be
+  return false;
   if (player.powerUps >= pointsToWin) {
     sendPlayerStates(player);
     setGameState(GameState.FINISHED);
@@ -52,6 +54,10 @@ export function checkWinner(player, otherPlayers) {
     }
   }
   return false;
+}
+
+export function setEndGameMessage(newMessage) {
+  endGameMessage = newMessage;
 }
 
 export function generatePowerups(globalPowerUps, worldWidth, worldHeight, colors) {
@@ -96,7 +102,42 @@ export function checkPowerupCollision(playerToCheck, globalPowerUps) {
       setGlobalPowerUps(globalPowerUps);
       //cf test do we need this looks like yes
       //sendGameState(globalPowerUps);
-      break; // exit the loop to avoid possible index errors
+      break; // exit the loop to avoid possible index errors - does that mean we can only register 1 collection per tick?
+    }
+  }
+}
+export function checkPlayerCollision(playerToCheck, allPlayers) {
+  for (let i = 0; i < allPlayers.length; i++) {
+    if (playerToCheck.id == allPlayers[i].id) {
+      //don't check collision against self
+      continue;
+    }
+    let dx = playerToCheck.x - allPlayers[i].x;
+    let dy = playerToCheck.y - allPlayers[i].y;
+    let distance = Math.sqrt(dx * dx + dy * dy);
+
+    if (distance < 20) {
+      // assuming the radius of both ships is 10
+      //for now just reset player if a crash
+      if (playerToCheck.isPlaying == true) {
+        playerToCheck.gotHit();
+      }
+      if (playerToCheck.isBot) {
+       // playerToCheck.resetState(true, true);
+       allPlayers[i].delayReset(3);
+      }
+      if (allPlayers[i] instanceof Player) {
+        // allPlayers[i].resetState(true, true);
+        if (allPlayers[i].isPlaying == true) {
+          allPlayers[i].gotHit();
+        }
+        if (allPlayers[i].isBot) {
+          // allPlayers[i].resetState(true, true);
+          allPlayers[i].delayReset(3);
+        }
+      } else {
+        console.log("non player in players array");
+      }
     }
   }
 }
@@ -142,17 +183,19 @@ export function updatePowerups(deltaTime) {
   // Update the positions, velocities, etc. of the powerups
   //setGlobalPowerUps(getGlobalPowerUps());
 }
-export function detectCollisions(player, globalPowerUps) {
+export function detectCollisions(player, globalPowerUps, bots, otherPlayers) {
   // Detect collisions between the player's ship and the powerups or other ships
   // If a collision is detected, update the game state accordingly
   checkPowerupCollision(player, globalPowerUps);
+  let allPlayers = [...bots, ...otherPlayers, player];
+  checkPlayerCollision(player, allPlayers);
 }
 
 export function calculateAngle(player) {
   return Math.atan2(player.mousePosY - player.y, player.mousePosX - player.x);
 }
 
-export function masterPeerUpdateGame(globalPowerUps, bots, deltaTime) {
+export function masterPeerUpdateGame(globalPowerUps, otherPlayers, bots, deltaTime) {
   // This peer is the master, so it runs the game logic for shared objects
 
   //eventually run this based on how many bots and existing players in total currently
@@ -163,7 +206,11 @@ export function masterPeerUpdateGame(globalPowerUps, bots, deltaTime) {
 
   // The master peer also detects collisions between all ships and powerups
   otherPlayers.forEach((otherPlayer) => {
-    detectCollisions(otherPlayer, globalPowerUps, otherPlayers);
+    detectCollisions(otherPlayer, globalPowerUps, bots, otherPlayers);
+  });
+
+  bots.forEach((bot) => {
+    detectCollisions(bot, globalPowerUps, bots, otherPlayers);
   });
 
   // Send the game state to all other peers
@@ -185,7 +232,6 @@ export function createBots() {
     }
   }
 }
-
 export function getRandomName() {
   const prefixes = [
     "Astro",
@@ -202,6 +248,20 @@ export function getRandomName() {
     "Sneaky",
     "Stinky",
     "Drunk",
+    "Mean",
+    "Tree",
+    "Dave",
+    "Fire",
+    "Ice",
+    "Mystic",
+    "Electric",
+    "Nebula",
+    "Aqua",
+    "Cyber",
+    "Shadow",
+    "Crystal",
+    "Golden",
+    "Silver",
   ];
   const suffixes = [
     "Rider",
@@ -214,29 +274,47 @@ export function getRandomName() {
     "Flyer",
     "Racer",
     "Striker",
-    "Butthole",
     "Tosser",
-    "Wanker",
-    "Killer",
-    "Chubb",
+    "Wanderer",
+    "Maverick",
+    "Slinger",
+    "Jester",
+    "Ranger",
+    "Champion",
+    "Seeker",
+    "Phantom",
+    "Hunter",
+    "Shifter",
+    "Whisper",
+    "Dreamer",
+    "Wanderer",
   ];
 
-  // Generate a random index for prefix and suffix
+  // Generate random indexes for prefix and suffix
   const prefixIndex = Math.floor(Math.random() * prefixes.length);
   const suffixIndex = Math.floor(Math.random() * suffixes.length);
 
   // Generate a random number between 10 and 99
   const randomNumber = Math.floor(Math.random() * 90) + 10;
 
-  // Concatenate prefix, suffix and random number to form the name
-  let randomName = prefixes[prefixIndex] + suffixes[suffixIndex] + randomNumber;
+  // Decide whether to place the number at the beginning or end
+  const placeAtEnd = Math.random() < 0.3;
 
-  // If the name is longer than 10 characters, regenerate it
-  while (randomName.length > max_player_name) {
-    const prefixIndex = Math.floor(Math.random() * prefixes.length);
-    const suffixIndex = Math.floor(Math.random() * suffixes.length);
-    const randomNumber = Math.floor(Math.random() * 90) + 10;
+  const skipSuffix = Math.random() < 0.3;
+
+  // Build the name based on the placement of the number
+  let randomName;
+  if (!placeAtEnd) {
+    randomName = prefixes[prefixIndex] + suffixes[suffixIndex];
+  } else if (skipSuffix) {
+    randomName = prefixes[prefixIndex] + randomNumber;
+  } else {
     randomName = prefixes[prefixIndex] + suffixes[suffixIndex] + randomNumber;
+  }
+
+  // If the name is longer than 15 characters, truncate it
+  if (randomName.length > 15) {
+    randomName = randomName.slice(0, 15);
   }
 
   return randomName;

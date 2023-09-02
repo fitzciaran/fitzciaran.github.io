@@ -2,7 +2,6 @@ import { BotState } from "./astroids.js";
 import { isPlayerMasterPeer, getTopScores } from "./connectionHandlers.js";
 import { pilot1, pilot2 } from "./gameLogic.js";
 
-
 let backLayer = new Image();
 let midBackLayer = new Image();
 let middleLayer = new Image();
@@ -134,7 +133,9 @@ export function drawBackground(ctx, camX, camY, canvas, backLayer, midBackLayer,
   const aspectRatioDiff = backAspectRatio - canvasAspectRatio;
 
   // Calculate offsets based on the aspect ratio difference and window dimensions
-  let xOffset = 630;
+  //sometimes 890 seems to be good sometime 620 (regardless of window resize and refreshes)
+  // let xOffset = 890;
+  let xOffset = 620;
   let yOffset = 12.5;
   //xOffset += (Math.abs(aspectRatioDiff) * window.innerHeight) / 2;
   if (aspectRatioDiff > 0) {
@@ -182,8 +183,15 @@ export function drawBackground(ctx, camX, camY, canvas, backLayer, midBackLayer,
 
 // Export a drawWorldBounds function that takes the canvas context as an argument
 export function drawWorldBounds(ctx, camX, camY, worldWidth, worldHeight) {
-  ctx.lineWidth = 10; // Line width increased
-  ctx.strokeStyle = "blue";
+  // Create gradient
+  let gradient = ctx.createLinearGradient(0, 0, worldWidth, worldHeight);
+  gradient.addColorStop("0", "magenta");
+  gradient.addColorStop("0.5", "blue");
+  gradient.addColorStop("1.0", "red");
+
+  // Draw border
+  ctx.lineWidth = 20;
+  ctx.strokeStyle = gradient;
   ctx.strokeRect(-camX, -camY, worldWidth, worldHeight);
 }
 
@@ -206,25 +214,30 @@ function drawMinimap(player, otherPlayers, bots, worldWidth, worldHeight) {
   minimapCtx.lineWidth = 3; // Border width
   minimapCtx.strokeRect(0, 0, minimapCanvas.width, minimapCanvas.height);
 
-  if (player != null) {
+  if (player != null && player.isPlaying) {
     // Draw the player's ship on the minimap
     minimapCtx.fillStyle = player.color;
     minimapCtx.fillRect(player.x * scaleX, player.y * scaleY, dotSize, dotSize);
   }
   // Draw other players on the minimap
   otherPlayers.forEach((player) => {
-    minimapCtx.fillStyle = player.color;
-    minimapCtx.fillRect(player.x * scaleX, player.y * scaleY, dotSize, dotSize);
+    if (player != null && player.isPlaying) {
+      minimapCtx.fillStyle = player.color;
+      minimapCtx.fillRect(player.x * scaleX, player.y * scaleY, dotSize, dotSize);
+    }
   });
 
-   // Draw other players on the minimap
-   bots.forEach((bot) => {
+  // Draw bots on the minimap
+  bots.forEach((bot) => {
     minimapCtx.fillStyle = bot.color;
     minimapCtx.fillRect(bot.x * scaleX, bot.y * scaleY, dotSize, dotSize);
   });
 }
 
 function drawRotatedShip(ctx, camX, camY, player, points) {
+  if (!player.isPlaying) {
+    return;
+  }
   let centerX = player.x;
   let centerY = player.y;
   let angle = player.angle;
@@ -293,7 +306,7 @@ export function drawMinimapPowerups(globalPowerUps, worldWidth, worldHeight) {
   });
 }
 
-export function renderPowerupLevels(ctx, player, otherPlayers,bots) {
+function drawPowerupLevels(ctx, player, otherPlayers, bots) {
   const topGap = 100;
   const textHeight = 75; // Adjust this to the size of your text
   const gap = 16; // Gap between lines
@@ -301,7 +314,8 @@ export function renderPowerupLevels(ctx, player, otherPlayers,bots) {
 
   if (player != null) {
     let textWidth = ctx.measureText(player.name).width;
-    const myPowerupText = `${player.name}: ${player.powerUps}`;
+    const score = player.powerUps * 100;
+    const myPowerupText = `${player.name}: ${score}`;
     ctx.fillStyle = player.color;
     ctx.textAlign = "start";
     ctx.fillText(myPowerupText, 199.5 - textWidth * 0.99, topGap - textHeight);
@@ -311,9 +325,12 @@ export function renderPowerupLevels(ctx, player, otherPlayers,bots) {
     // const playerPowerupText = `Player ${player.id.slice(0, 7)} Powerups: ${player.powerUps}`; // Showing only the first 7 digits of id for readability
     let playerName = player.name;
     if (playerName == null || playerName == "") {
+      //todo maybe just skip over this player if not setup correctly?
+      return;
       playerName = "Unknown";
     }
-    const playerPowerupText = playerName + `: ${player.powerUps}`;
+    const score = player.powerUps * 100;
+    const playerPowerupText = playerName + `: ${score}`;
     let textWidth = ctx.measureText(playerName).width;
     const y = topGap - textHeight + (1 + index) * gap; // calculate y position for each player's text
     ctx.fillStyle = player.color; // individual ship color for each player
@@ -326,7 +343,8 @@ export function renderPowerupLevels(ctx, player, otherPlayers,bots) {
     if (playerName == null || playerName == "") {
       playerName = "Unknown";
     }
-    const playerPowerupText = playerName + `: ${bot.powerUps}`;
+    const score = bot.powerUps * 100;
+    const playerPowerupText = playerName + `: ${score}`;
     let textWidth = ctx.measureText(playerName).width;
     const y = topGap - textHeight + (1 + index + otherPlayers.length) * gap; // calculate y position for each player's text
     ctx.fillStyle = bot.color; // individual ship color for each player
@@ -334,7 +352,7 @@ export function renderPowerupLevels(ctx, player, otherPlayers,bots) {
   });
 }
 
-export function renderDebugInfo(ctx, player,bots) {
+export function renderDebugInfo(ctx, player, bots) {
   ctx.textAlign = "start";
   const topGap = 100;
   const gap = 16; // Gap between lines
@@ -352,20 +370,20 @@ export function renderDebugInfo(ctx, player,bots) {
   ctx.fillStyle = player.color;
   ctx.fillText(isMasterText, 558, topGap + gap * 2 - textHeight);
 
-  if (topDailyScoresString != "") {
-    var scores = topDailyScoresString.split("; ");
-    for (var i = 0; i < scores.length; i++) {
-      ctx.fillText(scores[i], 558, topGap + gap * (3 + i) - textHeight);
-    }
-  }
+  // if (topDailyScoresString != "") {
+  //   var scores = topDailyScoresString.split("; ");
+  //   for (var i = 0; i < scores.length; i++) {
+  //     ctx.fillText(scores[i], 558, topGap + gap * (3 + i) - textHeight);
+  //   }
+  // }
   bots.forEach((bot, index) => {
     let botInfo;
-    if(bot.botState == BotState.FOLLOW_PLAYER){
-    botInfo =  `bot state: ${bot.botState} following: ${bot.followingPlayer.name} `;
-    }else{
-      botInfo =  `bot state: ${bot.botState} aiming: ${bot.randomTarget.x},${bot.randomTarget.y} `;
+    if (bot.botState == BotState.FOLLOW_PLAYER) {
+      botInfo = `bot state: ${bot.botState} following: ${bot.followingPlayerID} `;
+    } else {
+      botInfo = `bot state: ${bot.botState} aiming: ${bot.randomTarget.x},${bot.randomTarget.y} `;
     }
-    ctx.fillText(botInfo, 958, topGap + gap * ( index) - textHeight);
+    ctx.fillText(botInfo, 958, topGap + gap * index - textHeight);
   });
 }
 
@@ -373,7 +391,7 @@ export function updateTopScoresInfo() {
   var date = new Date();
   var dateString = date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate();
 
-  getTopScores("daily-" + dateString, 5)
+  getTopScores("daily-" + dateString, 10)
     .then((scores) => {
       topDailyScoresString = scores.join("; ");
     })
@@ -411,9 +429,9 @@ export function drawScene(player, otherPlayers, bots, ctx, camX, camY, worldDime
   drawMinimapPowerups(globalPowerUps, worldDimensions.width, worldDimensions.height);
   if (player != null) {
     drawRotatedShip(ctx, camX, camY, player, shipPoints);
-    renderDebugInfo(ctx, player,bots);
+    renderDebugInfo(ctx, player, bots);
   }
-  renderPowerupLevels(ctx, player, otherPlayers,bots);
+  drawPowerupLevels(ctx, player, otherPlayers, bots);
 }
 
 export const loreTablet = {
@@ -428,10 +446,46 @@ let loreIndex = 0;
 let lineCount = 0;
 let maxCharsPerLine = 20; // Adjust this value based on the width of your tablet
 
-export function drawPilots(canvas, ctx) {
-  // or now don't Draw background let the game show in the background
-  ctx.fillStyle = "black";
-  // ctx.fillRect(0, 0, canvas.width, canvas.height);
+export function drawPreGameOverlay(canvas, ctx) {
+  const bestScoresXOffset = 250;
+  const bestScoresYOffset = 300;
+  // Create gradient
+  let gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+  gradient.addColorStop("0", "magenta");
+  gradient.addColorStop("0.5", "blue");
+  gradient.addColorStop("1.0", "red");
+
+  // Draw border
+  ctx.lineWidth = 10;
+  ctx.strokeStyle = gradient;
+  ctx.strokeRect(bestScoresXOffset - 170, bestScoresYOffset - 50, 360, 320);
+
+  // Draw title
+  ctx.font = "20px Arial";
+  ctx.fillStyle = "white";
+  ctx.textAlign = "center";
+
+  ctx.fillText("Best Scores Today!", bestScoresXOffset, bestScoresYOffset);
+
+  // Draw table headers
+  ctx.font = "16px Arial";
+  ctx.fillText("Rank", bestScoresXOffset - 100, bestScoresYOffset + 30);
+  ctx.fillText("Score", bestScoresXOffset, bestScoresYOffset + 30);
+  ctx.fillText("Player", bestScoresXOffset + 100, bestScoresYOffset + 30);
+
+  // Draw scores
+  ctx.font = "14px Arial";
+  let gap = 20;
+  const textHeight = 75;
+  if (topDailyScoresString != "") {
+    var scores = topDailyScoresString.split("; ");
+    for (var i = 0; i < scores.length; i++) {
+      let scoreData = scores[i].split(", "); // Assuming score data is in format "score, player"
+      ctx.fillText((i + 1).toString(), bestScoresXOffset - 100, bestScoresYOffset + 130 + gap * i - textHeight); // Rank
+      ctx.fillText(scoreData[0], bestScoresXOffset, bestScoresYOffset + 130 + gap * i - textHeight); // Score
+      ctx.fillText(scoreData[1], bestScoresXOffset + 100, bestScoresYOffset + 130 + gap * i - textHeight); // Player
+    }
+  }
 
   // Draw title
   ctx.font = "30px Arial";
@@ -445,7 +499,7 @@ export function drawPilots(canvas, ctx) {
   // Draw pilot options
   ctx.drawImage(pilot1.image, pilot1.x, pilot1.y, pilot1.width, pilot1.height);
   ctx.drawImage(pilot2.image, pilot2.x, pilot2.y, pilot2.width, pilot2.height);
-
+  ctx.lineWidth = 7;
   // Highlight selected pilot
   if (pilot1.selected) {
     ctx.strokeStyle = "yellow";

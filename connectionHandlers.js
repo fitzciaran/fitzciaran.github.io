@@ -8,19 +8,20 @@ import {
   detectCollisions,
   updateBots,
   masterPeerUpdateGame,
+  shuffleArray,
 } from "./gameLogic.js";
 
 
 export let everConnected = false;
 export let connections = [];
 export let peerIds = [
-  "a7ef962d-14a8-40e4-8a1e-226a438a345d",
-  "b7ef962d-14a8-40e4-8a1e-226a438a345d",
-  "c7ef962d-14a8-40e4-8a1e-226a438a345d",
-  "d7ef962d-14a8-40e4-8a1e-226a438a345d",
-  "e7ef962d-14a8-40e4-8a1e-226a438a345d",
-  "a6ef962d-14a8-40e4-8a1e-226a438a345d",
-  "b6ef962d-14a8-40e4-8a1e-226a438a345d",
+  "a7ef962d-14a8-40e4-8a1e-226a438a345c",
+  "b7ef962d-14a8-40e4-8a1e-226a438a345c",
+  "c7ef962d-14a8-40e4-8a1e-226a438a345c",
+  "d7ef962d-14a8-40e4-8a1e-226a438a345c",
+  "e7ef962d-14a8-40e4-8a1e-226a438a345c",
+  "a6ef962d-14a8-40e4-8a1e-226a438a345c",
+  "b6ef962d-14a8-40e4-8a1e-226a438a345c",
 ];
 
 let masterPeerId = peerIds[0]; // start off with the first peer as the master
@@ -59,6 +60,8 @@ export function sendPlayerStates(player) {
     isMaster: player.isMaster,
     ticksSincePowerUpCollection: player.ticksSincePowerUpCollection,
     timeOfLastActive: player.timeOfLastActive,
+    isDead: player.isDead,
+    isPlaying: player.isPlaying,
   };
   //console.log("Sending data:", data); // Log any data sent
   connections.forEach((conn) => {
@@ -136,6 +139,8 @@ function handleData(player, otherPlayers, globalPowerUps, data) {
     otherPlayer.isMaster = data.isMaster;
     otherPlayer.ticksSincePowerUpCollection = data.ticksSincePowerUpCollection;
     otherPlayer.timeOfLastActive = data.timeOfLastActive;
+    otherPlayer.isDead = data.isDead;
+    otherPlayer.isPlaying = data.isPlaying;
 
     if (player.getPlayerIsMaster() && otherPlayer.isMaster) {
       resolveConflicts(data, player, globalPowerUps, otherPlayers);
@@ -143,7 +148,8 @@ function handleData(player, otherPlayers, globalPowerUps, data) {
   }
   // If the player is not found, add them to the array
   else if (data.id) {
-    otherPlayers.push(data);
+    let newPlayer = new Player(data.id, data.x, data.y,  data.powerUps, data.color,  data.angle, data.pilot, data.name);
+    otherPlayers.push(newPlayer);
     if (!connectedPeers.includes(data.id)) {
       connectedPeers.push(data.id);
     }
@@ -170,11 +176,11 @@ function handleData(player, otherPlayers, globalPowerUps, data) {
 }
 
 // Wait for a short delay to allow time for the connections to be attempted
-export function attemptConnections(player, otherPlayers, peerIds, globalPowerUps) {
+export function attemptConnections(player, otherPlayers, globalPowerUps) {
   if (player.id === null) {
     console.log("All IDs are in use");
     connectionBackOffTime = (connectionBackOffTime + 500) * 2;
-    setTimeout(() => tryNextId(player, peerIds), connectionBackOffTime);
+    setTimeout(() => tryNextId(player), connectionBackOffTime);
     return;
   }
 
@@ -207,18 +213,18 @@ export function attemptConnections(player, otherPlayers, peerIds, globalPowerUps
     // If the master peer has disconnected, choose a new master peer
     // if (isPlayerMasterPeer(player)) {
     masterPeerId = chooseNewMasterPeer(player, otherPlayers);
-    tryNextId();
+    tryNextId(player);
     //  }
   });
 
-  connectToPeers(player, otherPlayers, peerIds, globalPowerUps);
+  connectToPeers(player, otherPlayers, globalPowerUps);
 }
 
 export function isPlayerMasterPeer(player) {
   return player.id === masterPeerId;
 }
 
-export function connectToPeers(player, otherPlayers, peerIds, globalPowerUps) {
+export function connectToPeers(player, otherPlayers, globalPowerUps) {
   // Connect to the other peers
   peerIds.forEach((id) => {
     if (id !== player.id) {
@@ -245,7 +251,7 @@ export function connectToPeers(player, otherPlayers, peerIds, globalPowerUps) {
   });
 }
 
-export function tryNextId(player, peerIds) {
+export function tryNextId(player) {
   if (index >= peerIds.length) {
     console.log("All IDs are in use - trynextid function");
     return;
@@ -270,7 +276,7 @@ export function tryNextId(player, peerIds) {
       console.log("ID is in use:", id);
       index++;
 
-      tryNextId(player, peerIds);
+      tryNextId(player);
     } else if (err.type === "browser-incompatible") {
       console.log("browser incompatible:", err);
       //console.log("Other error:");
@@ -325,14 +331,6 @@ function addConnectionHandlers(player, otherPlayers, conn, globalPowerUps) {
     // update the local game state to match the received game state
     resolveConflicts(data, player, globalPowerUps, otherPlayers);
   });
-}
-
-
-function shuffleArray(array) {
-  for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
-  }
 }
 
 export function getPeer() {
@@ -392,11 +390,10 @@ function resolveConflicts(data, player, powerups, otherPlayers) {
   // If there is a conflict between the local game state and the received game state,
   // update the local game state to match the received game state
   if (player.id == null) {
-    tryNextId(player, peerIds);
+    tryNextId(player);
   }
   masterPeerId = chooseNewMasterPeer(player, otherPlayers);
 }
-
 export function addScore(category, name, score) {
   var collection = db.collection(category);
 
@@ -406,16 +403,11 @@ export function addScore(category, name, score) {
     .limit(10)
     .get()
     .then((querySnapshot) => {
-      var lowestScore = null;
+      // Count the number of scores in the category
+      const numScores = querySnapshot.size;
 
-      querySnapshot.forEach((doc) => {
-        if (lowestScore == null || doc.data().score < lowestScore) {
-          lowestScore = doc.data().score;
-        }
-      });
-
-      // If the new score is in the top 10, add it to the database
-      if (lowestScore == null || score > lowestScore) {
+      // If there are fewer than 10 scores, add the new score
+      if (numScores < 10) {
         collection
           .add({
             name: name,
@@ -428,6 +420,30 @@ export function addScore(category, name, score) {
           .catch(function (error) {
             console.error("Error adding score: ", error);
           });
+      } else {
+        // Otherwise, check if the new score is in the top 10
+        var lowestScore = null;
+
+        querySnapshot.forEach((doc) => {
+          if (lowestScore == null || doc.data().score < lowestScore) {
+            lowestScore = doc.data().score;
+          }
+        });
+
+        if (score > lowestScore) {
+          collection
+            .add({
+              name: name,
+              score: score,
+              date: firebase.firestore.FieldValue.serverTimestamp(),
+            })
+            .then(function (docRef) {
+              console.log("Score written with ID: ", docRef.id);
+            })
+            .catch(function (error) {
+              console.error("Error adding score: ", error);
+            });
+        }
       }
     });
 }
@@ -442,7 +458,7 @@ export function getTopScores(category, X) {
       .then((querySnapshot) => {
         querySnapshot.forEach((doc) => {
           var data = doc.data();
-          scores.push(`Name: ${data.name}, Score: ${data.score}`);
+          scores.push(`${data.score}, ${data.name}`);
         });
         resolve(scores);
       })

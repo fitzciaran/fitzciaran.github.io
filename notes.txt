@@ -82,7 +82,8 @@ a new challenger approaches  screen when someone joins?
 getting pulled in the direction of a few different types of games currently ... thats fine for now tho
 rollback prediction for other players? or even for ai that master is processing?
 
-camera follow host before the game starts?
+camera follow host before the game starts? - try out following the bots see how it is.
+
 move player processing logic into the player object so can use for bots.
 maybe move player inputs into player logic for same reason
 
@@ -90,3 +91,8 @@ bots can appear jittery on non-master peers
 add bot collision with power ups and players
 add player to player collision (decide what happens)
 add bot states, and sometimes randomly switch between states.
+
+need to introduce the idea of ongoing game so lose state for one is only local for them
+maybe you lose health as time goes by and you have to keep up with picking up power ups to restore?
+neaten current scores text - maybe put in a box too? 
+some visual effect when ships hit

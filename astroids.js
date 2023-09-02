@@ -1,14 +1,14 @@
 import {
   setupCanvas,
   drawScene,
-  drawPilots,
+  drawPreGameOverlay,
   setupPilotsImages,
   drawNameEntry,
   drawWinnerMessage,
   drawNameCursor,
   updateTopScoresInfo,
 } from "./canvasDrawingFunctions.js";
-import { peerIds, tryNextId, attemptConnections, connectToPeers, sendPlayerStates, updateConnections } from "./connectionHandlers.js";
+import { tryNextId, attemptConnections, connectToPeers, sendPlayerStates, updateConnections, addScore } from "./connectionHandlers.js";
 import {
   checkWinner,
   generatePowerups,
@@ -23,6 +23,7 @@ import {
   detectCollisions,
   masterPeerUpdateGame,
   shuffleArray,
+  setEndGameMessage,
 } from "./gameLogic.js";
 import {
   handleInputEvents,
@@ -40,7 +41,23 @@ import {
 const { canvas, ctx } = setupCanvas();
 const worldDimensions = { width: 3600, height: 2400 };
 
-const colors = ["red", "blue", "SpringGreen", "green","lime", "cyan",  "indigo", "purple", "orange", "pink", "MediumVioletRed", "violet", "maroon", "crimson", "white"];
+const colors = [
+  "red",
+  "blue",
+  "SpringGreen",
+  "green",
+  "lime",
+  "cyan",
+  "indigo",
+  "purple",
+  "orange",
+  "pink",
+  "MediumVioletRed",
+  "violet",
+  "maroon",
+  "crimson",
+  "white",
+];
 const shipPoints = [
   { x: 0, y: -20 },
   { x: -10, y: 20 },
@@ -69,11 +86,14 @@ export const BotState = {
   RANDOM: "random",
 };
 
-//switch this to intro once built that section
+//switch this to intro once windowloaded
 let gameState = GameState.UNSET;
 // let pilotSelected = "";
 let accumulator = 0;
 let fixedDeltaTime = 1 / 60; // 60 updates per second
+let playerToSpectate = null;
+//if below is true if there are any connected humans they will first be used to spectate if possible
+let prioritizeHumanSpectate = false;
 
 export class Player {
   constructor(id = null, x = null, y = null, powerUps = 0, color = null, angle = 0, pilot = "", name = "") {
@@ -99,31 +119,48 @@ export class Player {
     this.previousAngleDifference = 0;
     this.previousTurnDirection = 0;
     this.botState = BotState.FOLLOW_PLAYER;
-    this.followingPlayer = "";
+    this.followingPlayerID = "";
     this.timeOfLastMessage = "";
     this.timeOfLastActive = "";
     this.randomTarget = { x: 0, y: 0 };
     this.targetedBy = [];
+    this.inRangeTicks = 0;
+    this.isDead = false;
+    this.isPlaying = true;
   }
 
-  resetState(keepName) {
-    //don't think we ever want to abandon id
-    //this.id = null;
+  resetState(keepName, keepColor) {
     this.x = 1200 + Math.random() * (worldDimensions.width - 2400);
     this.y = 600 + Math.random() * (worldDimensions.height - 1200);
     this.powerUps = 0;
-    this.color = colors[Math.floor(Math.random() * colors.length)];
+    if (keepColor) {
+      this.color = colors[Math.floor(Math.random() * colors.length)];
+    }
     this.angle = 0;
     this.pilot = "";
     if (!keepName) {
       this.name = "";
     }
-    this.followingPlayer = "";
+    this.followingPlayerID = "";
     this.timeOfLastMessage = "";
     this.timeOfLastActive = "";
     this.randomTarget = { x: 0, y: 0 };
     this.targetedBy = [];
     this.space = false;
+    this.isDead = false;
+  }
+  delayReset(framesToDelay) {
+    if (framesToDelay > 0) {
+      requestAnimationFrame(() => {
+        this.delayReset(framesToDelay - 1);
+      });
+    } else {
+      // Execute the reset after the specified number of frames
+      this.resetState(true, true);
+    }
+  }
+  gotHit() {
+    this.isDead = true;
   }
 
   setPilot(newPilot) {
@@ -223,6 +260,7 @@ export class Player {
       console.log("Invalid velocity values: x =", this.vel.x, "y =", this.vel.y);
     }
   }
+
   centerCameraOnPlayer() {
     const targetCamX = this.x - canvas.width / 2;
     let targetCamY;
@@ -252,9 +290,11 @@ export class Player {
     }
   }
   updateBotInputs() {
+    this.randomlyConsiderChangingState();
     if (this.botState == BotState.FOLLOW_PLAYER) {
-      if (this.followingPlayer == "") {
-        let allPlayers = [...otherPlayers, player];
+      if (this.followingPlayerID == "") {
+        //lets try including other bots in the follow candidates
+        let allPlayers = [...otherPlayers, ...bots, player];
         shuffleArray(allPlayers);
         let playerToFollow = null;
         // Reset powerUps of other players
@@ -262,11 +302,11 @@ export class Player {
           //we are not targing any player currently so if we find we're in their array of followers remove ourselves
           candidate.targetedBy = candidate.targetedBy.filter((id) => id !== this.id);
           let candidateHowLongSinceActive = candidate.howLongSinceActive();
-          if (candidateHowLongSinceActive < 300 && candidate.targetedBy.length < 2) {
+          if (candidateHowLongSinceActive < 300 && candidate.targetedBy.length < 1 && candidate.isPlaying) {
             playerToFollow = candidate;
             // playerToFollow.targetedBy += 1;
             playerToFollow.targetedBy.push(this.id);
-            this.followingPlayer = playerToFollow;
+            this.followingPlayerID = playerToFollow.id;
             //we'll skip updating inputs on this tick, picking a target is enough
             return;
           } else {
@@ -274,13 +314,21 @@ export class Player {
           }
         });
       }
-      if (this.followingPlayer == "") {
+      if (this.followingPlayerID == "") {
         this.botState = BotState.RANDOM;
         return;
       }
       //for testing just aim towards the player(master player is running this code)
-      let targetX = this.followingPlayer.x;
-      let targetY = this.followingPlayer.y;
+      let followingPlayer = null;
+      let allPlayers = [...otherPlayers, ...bots, player];
+      allPlayers.forEach((candidate) => {
+        if (this.followingPlayerID == candidate.id) {
+          followingPlayer = candidate;
+          return;
+        }
+      });
+      let targetX = followingPlayer.x;
+      let targetY = followingPlayer.y;
       this.aimAtTarget(targetX, targetY);
     } else if (this.botState == BotState.RANDOM) {
       if (this.randomTarget.x == 0 && this.randomTarget.y == 0) {
@@ -293,6 +341,7 @@ export class Player {
     }
   }
 
+  //this is doing more than aiming at target refactor this
   aimAtTarget(targetX, targetY) {
     let currentX = this.x;
     let currentY = this.y;
@@ -300,24 +349,37 @@ export class Player {
     // Calculate the distance between the target and current points
     let distance = Math.sqrt((targetX - currentX) ** 2 + (targetY - currentY) ** 2);
 
-    if (distance < 100) {
-      //once we get there move on to a new target
-
-      if (this.followingPlayer && this.followingPlayer.targetedBy.length > 0) {
-        // this.followingPlayer.targetedBy -= 1;
-        this.followingPlayer.targetedBy = this.followingPlayer.targetedBy.filter((id) => id !== this.id);
+    if (this.botState == BotState.FOLLOW_PLAYER) {
+      if (distance < 100) {
+        //once we get there move on to a new target
+        this.inRangeTicks += 1;
+        if (this.inRangeTicks > 100) {
+          let followingPlayer = null;
+          let allPlayers = [...otherPlayers, ...bots, player];
+          allPlayers.forEach((candidate) => {
+            if (this.followingPlayerID == candidate.id) {
+              followingPlayer = candidate;
+              return;
+            }
+          });
+          if (followingPlayer && followingPlayer.targetedBy.length > 0) {
+            // this.followingPlayer.targetedBy -= 1;
+            followingPlayer.targetedBy = followingPlayer.targetedBy.filter((id) => id !== this.id);
+          } else {
+            console.log("followingPlayer null ");
+          }
+          this.followingPlayerID = "";
+          this.chooseNewBotState();
+        }
       } else {
-        console.log("followingPlayer null ");
+        if (this.inRangeTicks > 0) {
+          this.inRangeTicks -= 1;
+        }
       }
-      this.followingPlayer = "";
+    } else if (distance < 300 && this.botState == BotState.RANDOM) {
       this.randomTarget.x = 0;
       this.randomTarget.y = 0;
-      //randomly choose new state
-      if (Math.random() > 0.7) {
-        this.botState = BotState.FOLLOW_PLAYER;
-      } else {
-        this.botState = BotState.RANDOM;
-      }
+      this.chooseNewBotState();
     }
     // If distance is closer than 300, adjust the target randomly
     // if (distance < 300) {
@@ -343,7 +405,22 @@ export class Player {
     }
     this.space = true;
   }
-
+  randomlyConsiderChangingState() {
+    if (Math.random() > 0.99) {
+      this.followingPlayerID = "";
+      this.randomTarget.x = 0;
+      this.randomTarget.y = 0;
+      this.chooseNewBotState();
+    }
+  }
+  chooseNewBotState() {
+    //for now randomly choose new state
+    if (Math.random() > 0.7) {
+      this.botState = BotState.FOLLOW_PLAYER;
+    } else {
+      this.botState = BotState.RANDOM;
+    }
+  }
   mousePosToPositionAwayFromTarget(targetX, targetY, distanceFromCurrent, currentMousePosX, currentMousePosY) {
     let deltaX = targetX - this.x;
     let deltaY = targetY - this.y;
@@ -351,6 +428,9 @@ export class Player {
     // Calculate the distance between the target and current position
     let distance = Math.sqrt(deltaX ** 2 + deltaY ** 2);
 
+    if (distance == 0) {
+      return { X: 0, Y: 0 };
+    }
     // Calculate the normalized direction vector
     let directionX = deltaX / distance;
     let directionY = deltaY / distance;
@@ -373,13 +453,16 @@ export class Player {
     }
 
     // Interpolate between the current angle and the desired angle
-    let interpolationFactor = 0.4; // Adjust this value to change the speed of the turn
+    let interpolationFactor = 0.6; // Adjust this value to change the speed of the turn
     let interpolatedAngle = currentAngle + angleDifference * interpolationFactor;
 
     // Calculate the new mouse position based on the interpolated angle and the desired distance from the current position
     mousePosX = this.x + Math.cos(interpolatedAngle) * distanceFromCurrent;
     mousePosY = this.y + Math.sin(interpolatedAngle) * distanceFromCurrent;
-
+    if (!isNaN(mousePosX) && !isNaN(mousePosY)) {
+    } else {
+      console.log("mousePos NaN");
+    }
     return { X: mousePosX, Y: mousePosY };
   }
   howLongSinceActive() {
@@ -394,6 +477,7 @@ export class Player {
 }
 
 export const player = new Player(null, null, null, 0, null, 0, "", "");
+player.isPlaying = false;
 export let otherPlayers = [];
 export let bots = [];
 let globalPowerUps = [];
@@ -413,42 +497,6 @@ export function getCanvas() {
 export function setBots(newBots) {
   bots = newBots;
 }
-
-// function legacyUpdateCamera(playerToFollow) {
-//   const targetCamX = playerToFollow.x - canvas.width / 2;
-//   let targetCamY;
-//   //don't currently set ySpeed
-//   // if (playerToFollow.ySpeed < 0) {
-//   //   // Moving up
-//   //   targetCamY = playerToFollow.y - (canvas.height * 2) / 4;
-//   // } else {
-//   // Moving down or not moving vertically
-//   targetCamY = playerToFollow.y - (canvas.height * 2) / 4;
-//   // }
-//   let newCamX = camX + (targetCamX - camX) * camSpeedX;
-//   let newCamY = camY + (targetCamY - camY) * camSpeedY;
-
-//   // Define the size of the buffer zone
-//   let bufferZoneX = 200;
-//   let bufferZoneY = 100;
-
-//   // Calculate the distance to the edge of the world
-//   let distanceToEdgeX = worldDimensions.width - playerToFollow.x;
-//   let distanceToEdgeY = worldDimensions.height - playerToFollow.y;
-
-//   // If the ship is within the buffer zone, slow down the camera
-//   if (distanceToEdgeX < bufferZoneX) {
-//     let slowdownFactor = distanceToEdgeX / bufferZoneX;
-//     newCamX = camX + (targetCamX - camX) * camSpeedX * slowdownFactor;
-//   }
-//   if (distanceToEdgeY < bufferZoneY) {
-//     let slowdownFactor = (distanceToEdgeY / bufferZoneY) * (bufferZoneX / bufferZoneY); // Adjusted this line
-//     newCamY = camY + (targetCamY - camY) * camSpeedY * slowdownFactor;
-//   }
-
-//   camX = Math.max(Math.min(newCamX, worldDimensions.width - canvas.width), 0);
-//   camY = Math.max(Math.min(newCamY, worldDimensions.height - canvas.height), 0);
-// }
 
 function updateCamera(playerToFollow, deltaTime) {
   const targetCamX = playerToFollow.x - canvas.width / 2;
@@ -477,11 +525,11 @@ function updateGame(deltaTime, playerActive) {
 
   if (playerActive || player.getPlayerIsMaster()) {
     // Detect collisions with powerups or other ships
-    detectCollisions(player, globalPowerUps, otherPlayers);
+    detectCollisions(player, globalPowerUps, bots, otherPlayers);
 
     if (player.getPlayerIsMaster()) {
       // This peer is the master, so it runs the game logic for shared objects
-      masterPeerUpdateGame(globalPowerUps, bots, deltaTime);
+      masterPeerUpdateGame(globalPowerUps, otherPlayers, bots, deltaTime);
     }
   }
 
@@ -492,18 +540,40 @@ function updateGame(deltaTime, playerActive) {
     drawScene(null, otherPlayers, bots, ctx, camX, camY, worldDimensions, canvas, shipPoints, globalPowerUps);
   }
   // if (isPlayerMasterPeer(player)) {
-  //   masterPeerUpdateGame(globalPowerUps,bots,deltaTime);
+  //   masterPeerUpdateGame(globalPowerUps,otherPlayers,bots,deltaTime);
   // }
   updateConnections(player, otherPlayers, globalPowerUps);
 
-  if (checkWinner(player, otherPlayers)) {
+  if (checkWinner(player, otherPlayers) || player.isDead) {
     setGameState(GameState.FINISHED);
   }
 }
+
 function camFollowPlayer(deltaTime) {
-  //could choose spectaror who is active? but need to stick with one once choosen so maintain a playerToSpectate varible and only check if they become invalid.
-  if (otherPlayers != null && otherPlayers[0] != null) {
-    updateCamera(otherPlayers[0], deltaTime);
+  if (playerToSpectate != null) {
+    updateCamera(playerToSpectate, deltaTime);
+  } else {
+    let allPlayers = null;
+    if (prioritizeHumanSpectate) {
+      allPlayers = [...bots, player];
+      shuffleArray(allPlayers);
+      //let shuffledOtherPlayers = shuffleArray([...otherPlayers]);
+      allPlayers = [...otherPlayers, ...bots, player];
+    } else {
+      allPlayers = [...bots, ...otherPlayers, player];
+      shuffleArray(allPlayers);
+    }
+
+    //could choose spectaror who is active? but need to stick with one once choosen so maintain a playerToSpectate varible and only check if they become invalid.
+    allPlayers.forEach((candidate) => {
+      if (candidate != null && candidate.id != player.id) {
+        playerToSpectate = candidate;
+        //lets try following any non current player character
+        //in future this can be a fallback and prioritise non-bots
+        updateCamera(playerToSpectate, deltaTime);
+        return;
+      }
+    });
   }
 }
 
@@ -515,7 +585,7 @@ function setupPilots(canvas, ctx) {
 }
 
 function updatePilot() {
-  drawPilots(canvas, ctx);
+  drawPreGameOverlay(canvas, ctx);
 }
 
 function updateName() {
@@ -556,6 +626,7 @@ export function setGameState(newState) {
   }
 
   if (newState === GameState.INTRO && prevGameState !== GameState.INTRO) {
+    updateTopScoresInfo();
     setupPilots(canvas, ctx);
     setupNameEventListeners(window);
     updateName();
@@ -566,6 +637,11 @@ export function setGameState(newState) {
   }
 
   if (newState === GameState.FINISHED && prevGameState !== GameState.FINISHED) {
+    var date = new Date();
+    var dateString = date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate();
+    var score = Math.floor(Math.random() * 100) + 1;
+    addScore("daily-" + dateString, player.name, player.powerUps * 100);
+
     setupWinStateEventListeners(window);
     if (player.getPlayerIsMaster()) {
       sendPlayerStates(player);
@@ -583,9 +659,10 @@ export function setGameState(newState) {
   if (newState === GameState.GAME && prevGameState !== GameState.GAME) {
     // fixedDeltaTime = 1 / 60;
     // setupGameEventListeners(window);
-    //for now just do this at game start, in future do this periodically
-    updateTopScoresInfo();
-    setTimeout(() => connectToPeers(player, otherPlayers, peerIds, globalPowerUps), 1000);
+
+    //todo add back in if not to blame
+    player.isPlaying = true;
+    setTimeout(() => connectToPeers(player, otherPlayers, globalPowerUps), 1000);
     removePilotsEventListeners(canvas);
   }
 
@@ -593,7 +670,10 @@ export function setGameState(newState) {
     //for now moving to showing game underneath all the time
     //  fixedDeltaTime = 1 / 30; //30 fps is plenty if not in game
     //  removeGameStateEventListeners(window);
-    player.resetState(true);
+    player.resetState(true, true);
+
+    //todo add back in if not to blame
+    player.isPlaying = false;
     player.centerCameraOnPlayer();
     globalPowerUps = [];
   }
@@ -630,21 +710,22 @@ function update() {
 
 window.addEventListener("load", function () {
   /* START CONNECTION HANDLERS  */
-  tryNextId(player, peerIds);
+  tryNextId(player);
 
-  setTimeout(() => attemptConnections(player, otherPlayers, peerIds, globalPowerUps), 500);
+  setTimeout(() => attemptConnections(player, otherPlayers, globalPowerUps), 500);
   //do we need to keep doing this??
-  // setInterval(() => connectToPeers(player, otherPlayers, peerIds, globalPowerUps), 6000);
-  setTimeout(() => connectToPeers(player, otherPlayers, peerIds, globalPowerUps), 6000);
+  // setInterval(() => connectToPeers(player, otherPlayers, globalPowerUps), 6000);
+  setTimeout(() => connectToPeers(player, otherPlayers, globalPowerUps), 6000);
 
   setInterval(() => generatePowerups(globalPowerUps, worldDimensions.width, worldDimensions.height, colors), 3000);
-  setInterval(() => connectToPeers(player, otherPlayers, peerIds, globalPowerUps), 35000);
+  setInterval(() => connectToPeers(player, otherPlayers, globalPowerUps), 35000);
 
   //don;t need to under master system
   //setInterval(() => sendPowerups(globalPowerUps), 3000);
 
   /* END CONNECTION HANDLERS  */
-
+  //for now just do this at game start and transition, in future do this periodically
+  updateTopScoresInfo();
   handleInputEvents(canvas, player);
   // Call setupPilotsImages once at the start of the game
   setupPilotsImages(canvas);
