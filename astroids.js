@@ -9,7 +9,15 @@ import {
   updateTopScoresInfo,
   setupPilotsImageSources,
 } from "./canvasDrawingFunctions.js";
-import { tryNextId, attemptConnections, connectToPeers, sendPlayerStates, updateConnections, addScore,isPlayerMasterPeer } from "./connectionHandlers.js";
+import {
+  tryNextId,
+  attemptConnections,
+  connectToPeers,
+  sendPlayerStates,
+  updateConnections,
+  addScore,
+  isPlayerMasterPeer,
+} from "./connectionHandlers.js";
 import {
   checkWinner,
   generatePowerups,
@@ -207,16 +215,13 @@ function camFollowPlayer(deltaTime) {
       shuffleArray(allPlayers);
     }
 
-    //could choose spectaror who is active? but need to stick with one once choosen so maintain a playerToSpectate varible and only check if they become invalid.
-    allPlayers.forEach((candidate) => {
+    for (let candidate of allPlayers) {
       if (candidate != null && candidate.id != player.id) {
         playerToSpectate = candidate;
-        //lets try following any non current player character
-        //in future this can be a fallback and prioritise non-bots
         updateCamera(playerToSpectate, deltaTime);
-        return;
+        break; // Exit the loop once a valid playerToSpectate is found
       }
-    });
+    }
   }
 }
 
@@ -284,7 +289,7 @@ export function setGameState(newState) {
     var score = Math.floor(Math.random() * 100) + 1;
     addScore("daily-" + dateString, player.name, player.powerUps * 100);
 
-    setupWinStateEventListeners(window,canvas);
+    setupWinStateEventListeners(window, canvas);
     if (isPlayerMasterPeer(player)) {
       sendPlayerStates(player);
     }
@@ -295,7 +300,7 @@ export function setGameState(newState) {
     setGameWon(false);
     pilot2.selected = false;
     pilot1.selected = true;
-    removeWinStateEventListeners(window,canvas);
+    removeWinStateEventListeners(window, canvas);
   }
 
   if (newState === GameState.GAME && prevGameState !== GameState.GAME) {

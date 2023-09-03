@@ -125,3 +125,5 @@ check this probably doesn't work but have put something in: timer for how long s
 issue with non-master peer sometimes powerups/enemies get restored (presumably by the master) as soon as we hits them, resulting in multiple hits/collection/kills
 wait to see if will connect to a master before creating bots/powerups ourselves. - hopefully before playing ourselves... maybe hold off on showing game??
 consider better options for right click.
+isMastervariable outside of player object?
+another, closer, "inRangeticks variable for botstate?

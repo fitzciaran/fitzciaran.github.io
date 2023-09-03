@@ -5,6 +5,7 @@ import { drawKillInfo } from "./canvasDrawingFunctions.js";
 const bounceFactor = 1.5;
 const offset = 1;
 const minBounceSpeed = 5;
+const maxBotsThatCanTargetAtOnce = 1;
 
 export class Player {
   constructor(id = null, x = null, y = null, powerUps = 0, color = null, angle = 0, pilot = "", name = "") {
@@ -68,6 +69,11 @@ export class Player {
     this.invincibleTimer = 0;
     this.comboScaler = 1;
     this.kills = 0;
+    this.inRangeTicks = 0;
+    this.mousePosX = 0;
+    this.mousePosY = 0;
+    this.currentSpeed = 0;
+    this.vel = { x: 0, y: 0 };
   }
 
   delayReset(framesToDelay) {
@@ -201,12 +207,12 @@ export class Player {
     } else if (this.pilot == PilotName.PILOT_2) {
       pilotBoostFactor = 0.2;
     }
-    if(this.shift && this.invincibleTimer > 0){
-        if (this.invincibleTimer > 0) {
-            this.invincibleTimer -= 5;
-            this.invincibleTimer = Math.max(this.invincibleTimer,0);
-        }
-        pilotBoostFactor *= 2.8;
+    if (this.shift && this.invincibleTimer > 0) {
+      if (this.invincibleTimer > 0) {
+        this.invincibleTimer -= 5;
+        this.invincibleTimer = Math.max(this.invincibleTimer, 0);
+      }
+      pilotBoostFactor *= 2.8;
     }
     this.vel.x *= newFriction;
     this.vel.y *= newFriction;
@@ -288,43 +294,45 @@ export class Player {
     if (this.botState == BotState.FOLLOW_PLAYER) {
       if (this.followingPlayerID == "") {
         //lets try including other bots in the follow candidates
-        let allPlayers = [...otherPlayers, ...bots, player];
-        shuffleArray(allPlayers);
+        let allPlayers = [player, ...otherPlayers, ...bots];
+        //for debuging bot following I won't shuffle this and let it target player if possible
+        //shuffleArray(allPlayers);
         let playerToFollow = null;
-        // Reset powerUps of other players
-        allPlayers.forEach((candidate) => {
-          //we are not targing any player currently so if we find we're in their array of followers remove ourselves
+
+        for (const candidate of allPlayers) {
           candidate.targetedBy = candidate.targetedBy.filter((id) => id !== this.id);
+
+          if (this.id === candidate.id) {
+            // Don't follow yourself
+            continue; // Skip to the next iteration
+          }
+
           let candidateHowLongSinceActive = candidate.howLongSinceActive();
-          if (candidateHowLongSinceActive < 300 && candidate.targetedBy.length < 1 && candidate.isPlaying) {
+
+          if (candidateHowLongSinceActive < 300 && candidate.targetedBy.length < maxBotsThatCanTargetAtOnce && candidate.isPlaying) {
             playerToFollow = candidate;
-            // playerToFollow.targetedBy += 1;
             playerToFollow.targetedBy.push(this.id);
             this.followingPlayerID = playerToFollow.id;
-            //we'll skip updating inputs on this tick, picking a target is enough
-            return;
+            break;
           } else {
             console.log(candidate.name + " is inactive not targeting");
           }
-        });
+        }
       }
       if (this.followingPlayerID == "") {
         this.botState = BotState.RANDOM;
         return;
       }
-      //for testing just aim towards the player(master player is running this code)
-      let followingPlayer = null;
-      let allPlayers = [...otherPlayers, ...bots, player];
-      allPlayers.forEach((candidate) => {
-        if (this.followingPlayerID == candidate.id) {
-          followingPlayer = candidate;
-          return;
-        }
-      });
+
+      const allPlayers = [...otherPlayers, ...bots, player];
+      let followingPlayer = allPlayers.find((candidate) => this.followingPlayerID === candidate.id);
+      if (followingPlayer.isBot) {
+        this.randomlyConsiderChangingState(0.995);
+      }
       let targetX = followingPlayer.x;
       let targetY = followingPlayer.y;
       this.#checkIfGotToTarget(targetX, targetY);
-      this.#aimAtTarget(targetX, targetY, followingPlayer.vel.x, followingPlayer.vel.y,0.4);
+      this.#aimAtTarget(targetX, targetY, followingPlayer.vel.x, followingPlayer.vel.y, 0.4);
     } else if (this.botState == BotState.RANDOM) {
       if (this.randomTarget.x == 0 && this.randomTarget.y == 0) {
         this.randomTarget.x = 100 + Math.random() * (worldDimensions.width - 200);
@@ -333,7 +341,7 @@ export class Player {
       let targetX = this.randomTarget.x;
       let targetY = this.randomTarget.y;
       this.#checkIfGotToTarget(targetX, targetY);
-      this.#aimAtTarget(targetX, targetY, 0, 0,0);
+      this.#aimAtTarget(targetX, targetY, 0, 0, 0);
     }
   }
 
@@ -347,15 +355,16 @@ export class Player {
       if (distance < 100) {
         //once we get there move on to a new target
         this.inRangeTicks += 1;
-        if (this.inRangeTicks > 100) {
+        if (this.inRangeTicks > 200) {
           let followingPlayer = null;
-          let allPlayers = [...otherPlayers, ...bots, player];
-          allPlayers.forEach((candidate) => {
-            if (this.followingPlayerID == candidate.id) {
+          let allPlayers = [player, ...otherPlayers, ...bots];
+
+          for (const candidate of allPlayers) {
+            if (this.followingPlayerID === candidate.id) {
               followingPlayer = candidate;
-              return;
+              break; // Exit the loop once the followingPlayer is found
             }
-          });
+          }
           if (followingPlayer && followingPlayer.targetedBy.length > 0) {
             // this.followingPlayer.targetedBy -= 1;
             followingPlayer.targetedBy = followingPlayer.targetedBy.filter((id) => id !== this.id);
@@ -363,6 +372,8 @@ export class Player {
             console.log("followingPlayer null ");
           }
           this.followingPlayerID = "";
+          this.chooseNewBotState();
+        } else if (distance < 50 && this.inRangeTicks > 80) {
           this.chooseNewBotState();
         }
       } else {
@@ -385,12 +396,17 @@ export class Player {
     let distance = Math.sqrt((targetX - currentX) ** 2 + (targetY - currentY) ** 2);
 
     // Calculate the time it would take to reach the original target without considering target's velocity
-    let timeToReachTarget = distance / Math.sqrt(currentVelocityX ** 2 + currentVelocityY ** 2);
+    let currentSpeed = Math.sqrt(currentVelocityX ** 2 + currentVelocityY ** 2);
+    let adjustedTargetX = targetX;
+    let adjustedTargetY = targetY;
 
-    // Calculate the adjusted target by considering a weighted combination of position and velocity
-    let adjustedTargetX = targetX * (1 - adjustmentFactor) + (targetX + targetVelocityX * timeToReachTarget) * adjustmentFactor;
-    let adjustedTargetY = targetY * (1 - adjustmentFactor) + (targetY + targetVelocityY * timeToReachTarget) * adjustmentFactor;
+    if (currentSpeed != 0) {
+      let timeToReachTarget = distance / currentSpeed;
 
+      // Calculate the adjusted target by considering a weighted combination of position and velocity
+      adjustedTargetX = targetX * (1 - adjustmentFactor) + (targetX + targetVelocityX * timeToReachTarget) * adjustmentFactor;
+      adjustedTargetY = targetY * (1 - adjustmentFactor) + (targetY + targetVelocityY * timeToReachTarget) * adjustmentFactor;
+    }
     // Calculate the adjusted mouse position
     let mousePos = this.mousePosToPositionAwayFromTarget(adjustedTargetX, adjustedTargetY, 200, this.mousePosX, this.mousePosY);
 
@@ -403,22 +419,6 @@ export class Player {
     this.space = true;
   }
 
-  randomlyConsiderChangingState() {
-    if (Math.random() > 0.998) {
-      this.followingPlayerID = "";
-      this.randomTarget.x = 0;
-      this.randomTarget.y = 0;
-      this.chooseNewBotState();
-    }
-  }
-  chooseNewBotState() {
-    //for now randomly choose new state
-    if (Math.random() > 0.7) {
-      this.botState = BotState.FOLLOW_PLAYER;
-    } else {
-      this.botState = BotState.RANDOM;
-    }
-  }
   mousePosToPositionAwayFromTarget(targetX, targetY, distanceFromCurrent, currentMousePosX, currentMousePosY) {
     let deltaX = targetX - this.x;
     let deltaY = targetY - this.y;
@@ -451,7 +451,7 @@ export class Player {
     }
 
     // Interpolate between the current angle and the desired angle
-    let interpolationFactor = 0.3; // Adjust this value to change the speed of the turn
+    let interpolationFactor = 0.8; // Adjust this value to change the speed of the turn
     let interpolatedAngle = currentAngle + angleDifference * interpolationFactor;
 
     // Calculate the new mouse position based on the interpolated angle and the desired distance from the current position
@@ -463,6 +463,23 @@ export class Player {
     }
     return { X: mousePosX, Y: mousePosY };
   }
+  randomlyConsiderChangingState(chance = 1) {
+    if (Math.random() > chance) {
+      this.followingPlayerID = "";
+      this.randomTarget.x = 0;
+      this.randomTarget.y = 0;
+      this.chooseNewBotState();
+    }
+  }
+  chooseNewBotState() {
+    //for now randomly choose new state
+    if (Math.random() > 0.4) {
+      this.botState = BotState.FOLLOW_PLAYER;
+    } else {
+      this.botState = BotState.RANDOM;
+    }
+  }
+
   howLongSinceActive() {
     if (this.timeOfLastActive) {
       const currentTime = Date.now();
