@@ -1,7 +1,6 @@
 import { camX, camY, getGameState, setGameState, getCanvas, GameState, PilotName, player } from "./astroids.js";
-import { drawNameEntry } from "./canvasDrawingFunctions.js";
-import { pilot1, pilot2, calculateAngle,getRandomName,max_player_name } from "./gameLogic.js";
-
+import { drawNameEntry, playButtonX, playButtonY, playButtonWidth, playButtonHeight } from "./canvasDrawingFunctions.js";
+import { pilot1, pilot2, calculateAngle, getRandomName, max_player_name } from "./gameLogic.js";
 
 let pilotMouseMoveListener;
 let pilotClickListener;
@@ -14,6 +13,7 @@ let keys = {
   left: false,
   right: false,
   space: false,
+  shift: false,
 };
 
 export let mousePos = { x: 0, y: 0 };
@@ -48,13 +48,23 @@ function handleInputEvents(canvas, player) {
   );
 
   canvas.addEventListener("mousedown", function (e) {
-    player.space = true;
-    keys.space = true;
+    if (e.button === 2) {
+      player.shift = true;
+      keys.shift = true;
+    } else {
+      player.space = true;
+      keys.space = true;
+    }
   });
 
   canvas.addEventListener("mouseup", function (e) {
-    player.space = false;
-    keys.space = false;
+    if (e.button === 2) {
+      player.shift = false;
+      keys.shift = false;
+    } else {
+      player.space = false;
+      keys.space = false;
+    }
   });
 
   canvas.addEventListener("touchstart", function (e) {
@@ -249,10 +259,26 @@ export function removeNameEventListeners(window) {
 
 export function setupGameEventListeners() {}
 export function removeGameStateEventListeners() {}
-export function setupWinStateEventListeners() {
+export function setupWinStateEventListeners(window, canvas) {
   window.addEventListener("keydown", handleWinStateKeyDown);
+  canvas.addEventListener("click", handleWinStateClick);
 }
 
-export function removeWinStateEventListeners() {
+export function removeWinStateEventListeners(window, canvas) {
   window.removeEventListener("keydown", handleWinStateKeyDown);
+  canvas.removeEventListener("click", handleWinStateClick);
+}
+
+function handleWinStateClick(event) {
+  // Play button dimensions and location
+  let buttonX = playButtonX;
+  let buttonY = playButtonY;
+  let buttonWidth = playButtonWidth;
+  let buttonHeight = playButtonHeight;
+
+  // Check if the mouse click is within the bounds of the play button
+  if (event.clientX > buttonX && event.clientX < buttonX + buttonWidth && event.clientY > buttonY && event.clientY < buttonY + buttonHeight) {
+    // Play button has been clicked
+    setGameState(GameState.GAME);
+  }
 }

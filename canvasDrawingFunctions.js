@@ -1,6 +1,6 @@
-import { BotState } from "./astroids.js";
+import { BotState, executionTime } from "./astroids.js";
 import { isPlayerMasterPeer, getTopScores } from "./connectionHandlers.js";
-import { pilot1, pilot2 } from "./gameLogic.js";
+import { maxInvincibilityTime, pilot1, pilot2 } from "./gameLogic.js";
 
 let backLayer = new Image();
 let midBackLayer = new Image();
@@ -15,6 +15,10 @@ frontLayer.src = "images/parallax-space-big-planet.png";
 let cursorBlink = true;
 let cursorBlinkInterval = setInterval(() => (cursorBlink = !cursorBlink), 450);
 var topDailyScoresString = "";
+export let playButtonX = 0;
+export let playButtonY = 0;
+export let playButtonWidth = 0;
+export let playButtonHeight = 0;
 
 // Export a setupCanvas function that initializes the canvas and returns it
 export function setupCanvas() {
@@ -23,6 +27,10 @@ export function setupCanvas() {
   canvas.style.position = "absolute"; // positioning the canvas to start from the top left corner.
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
+  // Disable the default context menu on the canvas
+  canvas.addEventListener("contextmenu", function (e) {
+    e.preventDefault();
+  });
 
   // Adding event listener to handle window resizing
   window.addEventListener("resize", function () {
@@ -238,11 +246,38 @@ function drawRotatedShip(ctx, camX, camY, player, points) {
   if (!player.isPlaying) {
     return;
   }
+
   let centerX = player.x;
   let centerY = player.y;
   let angle = player.angle;
   let color = player.color;
   let name = player.name;
+
+  if (player.invincibleTimer > 10 || (player.invincibleTimer > 0 && !player.isUserControlledCharacter)) {
+    // Apply a glowing effect for star ships
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = "gold"; // Adjust the glow color as needed
+    ctx.strokeStyle = "gold"; // Adjust the stroke color to match the glow
+
+    // Gradually change the star ship's color
+    const transitionColor = "gold"; // Final color
+    const transitionDuration = 2000; // Transition duration in milliseconds
+
+    const currentTime = Date.now();
+    const elapsedTime = currentTime - player.starTransitionStartTime;
+
+    if (!player.starTransitionStartTime || elapsedTime >= transitionDuration) {
+      player.starTransitionStartTime = currentTime;
+      player.starTransitionStartColor = color;
+    }
+
+    const colorProgress = Math.min(1, elapsedTime / transitionDuration);
+    const r = Math.floor(interpolate(player.starTransitionStartColor.r, transitionColor.r, colorProgress));
+    const g = Math.floor(interpolate(player.starTransitionStartColor.g, transitionColor.g, colorProgress));
+    const b = Math.floor(interpolate(player.starTransitionStartColor.b, transitionColor.b, colorProgress));
+
+    ctx.strokeStyle = `rgb(${r},${g},${b})`;
+  }
 
   ctx.beginPath();
 
@@ -271,6 +306,11 @@ function drawRotatedShip(ctx, camX, camY, player, points) {
   ctx.font = "14px Arial"; // Adjust font size and family as needed
   ctx.textAlign = "center";
   ctx.fillText(name, namePositionX, namePositionY);
+  if (player.recentKillTicks > 0) {
+    player.recentKillTicks -= 1;
+    drawKillInfo(ctx, player, player.recentKillText, camX, camY);
+  }
+  ctx.shadowBlur = 0;
 }
 
 // Rotate a point (x, y) by a certain angle
@@ -281,13 +321,44 @@ export function rotatePoint(x, y, angle) {
   };
 }
 
+// Interpolate between two color components (e.g., red, green, blue)
+function interpolate(start, end, progress) {
+  return start + (end - start) * progress;
+}
+
 export function drawPowerups(globalPowerUps, ctx, camX, camY) {
   // Draw each dot
-  globalPowerUps.forEach((powerup) => {
+  globalPowerUps.forEach((powerUp) => {
+    if (powerUp.isStar) {
+      // Apply a glowing effect for star ships
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = "gold"; // Adjust the glow color as needed
+      ctx.strokeStyle = "gold"; // Adjust the stroke color to match the glow
+
+      // Gradually change the star ship's color
+      const transitionColor = "gold"; // Final color
+      const transitionDuration = 2000; // Transition duration in milliseconds
+
+      const currentTime = Date.now();
+      const elapsedTime = currentTime - powerUp.starTransitionStartTime;
+
+      if (!powerUp.starTransitionStartTime || elapsedTime >= transitionDuration) {
+        powerUp.starTransitionStartTime = currentTime;
+        powerUp.starTransitionStartColor = powerUp.color;
+      }
+
+      const colorProgress = Math.min(1, elapsedTime / transitionDuration);
+      const r = Math.floor(interpolate(powerUp.starTransitionStartColor.r, transitionColor.r, colorProgress));
+      const g = Math.floor(interpolate(powerUp.starTransitionStartColor.g, transitionColor.g, colorProgress));
+      const b = Math.floor(interpolate(powerUp.starTransitionStartColor.b, transitionColor.b, colorProgress));
+
+      ctx.strokeStyle = `rgb(${r},${g},${b})`;
+    }
     ctx.beginPath();
-    ctx.arc(powerup.x - camX, powerup.y - camY, 10, 0, Math.PI * 2);
-    ctx.fillStyle = powerup.color;
+    ctx.arc(powerUp.x - camX, powerUp.y - camY, 10, 0, Math.PI * 2);
+    ctx.fillStyle = powerUp.color;
     ctx.fill();
+    ctx.shadowBlur = 0;
   });
 }
 
@@ -306,50 +377,145 @@ export function drawMinimapPowerups(globalPowerUps, worldWidth, worldHeight) {
   });
 }
 
+function drawInvincibilityGauge(ctx, player, centerX, bottomY) {
+  const gaugeWidth = 200; // Adjust the width of the gauge
+  const gaugeHeight = 50; // Adjust the height of the gauge
+  const borderWidth = 7; // Adjust the border width
+  const gaugeColor = "#ff9900"; // Fill color of the gauge
+  const borderColor = "#333"; // Border color
+
+  // Calculate the gauge boundaries based on fillPercent
+  const fillPercent = player.invincibleTimer / maxInvincibilityTime;
+  const fillWidth = gaugeWidth * fillPercent;
+
+  // Create a linear gradient for the gauge background
+  const gradient = ctx.createLinearGradient(centerX - gaugeWidth / 2, bottomY - gaugeHeight, centerX + gaugeWidth / 2, bottomY);
+
+  // Define gradient colors
+  gradient.addColorStop(0, "rgba(0, 0, 0, 0.5)"); // Start with transparent black
+  gradient.addColorStop(0.5, "rgba(255, 255, 255, 0.3)"); // Middle with semi-transparent white
+  gradient.addColorStop(1, "rgba(0, 0, 0, 0.5)"); // End with transparent black
+
+  // Draw the gradient background
+  ctx.fillStyle = gradient;
+  ctx.fillRect(centerX - gaugeWidth / 2, bottomY - gaugeHeight, gaugeWidth, gaugeHeight);
+
+  // Draw the gauge fill based on fillPercent
+  ctx.fillStyle = gaugeColor;
+  ctx.fillRect(
+    centerX - gaugeWidth / 2 + borderWidth,
+    bottomY - gaugeHeight + borderWidth,
+    Math.max(0, fillWidth - borderWidth * 2),
+    gaugeHeight - borderWidth * 2
+  );
+}
+
 function drawPowerupLevels(ctx, player, otherPlayers, bots) {
-  const topGap = 100;
-  const textHeight = 75; // Adjust this to the size of your text
+  const topGap = 20;
+  const textHeight = 20; // Adjust this to the size of your text
   const gap = 16; // Gap between lines
+  const boxPadding = 10; // Padding around the box
+  let boxWidth = 200; // Width of the box
+  let boxHeight = 2 * boxPadding; // Start with padding at the top and bottom
+
+  // Measure the maximum text width to align to the right of the box
+  let maxTextWidth = 0;
+
   ctx.font = "14px Arial";
 
   if (player != null) {
-    let textWidth = ctx.measureText(player.name).width;
     const score = player.powerUps * 100;
     const myPowerupText = `${player.name}: ${score}`;
     ctx.fillStyle = player.color;
-    ctx.textAlign = "start";
-    ctx.fillText(myPowerupText, 199.5 - textWidth * 0.99, topGap - textHeight);
+    const textWidth = ctx.measureText(myPowerupText).width;
+    maxTextWidth = Math.max(maxTextWidth, textWidth);
+    boxHeight += textHeight + gap;
   }
-  // Draw other players' powerups
-  otherPlayers.forEach((player, index) => {
-    // const playerPowerupText = `Player ${player.id.slice(0, 7)} Powerups: ${player.powerUps}`; // Showing only the first 7 digits of id for readability
-    let playerName = player.name;
-    if (playerName == null || playerName == "") {
-      //todo maybe just skip over this player if not setup correctly?
-      return;
-      playerName = "Unknown";
-    }
+
+  otherPlayers.forEach((player) => {
+    let playerName = player.name || "Unknown";
     const score = player.powerUps * 100;
     const playerPowerupText = playerName + `: ${score}`;
-    let textWidth = ctx.measureText(playerName).width;
-    const y = topGap - textHeight + (1 + index) * gap; // calculate y position for each player's text
-    ctx.fillStyle = player.color; // individual ship color for each player
-    ctx.fillText(playerPowerupText, 200 - textWidth, y);
+    const textWidth = ctx.measureText(playerPowerupText).width;
+    maxTextWidth = Math.max(maxTextWidth, textWidth);
+    boxHeight += textHeight + gap;
   });
 
-  bots.forEach((bot, index) => {
-    // const playerPowerupText = `Player ${player.id.slice(0, 7)} Powerups: ${player.powerUps}`; // Showing only the first 7 digits of id for readability
-    let playerName = bot.name;
-    if (playerName == null || playerName == "") {
-      playerName = "Unknown";
-    }
+  bots.forEach((bot) => {
+    let playerName = bot.name || "Unknown";
     const score = bot.powerUps * 100;
     const playerPowerupText = playerName + `: ${score}`;
-    let textWidth = ctx.measureText(playerName).width;
-    const y = topGap - textHeight + (1 + index + otherPlayers.length) * gap; // calculate y position for each player's text
-    ctx.fillStyle = bot.color; // individual ship color for each player
-    ctx.fillText(playerPowerupText, 200 - textWidth, y);
+    const textWidth = ctx.measureText(playerPowerupText).width;
+    maxTextWidth = Math.max(maxTextWidth, textWidth);
+    boxHeight += textHeight + gap;
   });
+
+  //size box to fit the largest name/score combno, with a min size
+  boxWidth = Math.max(150, maxTextWidth + 20);
+
+  // Calculate the position of the box
+  const boxX = 100; // Adjust this as needed
+  const boxY = topGap - boxPadding;
+
+  // Create a gradient for the box background
+  const gradient = ctx.createLinearGradient(boxX, boxY, boxX + boxWidth, boxY + boxHeight);
+  gradient.addColorStop(0, "rgba(0, 0, 0, 0.2)"); // Transparent black
+  gradient.addColorStop(1, "rgba(0, 0, 0, 0.5)"); // Semi-transparent black
+
+  // Draw the box background with gradient
+  ctx.fillStyle = gradient;
+  ctx.strokeStyle = "#555"; // Border color
+  // ctx.strokeStyle = gradient; // Border color
+  ctx.lineWidth = 2; // Border width
+  ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
+  ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
+
+  ctx.textAlign = "center";
+
+  // Draw the text inside the box
+  let currentY = boxY + boxPadding + textHeight + 10;
+  ctx.fillStyle = "white";
+  ctx.fillText("Leaderboard", boxX + boxWidth / 2, boxY + boxPadding + 5);
+
+  ctx.textAlign = "right";
+
+  // Combine all players (including player) and bots into a single array
+  let allPlayers;
+  if (player == null || player.name == "") {
+    allPlayers = [...otherPlayers, ...bots];
+  } else {
+    allPlayers = [player, ...otherPlayers, ...bots];
+  }
+  ctx.font = "14px Arial";
+
+  // Sort allPlayers by score in descending order
+  allPlayers.sort((a, b) => {
+    return b.powerUps - a.powerUps;
+  });
+
+  allPlayers.forEach((currentPlayer) => {
+    let playerName = currentPlayer.name || "Unknown";
+    const score = currentPlayer.powerUps * 100;
+    const playerPowerupText = playerName + `: ${score}`;
+
+    ctx.fillStyle = currentPlayer.color;
+    ctx.fillText(playerPowerupText, boxX + boxWidth - boxPadding, currentY);
+    currentY += textHeight + gap;
+  });
+}
+
+export function drawKillInfo(ctx, player, score, camX, camY) {
+  let centerX = player.x;
+  let centerY = player.y;
+  // Calculate position for the score (above the unrotated center of the ship)
+  const scorePositionX = centerX - camX;
+  const scorePositionY = centerY - camY - 15; // You can adjust this value for the desired distance
+
+  // Draw the score
+  ctx.fillStyle = player.color;
+  ctx.font = "25px Arial"; // Adjust font size and family as needed
+  ctx.textAlign = "center";
+  ctx.fillText(score, scorePositionX, scorePositionY);
 }
 
 export function renderDebugInfo(ctx, player, bots) {
@@ -369,6 +535,11 @@ export function renderDebugInfo(ctx, player, bots) {
   const isMasterText = `is Master =  ${isPlayerMasterPeer(player)}`;
   ctx.fillStyle = player.color;
   ctx.fillText(isMasterText, 558, topGap + gap * 2 - textHeight);
+  ctx.fillText(`invicible state: ${player.invincibleTimer}`, 558, topGap + gap * 3 - textHeight);
+
+  const executionTimeText = `executionTime =  ${executionTime}`;
+  ctx.fillStyle = player.color;
+  ctx.fillText(executionTimeText, 558, topGap + gap * 4 - textHeight);
 
   // if (topDailyScoresString != "") {
   //   var scores = topDailyScoresString.split("; ");
@@ -409,12 +580,20 @@ export function drawWinnerMessage(ctx, canvas, message) {
   ctx.font = "20px Arial";
   ctx.fillStyle = "white";
   ctx.textAlign = "center";
-  ctx.fillText("press enter to play again", canvas.width / 2, canvas.height / 2 + 40);
+  //ctx.fillText("press enter to play again", canvas.width / 2, canvas.height / 2 + 40);
 
   ctx.font = "20px Arial";
   ctx.fillStyle = "white";
   ctx.textAlign = "center";
-  ctx.fillText("press r to return to main menu", canvas.width / 2, canvas.height / 2 + 65);
+  ctx.fillText("press r to return to main menu", canvas.width / 2, canvas.height / 2 + 40);
+
+  let buttonWidth = 200;
+  let buttonHeight = 40;
+  let buttonX = canvas.width / 2 - buttonWidth / 2;
+  let buttonY = canvas.height / 2 + 80;
+
+  let radius = 10; // Radius for rounded corners
+  drawPlayButton(ctx, buttonX, buttonY, buttonWidth, buttonHeight, radius);
 }
 
 export function drawScene(player, otherPlayers, bots, ctx, camX, camY, worldDimensions, canvas, shipPoints, globalPowerUps) {
@@ -430,6 +609,7 @@ export function drawScene(player, otherPlayers, bots, ctx, camX, camY, worldDime
   if (player != null) {
     drawRotatedShip(ctx, camX, camY, player, shipPoints);
     renderDebugInfo(ctx, player, bots);
+    drawInvincibilityGauge(ctx, player, canvas.width / 2, canvas.height - 70);
   }
   drawPowerupLevels(ctx, player, otherPlayers, bots);
 }
@@ -455,10 +635,27 @@ export function drawPreGameOverlay(canvas, ctx) {
   gradient.addColorStop("0.5", "blue");
   gradient.addColorStop("1.0", "red");
 
+  let boxWidth = 360;
+  let boxHeight = 320;
   // Draw border
   ctx.lineWidth = 10;
   ctx.strokeStyle = gradient;
-  ctx.strokeRect(bestScoresXOffset - 170, bestScoresYOffset - 50, 360, 320);
+  ctx.strokeRect(bestScoresXOffset - 170, bestScoresYOffset - 50, boxWidth, boxHeight);
+
+  // Create a gradient for the box background
+  const backGadient = ctx.createLinearGradient(
+    bestScoresXOffset - 170,
+    bestScoresYOffset - 50,
+    bestScoresXOffset - 170 + boxWidth,
+    bestScoresYOffset - 50 + boxHeight
+  );
+  backGadient.addColorStop(0, "rgba(0, 0, 0, 0.2)"); // Transparent black
+  backGadient.addColorStop(1, "rgba(0, 0, 0, 0.3)"); // Semi-transparent black
+
+  // Draw the box background with gradient
+  ctx.fillStyle = backGadient;
+  //  ctx.strokeStyle = "#555"; // Border color
+  ctx.fillRect(bestScoresXOffset - 170, bestScoresYOffset - 50, boxWidth, boxHeight);
 
   // Draw title
   ctx.font = "20px Arial";
@@ -494,7 +691,16 @@ export function drawPreGameOverlay(canvas, ctx) {
   ctx.fillText("Select Your Pilot", canvas.width / 2, 50);
 
   // Draw lore tablet
-  ctx.drawImage(loreTablet.image, loreTablet.x, loreTablet.y, loreTablet.width, loreTablet.height);
+  //todo can use this when have a non-trash asset
+  // ctx.drawImage(loreTablet.image, loreTablet.x, loreTablet.y, loreTablet.width, loreTablet.height);
+
+  // Draw the box background with gradient
+  ctx.fillStyle = backGadient;
+  //  ctx.strokeStyle = "#555"; // Border color
+  ctx.fillRect(loreTablet.x, loreTablet.y, loreTablet.width, loreTablet.height);
+
+  ctx.strokeStyle = "white";
+  ctx.strokeRect(loreTablet.x, loreTablet.y, loreTablet.width, loreTablet.height);
 
   // Draw pilot options
   ctx.drawImage(pilot1.image, pilot1.x, pilot1.y, pilot1.width, pilot1.height);
@@ -576,9 +782,12 @@ function animateLoreText(ctx, lore, loreIndex, lineCount) {
   }
 }
 
+export function setupPilotsImageSources() {
+  pilot1.image.src = "images/wolf.webp";
+  pilot2.image.src = "images/slippy.webp";
+}
 export function setupPilotsImages(canvas) {
-  pilot1.image.src = "images/pilot1.gif";
-  pilot2.image.src = "images/pilot2.gif";
+  setupPilotsImageSources();
   loreTablet.image.src = "images/tablet.png";
   centerPilots(canvas);
 }
@@ -639,6 +848,10 @@ export function drawNameEntry(canvas, ctx, name, x, y) {
   let buttonHeight = 20;
   let radius = 10; // Radius for rounded corners
 
+  drawPlayButton(ctx, buttonX, buttonY, buttonWidth, buttonHeight, radius);
+}
+
+function drawPlayButton(ctx, buttonX, buttonY, buttonWidth, buttonHeight, radius) {
   // Create gradient
   let gradient;
   try {
@@ -670,6 +883,12 @@ export function drawNameEntry(canvas, ctx, name, x, y) {
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText("Play", buttonX + buttonWidth / 2, buttonY + buttonHeight / 2);
+  // playButtonX = buttonX + buttonWidth / 2;
+  // playButtonY = buttonY + buttonHeight / 2;
+  playButtonX = buttonX;
+  playButtonY = buttonY;
+  playButtonWidth = buttonWidth;
+  playButtonHeight = buttonHeight;
 }
 
 export function drawNameCursor(canvas, ctx, name, x, y) {

@@ -88,11 +88,40 @@ move player processing logic into the player object so can use for bots.
 maybe move player inputs into player logic for same reason
 
 bots can appear jittery on non-master peers
-add bot collision with power ups and players
-add player to player collision (decide what happens)
-add bot states, and sometimes randomly switch between states.
 
 need to introduce the idea of ongoing game so lose state for one is only local for them
 maybe you lose health as time goes by and you have to keep up with picking up power ups to restore?
 neaten current scores text - maybe put in a box too? 
 some visual effect when ships hit
+draw shadows
+leader mark drawn - bonus for killing
+way to attack without getting hurt - maybe speed/angle - maybe states - pacman style? mario star style?
+     - maybe when collected a few normal power ups? maybe they fill a guage which drains slowly which thrusting
+    - this would become the way mainly score
+make ships much bigger
+Compete for large moving powerups, possibly in addition to the star mario/pac man state
+maybe also moving large obstacles (non-lethal?) pushing? and lethal.
+level ups? more gauges?
+worldDimensions maybe don't let Player know about this an have to always pass in a parameter to methods?
+camera shake
+bots should "attack" when have star only ?
+bots should "run" when don't? - or go for powerups?
+faster when star??
+gauge to show invicibletime? or use audio? - stop flashing slightly before? - for local player only?
+display combo multiplier in ui (when above 1)?
+spawn protection?
+something to make text more visible in general
+update "powerups" verbage to "score" throughout
+update follow code to take into acount velocity of ship following. - maybe consider how far away to determine how far ahead to look
+include kills tracking in leaderboard/score report?
+notion of lives 3,2,1 GO if hit and have lives left - animation showing life icon being removed.
+keep track of killed by and show on screen
+keep track of historical kills? - revenge kill bonus/acknowledgement? 
+- unique messaging if killed by multiple times? rival?
+
+background on name entry like on the leaderboards/lore
+refactor box drawing?
+check this probably doesn't work but have put something in: timer for how long since heard from master... kick master from connections and otherplayers if 
+issue with non-master peer sometimes powerups/enemies get restored (presumably by the master) as soon as we hits them, resulting in multiple hits/collection/kills
+wait to see if will connect to a master before creating bots/powerups ourselves. - hopefully before playing ourselves... maybe hold off on showing game??
+consider better options for right click.

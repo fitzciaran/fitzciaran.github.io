@@ -1,8 +1,12 @@
-import { setGameState, GameState, player, setGlobalPowerUps, getGlobalPowerUps, bots, Player, otherPlayers } from "./astroids.js";
+import { setGameState, GameState, player, setGlobalPowerUps, getGlobalPowerUps, bots, PowerUp, otherPlayers } from "./astroids.js";
 import { sendPlayerStates, sendGameState, isPlayerMasterPeer, addScore, sendBotsState } from "./connectionHandlers.js";
-
+import {
+  Player,
+} from "./player.js";
 //finish game after 5 for easier testing the finish
 export let pointsToWin = 5;
+let initialInvincibleTime = 60 * 10;
+export let maxInvincibilityTime = initialInvincibleTime;
 let maxPowerups = 10;
 export let endGameMessage = "";
 export let gameWon = false;
@@ -15,6 +19,7 @@ export const pilot1 = {
   selected: false,
   lore: "Orion is the muscle-bound moral compass of the cosmos. Born in a dying star, Orion's got strength that makes bodybuilders weep and a heart that's never heard of a grey area. He's saved more worlds than he's had hot dinners, and his name is basically a synonym for 'awesome' in every galaxy. But don't worry, he hasn't let it go to his head. He's always ready to lend a hand, or a bicep. Orion: not just a pilot, but a one-man, space-faring beacon of hope.",
 };
+
 
 export const pilot2 = {
   image: new Image(),
@@ -67,12 +72,19 @@ export function generatePowerups(globalPowerUps, worldWidth, worldHeight, colors
   // Check if there are less than max powerups powerups
   while (globalPowerUps.length < maxPowerups) {
     // Generate a new dot with random x and y within the world
-    let powerup = {
-      x: (Math.random() * 0.8 + 0.1) * worldWidth,
-      y: (Math.random() * 0.8 + 0.1) * worldHeight,
-      color: colors[Math.floor(Math.random() * colors.length)],
-    };
-    globalPowerUps.push(powerup);
+    // let powerup = {
+    //   x: (Math.random() * 0.8 + 0.1) * worldWidth,
+    //   y: (Math.random() * 0.8 + 0.1) * worldHeight,
+    //   color: colors[Math.floor(Math.random() * colors.length)],
+    // };
+    let isStar = (Math.random() > 0.5);
+    let powerUp = new PowerUp(
+      Math.random() * 10000,
+      (Math.random() * 0.8 + 0.1) * worldWidth,
+      (Math.random() * 0.8 + 0.1) * worldHeight,
+      colors[Math.floor(Math.random() * colors.length)],isStar
+    );
+    globalPowerUps.push(powerUp);
     setGlobalPowerUps(globalPowerUps);
     // Send the powerups every time you generate one
     // sendPowerups(globalPowerUps);
@@ -96,6 +108,9 @@ export function checkPowerupCollision(playerToCheck, globalPowerUps) {
         //may need to make this an array of "recently collected / iteracted stuff" to be more robust in the future rather than a simple power up timer
         playerToCheck.powerUps += 1;
         playerToCheck.ticksSincePowerUpCollection = 0;
+        if (globalPowerUps[i].isStar) {
+          playerToCheck.invincibleTimer = initialInvincibleTime;
+        }
       }
       globalPowerUps.splice(i, 1);
       // sendPowerups(globalPowerUps);
@@ -115,23 +130,29 @@ export function checkPlayerCollision(playerToCheck, allPlayers) {
     let dx = playerToCheck.x - allPlayers[i].x;
     let dy = playerToCheck.y - allPlayers[i].y;
     let distance = Math.sqrt(dx * dx + dy * dy);
-
-    if (distance < 20) {
+   
+    if (distance < 20 && playerToCheck.isPlaying == true && allPlayers[i].isPlaying == true) {
       // assuming the radius of both ships is 10
       //for now just reset player if a crash
-      if (playerToCheck.isPlaying == true) {
+      if( playerToCheck.invincibleTimer == 0) {
         playerToCheck.gotHit();
       }
-      if (playerToCheck.isBot) {
-       // playerToCheck.resetState(true, true);
-       allPlayers[i].delayReset(3);
+      if ( playerToCheck.invincibleTimer > 0 && !allPlayers[i].isDead && allPlayers[i].invincibleTimer == 0) {
+        playerToCheck.hitOtherPlayer(allPlayers[i]);
+      }
+      if (playerToCheck.isBot && playerToCheck.invincibleTimer == 0) {
+        // playerToCheck.resetState(true, true);
+        allPlayers[i].delayReset(3);
       }
       if (allPlayers[i] instanceof Player) {
         // allPlayers[i].resetState(true, true);
-        if (allPlayers[i].isPlaying == true) {
+        if ( allPlayers[i].invincibleTimer == 0) {
           allPlayers[i].gotHit();
         }
-        if (allPlayers[i].isBot) {
+        if (allPlayers[i].invincibleTimer > 0  && !playerToCheck.isDead && playerToCheck.invincibleTimer == 0) {
+          allPlayers[i].hitOtherPlayer(playerToCheck);
+        }
+        if (allPlayers[i].isBot && allPlayers[i].invincibleTimer == 0) {
           // allPlayers[i].resetState(true, true);
           allPlayers[i].delayReset(3);
         }
@@ -168,13 +189,29 @@ export function updateEnemies(deltaTime) {
 }
 
 export function updateBots(deltaTime) {
-  bots.forEach((bot) => {
+  bots.forEach((bot, index) => {
     // Check if bot is an instance of the Player class
     if (bot != null && bot instanceof Player) {
       bot.updateBotInputs();
       bot.updateTick(deltaTime);
     } else {
-      console.log("Bot is not an instance of the Player class.");
+      console.log("Bot is not an instance of the Player class. Reinitializing...");
+
+      // Create a new Player object using the properties of the bot
+      const newPlayer = new Player(
+        bot.id,
+        bot.x,
+        bot.y,
+        bot.powerUps,
+        bot.color,
+        bot.angle,
+        bot.pilot,
+        bot.name
+        // Add other properties as needed
+      );
+
+      // Replace the old bot with the new Player object in the array
+      bots[index] = newPlayer;
     }
   });
 }

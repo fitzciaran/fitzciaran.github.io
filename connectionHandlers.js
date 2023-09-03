@@ -1,4 +1,4 @@
-import { setGlobalPowerUps, Player, player, otherPlayers, bots,setBots } from "./astroids.js";
+import { setGlobalPowerUps, player, otherPlayers, bots, setBots } from "./astroids.js";
 import {
   resetPowerLevels,
   updateEnemies,
@@ -11,7 +11,7 @@ import {
   shuffleArray,
 } from "./gameLogic.js";
 
-
+import { Player } from "./player.js";
 export let everConnected = false;
 export let connections = [];
 export let peerIds = [
@@ -25,7 +25,10 @@ export let peerIds = [
 ];
 
 let masterPeerId = peerIds[0]; // start off with the first peer as the master
-
+export let timeSinceMessageFromMaster = 0;
+export function setTimeSinceMessageFromMaster(newTime) {
+  timeSinceMessageFromMaster = newTime;
+}
 shuffleArray(peerIds);
 let index = 0;
 let handleCounter = 0;
@@ -62,6 +65,7 @@ export function sendPlayerStates(player) {
     timeOfLastActive: player.timeOfLastActive,
     isDead: player.isDead,
     isPlaying: player.isPlaying,
+    isStar: player.isStar,
   };
   //console.log("Sending data:", data); // Log any data sent
   connections.forEach((conn) => {
@@ -104,6 +108,7 @@ export function sendBotsState(bots) {
   let data = {
     gameState: true,
     bots: bots,
+    connectedPeers: connectedPeers,
     //enemies and stuff here
   };
 
@@ -121,6 +126,27 @@ export function sendBotsState(bots) {
   });
 }
 
+export function sendConnectedPeers() {
+  // Send game state to other player
+  let data = {
+    gameState: true,
+    connectedPeers: connectedPeers,
+    //enemies and stuff here
+  };
+
+  //console.log("Sending data:", data); // Log any data sent
+  connections.forEach((conn) => {
+    if (conn && conn.open) {
+      conn.send(data);
+      sendCounter++;
+      // Log the data every 1000 calls
+      if (sendCounter === 5000) {
+        console.log("sending bots state data:", data);
+        sendCounter = 0; // reset the counter
+      }
+    }
+  });
+}
 
 function handleData(player, otherPlayers, globalPowerUps, data) {
   //console.log("handling data:");
@@ -141,14 +167,15 @@ function handleData(player, otherPlayers, globalPowerUps, data) {
     otherPlayer.timeOfLastActive = data.timeOfLastActive;
     otherPlayer.isDead = data.isDead;
     otherPlayer.isPlaying = data.isPlaying;
+    otherPlayer.isStar = data.isStar;
 
-    if (player.getPlayerIsMaster() && otherPlayer.isMaster) {
+    if (isPlayerMasterPeer(player) && otherPlayer.isMaster) {
       resolveConflicts(data, player, globalPowerUps, otherPlayers);
     }
   }
   // If the player is not found, add them to the array
   else if (data.id) {
-    let newPlayer = new Player(data.id, data.x, data.y,  data.powerUps, data.color,  data.angle, data.pilot, data.name);
+    let newPlayer = new Player(data.id, data.x, data.y, data.powerUps, data.color, data.angle, data.pilot, data.name);
     otherPlayers.push(newPlayer);
     if (!connectedPeers.includes(data.id)) {
       connectedPeers.push(data.id);
@@ -164,8 +191,43 @@ function handleData(player, otherPlayers, globalPowerUps, data) {
   if (data.globalPowerUps && JSON.stringify(globalPowerUps) !== JSON.stringify(data.globalPowerUps)) {
     setGlobalPowerUps(data.globalPowerUps);
   }
-  if(data.bots){
+  if (data.bots) {
+    setTimeSinceMessageFromMaster(0);
     setBots(data.bots);
+  }
+  if (data.connectedPeers) {
+    //check if connectedPeers has any id's (strings) not in data.connectedPeers
+    let combine = false;
+    if (differsFrom(connectedPeers, data.connectedPeers)) {
+      combine = true;
+    }
+
+    //then check if data.connectedPeers has any id's (strings) not in connectedPeers
+    if (differsFrom(data.connectedPeers, connectedPeers)) {
+      combine = true;
+    }
+
+    if (combine) {
+      // Combine the arrays and set connectedPeers = the combined array
+      connectedPeers = [...new Set([...data.connectedPeers, ...connectedPeers])];
+      // connectedPeers.forEach((connectedID) => {
+      //   connection.
+      // });
+      setTimeout(() => attemptConnections(player, otherPlayers, globalPowerUps), 50);
+      sendConnectedPeers();
+    }
+  }
+  if (timeSinceMessageFromMaster > 60 * 15 && !isPlayerMasterPeer(player)) {
+    setTimeSinceMessageFromMaster(0);
+    //try removing the current master
+    //issue could be that peer doesn't think it is the master because it is connected to others.. need to sync connected lists I think.
+    // Remove player from otherPlayers array, connections array and connectedPeers (array of id's of the connected peers)
+    otherPlayers = otherPlayers.filter((player) => player.id !== connectedPeers[0]);
+    connections = connections.filter((connection) => connection.peer !== connectedPeers[0]);
+    connectedPeers.splice(0, 1);
+    setTimeout(() => attemptConnections(player, otherPlayers, globalPowerUps), 50);
+    //what about "connections" how is connections and connectedPeers synced?
+    masterPeerId = chooseNewMasterPeer(player, otherPlayers);
   }
   handleCounter++;
   // Log the data every 1000 calls
@@ -175,6 +237,19 @@ function handleData(player, otherPlayers, globalPowerUps, data) {
   }
 }
 
+function differsFrom(firstArray, secondArray) {
+  // Convert the second array to a Set for efficient lookup
+  const secondArraySet = new Set(secondArray);
+
+  // Check if any element in the first array is not in the second array
+  for (const element of firstArray) {
+    if (!secondArraySet.has(element)) {
+      return true; // Found a value in the first array that's not in the second array
+    }
+  }
+
+  return false; // All values in the first array are also in the second array
+}
 // Wait for a short delay to allow time for the connections to be attempted
 export function attemptConnections(player, otherPlayers, globalPowerUps) {
   if (player.id === null) {
@@ -322,7 +397,7 @@ function addConnectionHandlers(player, otherPlayers, conn, globalPowerUps) {
 
   conn.on("data", function (data) {
     //console.log("Received data:", data);
-    if ((data && data.id) || (data && data.globalPowerUps)|| (data && data.bots)) {
+    if ((data && data.id) || (data && data.globalPowerUps) || (data && data.bots)) {
       handleData(player, otherPlayers, globalPowerUps, data);
     } else {
       console.log("Received unexpected data:", data);
@@ -345,6 +420,9 @@ function setPeer(newPeer) {
 export function updateConnections(player, otherPlayers, globalPowerUps) {
   if (everConnected) {
     sendPlayerStates(player);
+    if (!isPlayerMasterPeer(player)) {
+      setTimeSinceMessageFromMaster(timeSinceMessageFromMaster + 1);
+    }
   } else {
     connections.forEach((conn, index) => {
       if (conn && conn.closed) {
