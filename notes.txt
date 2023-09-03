@@ -59,7 +59,7 @@ some kind of starting state whether for ^ or other
 
 new challenger approaches when connect to someone
 some kind of run game with the mouse / ship mechanic/physics we have
-sumo mechanic
+sumo mechanic? - with static kill obstacles? or just for non star interactions?
 how to p2p with run style game
 maybe colliding just kills both players?
 maybe other things to avoid too - like not "fake players" but general enviroment obstacle
@@ -69,7 +69,7 @@ might have to do a proper server for master game state - daily leaderboards
 on screen arrow to direct to offscreen oppoents
 update UI of drawn oppoents name on craft in the world
 color select on craft select
-table of current leaders
+style table of current leaders
 make ships bigger
 maybe always provide thrust at low level - with limited click boost - need rechargable boost meter. - lean into these for char differences
 
@@ -124,6 +124,15 @@ refactor box drawing?
 check this probably doesn't work but have put something in: timer for how long since heard from master... kick master from connections and otherplayers if 
 issue with non-master peer sometimes powerups/enemies get restored (presumably by the master) as soon as we hits them, resulting in multiple hits/collection/kills
 wait to see if will connect to a master before creating bots/powerups ourselves. - hopefully before playing ourselves... maybe hold off on showing game??
-consider better options for right click.
+consider better options for right click. 
+    - push away
+         - could apply force to anything within a range? force could be uniform or based on how close but should be directed away from ship - uses stocks?
+         - could suck in when star mode?
+     -mines
+     -warp? why? escape?
+
 isMastervariable outside of player object?
 another, closer, "inRangeticks variable for botstate?
+r2d2 sound for bumble boost?
+seems to random to get hit, no prolonged engagement either get hit or don't and not engaged anymore...
+2nd (3rd, 4th) state for after something.. is collectively achieved, opens worm hole etc, opens part of the edge .. boss?

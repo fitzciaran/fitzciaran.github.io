@@ -1,4 +1,5 @@
-import { BotState, executionTime } from "./astroids.js";
+import {  executionTime } from "./astroids.js";
+import {  BotState } from "./player.js";
 import { isPlayerMasterPeer, getTopScores } from "./connectionHandlers.js";
 import { maxInvincibilityTime, pilot1, pilot2 } from "./gameLogic.js";
 

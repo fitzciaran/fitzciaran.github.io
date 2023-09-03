@@ -1,4 +1,4 @@
-import { bots, otherPlayers, player, worldDimensions, colors, BotState, PilotName, acceleration, setCam, camX, camY, ctx } from "./astroids.js";
+import { bots, otherPlayers, player, worldDimensions, colors, PilotName, acceleration, setCam, camX, camY, ctx } from "./astroids.js";
 import { shuffleArray, setEndGameMessage, maxInvincibilityTime } from "./gameLogic.js";
 import { drawKillInfo } from "./canvasDrawingFunctions.js";
 
@@ -6,6 +6,11 @@ const bounceFactor = 1.5;
 const offset = 1;
 const minBounceSpeed = 5;
 const maxBotsThatCanTargetAtOnce = 1;
+export const BotState = {
+  FOLLOW_PLAYER: "followPlayer",
+  RANDOM: "random",
+  COLLECT: "collect",
+};
 
 export class Player {
   constructor(id = null, x = null, y = null, powerUps = 0, color = null, angle = 0, pilot = "", name = "") {
@@ -54,7 +59,7 @@ export class Player {
       this.color = colors[Math.floor(Math.random() * colors.length)];
     }
     this.angle = 0;
-    this.pilot = "";
+    //this.pilot = "";
     if (!keepName) {
       this.name = "";
     }
@@ -205,14 +210,18 @@ export class Player {
     if (this.pilot == PilotName.PILOT_1) {
       pilotBoostFactor = 1.1;
     } else if (this.pilot == PilotName.PILOT_2) {
-      pilotBoostFactor = 0.2;
+      pilotBoostFactor = 0.6;
     }
     if (this.shift && this.invincibleTimer > 0) {
       if (this.invincibleTimer > 0) {
         this.invincibleTimer -= 5;
         this.invincibleTimer = Math.max(this.invincibleTimer, 0);
       }
-      pilotBoostFactor *= 2.8;
+      if (this.pilot == PilotName.PILOT_1) {
+        pilotBoostFactor = 3;
+      } else if (this.pilot == PilotName.PILOT_2) {
+        pilotBoostFactor = 6;
+      }
     }
     this.vel.x *= newFriction;
     this.vel.y *= newFriction;
@@ -327,7 +336,8 @@ export class Player {
       const allPlayers = [...otherPlayers, ...bots, player];
       let followingPlayer = allPlayers.find((candidate) => this.followingPlayerID === candidate.id);
       if (followingPlayer.isBot) {
-        this.randomlyConsiderChangingState(0.995);
+        //if bots are all following each other they can get into a spiral this should break them out of it.
+        this.randomlyConsiderChangingState(0.99);
       }
       let targetX = followingPlayer.x;
       let targetY = followingPlayer.y;
@@ -337,6 +347,24 @@ export class Player {
       if (this.randomTarget.x == 0 && this.randomTarget.y == 0) {
         this.randomTarget.x = 100 + Math.random() * (worldDimensions.width - 200);
         this.randomTarget.y = 100 + Math.random() * (worldDimensions.height - 200);
+      }
+      let targetX = this.randomTarget.x;
+      let targetY = this.randomTarget.y;
+      this.#checkIfGotToTarget(targetX, targetY);
+      this.#aimAtTarget(targetX, targetY, 0, 0, 0);
+    } else if (this.botState == BotState.COLLECT) {
+      if (this.randomTarget.x == 0 && this.randomTarget.y == 0) {
+        let powerUpToTarget;
+        if (this.powerUps.length > 0) {
+          const randomIndex = Math.floor(Math.random() * this.powerUps.length);
+          powerUpToTarget = this.powerUps[randomIndex];
+          this.randomTarget.x = powerUpToTarget.x;
+          this.randomTarget.y = powerUpToTarget.y;
+        } else {
+          this.botState = BotState.RANDOM;
+          this.randomTarget.x = 100 + Math.random() * (worldDimensions.width - 200);
+          this.randomTarget.y = 100 + Math.random() * (worldDimensions.height - 200);
+        }
       }
       let targetX = this.randomTarget.x;
       let targetY = this.randomTarget.y;
@@ -382,6 +410,10 @@ export class Player {
         }
       }
     } else if (distance < 300 && this.botState == BotState.RANDOM) {
+      this.randomTarget.x = 0;
+      this.randomTarget.y = 0;
+      this.chooseNewBotState();
+    } else if (distance < 20 && this.botState == BotState.COLLECT) {
       this.randomTarget.x = 0;
       this.randomTarget.y = 0;
       this.chooseNewBotState();

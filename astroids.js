@@ -91,11 +91,6 @@ export const PilotName = {
   PILOT_2: "pilot2",
 };
 
-export const BotState = {
-  FOLLOW_PLAYER: "followPlayer",
-  RANDOM: "random",
-};
-
 //switch this to intro once windowloaded
 let gameState = GameState.UNSET;
 // let pilotSelected = "";
