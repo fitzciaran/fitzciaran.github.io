@@ -15,38 +15,36 @@ import { Player } from "./player.js";
 export let everConnected = false;
 export let connections = [];
 export let peerIds = [
-  "a7ef962d-14a8-40e4-8a1e-226a438a345c",
-  "b7ef962d-14a8-40e4-8a1e-226a438a345c",
-  "c7ef962d-14a8-40e4-8a1e-226a438a345c",
-  "d7ef962d-14a8-40e4-8a1e-226a438a345c",
-  "e7ef962d-14a8-40e4-8a1e-226a438a345c",
-  "a6ef962d-14a8-40e4-8a1e-226a438a345c",
-  "b6ef962d-14a8-40e4-8a1e-226a438a345c",
+  "a7ef962d-14a8-40e4-8a1e-226a438a3456",
+  "b7ef962d-14a8-40e4-8a1e-226a438a3456",
+  "c7ef962d-14a8-40e4-8a1e-226a438a3456",
+  "d7ef962d-14a8-40e4-8a1e-226a438a3456",
+  "e7ef962d-14a8-40e4-8a1e-226a438a3456",
+  "a6ef962d-14a8-40e4-8a1e-226a438a3456",
+  "b6ef962d-14a8-40e4-8a1e-226a438a3456",
 ];
-
+shuffleArray(peerIds);
+export let ticksSinceLastConnectionAttempt = 0;
+export function setTicksSinceLastConnectionAttempt(newTime) {
+  ticksSinceLastConnectionAttempt = newTime;
+}
 let masterPeerId = peerIds[0]; // start off with the first peer as the master
 export let timeSinceMessageFromMaster = 0;
 export function setTimeSinceMessageFromMaster(newTime) {
   timeSinceMessageFromMaster = newTime;
 }
-shuffleArray(peerIds);
+export let timeSinceAnyMessageRecieved = 0;
+export function setTimeSinceAnyMessageRecieved(newTime) {
+  timeSinceAnyMessageRecieved = newTime;
+}
+export const wrappedResolveConflicts = createResolveConflictsWrapper();
+
 let index = 0;
 let handleCounter = 0;
 let sendCounter = 0;
 let peer;
 let connectedPeers = [];
 let connectionBackOffTime = 0;
-let firebaseConfig = {
-  apiKey: "AIzaSyAKNQY57EwlQ6TAf13wSx4eba4NK-MAN88",
-  authDomain: "p2p-game-test.firebaseapp.com",
-  projectId: "p2p-game-test",
-  storageBucket: "p2p-game-test.appspot.com",
-  messagingSenderId: "849363353418",
-  appId: "1:849363353418:web:13c04c4ac2ef99c88b4bb3",
-};
-firebase.initializeApp(firebaseConfig);
-
-let db = firebase.firestore();
 
 export function sendPlayerStates(player) {
   // Check if connection is open before sending data
@@ -55,17 +53,30 @@ export function sendPlayerStates(player) {
     id: player.id,
     x: player.x,
     y: player.y,
-    angle: player.angle,
-    color: player.color,
     powerUps: player.powerUps,
-    name: player.name,
+    color: player.color,
+    angle: player.angle,
     pilot: player.pilot,
+    name: player.name,
+    lives: player.lives,
     isMaster: player.isMaster,
-    ticksSincePowerUpCollection: player.ticksSincePowerUpCollection,
-    timeOfLastActive: player.timeOfLastActive,
     isDead: player.isDead,
     isPlaying: player.isPlaying,
     isStar: player.isStar,
+    invincibleTimer: player.invincibleTimer,
+    comboScaler: player.comboScaler,
+    kills: player.kills,
+    playerAngleData: player.playerAngleData,
+    mousePosX: player.mousePosX,
+    mousePosY: player.mousePosY,
+    currentSpeed: player.currentSpeed,
+    vel: player.vel,
+    distanceFactor: player.distanceFactor,
+    space: player.space,
+    shift: player.shift,
+    ticksSincePowerUpCollection: player.ticksSincePowerUpCollection,
+    targetedBy: player.targetedBy,
+    timeOfLastActive: player.timeOfLastActive,
   };
   //console.log("Sending data:", data); // Log any data sent
   connections.forEach((conn) => {
@@ -130,7 +141,8 @@ export function sendConnectedPeers() {
   // Send game state to other player
   let data = {
     gameState: true,
-    connectedPeers: connectedPeers,
+    //todo this could be the issue
+    //connectedPeers: connectedPeers,
     //enemies and stuff here
   };
 
@@ -149,28 +161,43 @@ export function sendConnectedPeers() {
 }
 
 function handleData(player, otherPlayers, globalPowerUps, data) {
+  timeSinceAnyMessageRecieved = 0;
   //console.log("handling data:");
   // Find the otherPlayer in the array
   let otherPlayer = otherPlayers.find((player) => player.id === data.id);
 
   // If the player is found, update their data
   if (otherPlayer) {
+    otherPlayer.timeSinceSentMessageThatWasRecieved = 0;
     otherPlayer.x = data.x;
     otherPlayer.y = data.y;
-    otherPlayer.angle = data.angle;
-    otherPlayer.color = data.color;
     otherPlayer.powerUps = data.powerUps;
-    otherPlayer.name = data.name;
+    otherPlayer.color = data.color;
+    otherPlayer.angle = data.angle;
     otherPlayer.pilot = data.pilot;
+    otherPlayer.name = data.name;
+    otherPlayer.lives = data.lives;
     otherPlayer.isMaster = data.isMaster;
-    otherPlayer.ticksSincePowerUpCollection = data.ticksSincePowerUpCollection;
-    otherPlayer.timeOfLastActive = data.timeOfLastActive;
     otherPlayer.isDead = data.isDead;
     otherPlayer.isPlaying = data.isPlaying;
+    otherPlayer.invincibleTimer = data.invincibleTimer;
+    otherPlayer.comboScaler = data.comboScaler;
+    otherPlayer.kills = data.kills;
+    otherPlayer.playerAngleData = data.playerAngleData;
+    otherPlayer.mousePosX = data.mousePosX;
+    otherPlayer.mousePosY = data.mousePosY;
+    otherPlayer.currentSpeed = data.currentSpeed;
+    otherPlayer.vel = data.vel;
+    otherPlayer.distanceFactor = data.distanceFactor;
+    otherPlayer.space = data.space;
+    otherPlayer.shift = data.shift;
+    otherPlayer.ticksSincePowerUpCollection = data.ticksSincePowerUpCollection;
+    otherPlayer.targetedBy = data.targetedBy;
+    otherPlayer.timeOfLastActive = data.timeOfLastActive;
     otherPlayer.isStar = data.isStar;
 
     if (isPlayerMasterPeer(player) && otherPlayer.isMaster) {
-      resolveConflicts(data, player, globalPowerUps, otherPlayers);
+      wrappedResolveConflicts(player, otherPlayers, globalPowerUps);
     }
   }
   // If the player is not found, add them to the array
@@ -222,12 +249,13 @@ function handleData(player, otherPlayers, globalPowerUps, data) {
     //try removing the current master
     //issue could be that peer doesn't think it is the master because it is connected to others.. need to sync connected lists I think.
     // Remove player from otherPlayers array, connections array and connectedPeers (array of id's of the connected peers)
-    otherPlayers = otherPlayers.filter((player) => player.id !== connectedPeers[0]);
-    connections = connections.filter((connection) => connection.peer !== connectedPeers[0]);
-    connectedPeers.splice(0, 1);
-    setTimeout(() => attemptConnections(player, otherPlayers, globalPowerUps), 50);
-    //what about "connections" how is connections and connectedPeers synced?
-    masterPeerId = chooseNewMasterPeer(player, otherPlayers);
+    // otherPlayers = otherPlayers.filter((player) => player.id !== connectedPeers[0]);
+    // connections = connections.filter((connection) => connection.peer !== connectedPeers[0]);
+    // connectedPeers.splice(0, 1);
+    // setTimeout(() => attemptConnections(player, otherPlayers, globalPowerUps), 50);
+    // //what about "connections" how is connections and connectedPeers synced?
+    // masterPeerId = chooseNewMasterPeer(player, otherPlayers);
+    wrappedResolveConflicts(player, otherPlayers, globalPowerUps);
   }
   handleCounter++;
   // Log the data every 1000 calls
@@ -247,13 +275,13 @@ function differsFrom(firstArray, secondArray) {
       return true; // Found a value in the first array that's not in the second array
     }
   }
-
   return false; // All values in the first array are also in the second array
 }
+
 // Wait for a short delay to allow time for the connections to be attempted
 export function attemptConnections(player, otherPlayers, globalPowerUps) {
   if (player.id === null) {
-    console.log("All IDs are in use");
+    console.log("in attemptConnections PLayer id is null");
     connectionBackOffTime = (connectionBackOffTime + 500) * 2;
     setTimeout(() => tryNextId(player), connectionBackOffTime);
     return;
@@ -317,6 +345,7 @@ export function connectToPeers(player, otherPlayers, globalPowerUps) {
         if (conn != null && conn != undefined) {
           //connections.push(conn); // Add the connection to the array
           everConnected = true;
+         //todo carefully assess result of removing this
           addConnectionHandlers(player, otherPlayers, conn, globalPowerUps);
         }
       } else {
@@ -329,6 +358,7 @@ export function connectToPeers(player, otherPlayers, globalPowerUps) {
 export function tryNextId(player) {
   if (index >= peerIds.length) {
     console.log("All IDs are in use - trynextid function");
+    resolveConnectionConflicts(player, otherPlayers, globalPowerUps);
     return;
   }
 
@@ -377,8 +407,8 @@ function addConnectionHandlers(player, otherPlayers, conn, globalPowerUps) {
       connectedPeers.sort();
     }
 
-    // Reset all powerUps when a new peer connects
-    resetPowerLevels(player, otherPlayers);
+    // Reset all powerUps when a new peer connects : don't do this anymore ongoing game
+    //resetPowerLevels(player, otherPlayers);
 
     // Send the current powerups to the new peer
     //don't need to under master peer system
@@ -404,7 +434,7 @@ function addConnectionHandlers(player, otherPlayers, conn, globalPowerUps) {
     }
     // If there is a conflict between the local game state and the received game state,
     // update the local game state to match the received game state
-    resolveConflicts(data, player, globalPowerUps, otherPlayers);
+    wrappedResolveConflicts(player, otherPlayers, globalPowerUps);
   });
 }
 
@@ -443,11 +473,17 @@ export function getPlayerId() {
 }
 
 function chooseNewMasterPeer(player, otherPlayers) {
-  masterPeerId = connectedPeers[0];
-  if (masterPeerId === player.id) {
-    player.setPlayerIsMaster(true);
+  if (connectedPeers.length > 0) {
+    masterPeerId = connectedPeers[0];
+
+    if (masterPeerId === player.id) {
+      player.setPlayerIsMaster(true);
+    } else {
+      player.setPlayerIsMaster(false);
+    }
   } else {
-    player.setPlayerIsMaster(false);
+    masterPeerId = player.id;
+    player.setPlayerIsMaster(true);
   }
   otherPlayers.forEach((otherPlayer) => {
     if (otherPlayer instanceof Player) {
@@ -463,85 +499,42 @@ function chooseNewMasterPeer(player, otherPlayers) {
 
   return masterPeerId;
 }
+export function createResolveConflictsWrapper() {
+  let isScheduled = false;
 
-function resolveConflicts(data, player, powerups, otherPlayers) {
+  return function(player, otherPlayers, globalPowerUps) {
+    if (!isScheduled) {
+      // If not scheduled, call the function and set the flag
+      resolveConflicts(player, otherPlayers, globalPowerUps);
+      isScheduled = true;
+
+      // Schedule to reset the flag after 5 seconds
+      setTimeout(() => {
+        isScheduled = false;
+      }, 5000);
+    }
+  };
+}
+
+
+function resolveConflicts(player, otherPlayers, globalPowerUps) {
   // If there is a conflict between the local game state and the received game state,
   // update the local game state to match the received game state
   if (player.id == null) {
     tryNextId(player);
   }
+  resolveConnectionConflicts(player, otherPlayers, globalPowerUps);
+}
+
+function resolveConnectionConflicts(player, otherPlayers, globalPowerUps) {
+  // If there is a conflict between the local game state and the received game state,
+  
+  //not sure about the below might need to keep it in mind but I think it was causing major issues.
+  // setTicksSinceLastConnectionAttempt(0);
+  // otherPlayers = otherPlayers.filter((player) => player.id !== connectedPeers[0]);
+  // connections = connections.filter((connection) => connection.peer !== connectedPeers[0]);
+  // connectedPeers.splice(0, 1);
+  //might not be able to attempt connections again without issues
+ // setTimeout(() => attemptConnections(player, otherPlayers, globalPowerUps), 50);
   masterPeerId = chooseNewMasterPeer(player, otherPlayers);
-}
-export function addScore(category, name, score) {
-  var collection = db.collection(category);
-
-  // Get the current top 10 scores
-  collection
-    .orderBy("score", "desc")
-    .limit(10)
-    .get()
-    .then((querySnapshot) => {
-      // Count the number of scores in the category
-      const numScores = querySnapshot.size;
-
-      // If there are fewer than 10 scores, add the new score
-      if (numScores < 10) {
-        collection
-          .add({
-            name: name,
-            score: score,
-            date: firebase.firestore.FieldValue.serverTimestamp(),
-          })
-          .then(function (docRef) {
-            console.log("Score written with ID: ", docRef.id);
-          })
-          .catch(function (error) {
-            console.error("Error adding score: ", error);
-          });
-      } else {
-        // Otherwise, check if the new score is in the top 10
-        var lowestScore = null;
-
-        querySnapshot.forEach((doc) => {
-          if (lowestScore == null || doc.data().score < lowestScore) {
-            lowestScore = doc.data().score;
-          }
-        });
-
-        if (score > lowestScore) {
-          collection
-            .add({
-              name: name,
-              score: score,
-              date: firebase.firestore.FieldValue.serverTimestamp(),
-            })
-            .then(function (docRef) {
-              console.log("Score written with ID: ", docRef.id);
-            })
-            .catch(function (error) {
-              console.error("Error adding score: ", error);
-            });
-        }
-      }
-    });
-}
-
-export function getTopScores(category, X) {
-  return new Promise((resolve, reject) => {
-    var scores = [];
-    db.collection(category)
-      .orderBy("score", "desc")
-      .limit(X)
-      .get()
-      .then((querySnapshot) => {
-        querySnapshot.forEach((doc) => {
-          var data = doc.data();
-          scores.push(`${data.score}, ${data.name}`);
-        });
-        resolve(scores);
-      })
-      .catch((error) => {
-        reject(error);
-      });
-  });
 }

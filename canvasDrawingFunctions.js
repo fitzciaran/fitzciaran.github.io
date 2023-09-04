@@ -1,6 +1,7 @@
-import {  executionTime } from "./astroids.js";
-import {  BotState } from "./player.js";
-import { isPlayerMasterPeer, getTopScores } from "./connectionHandlers.js";
+import { executionTime } from "./astroids.js";
+import { getTopScores } from "./db.js";
+import { BotState, Player } from "./player.js";
+import { isPlayerMasterPeer } from "./connectionHandlers.js";
 import { maxInvincibilityTime, pilot1, pilot2 } from "./gameLogic.js";
 
 let backLayer = new Image();
@@ -248,22 +249,12 @@ function drawRotatedShip(ctx, camX, camY, player, points) {
     return;
   }
 
-  let centerX = player.x;
-  let centerY = player.y;
-  let angle = player.angle;
-  let color = player.color;
-  let name = player.name;
-
-  if (player.invincibleTimer > 10 || (player.invincibleTimer > 0 && !player.isUserControlledCharacter)) {
-    // Apply a glowing effect for star ships
+  function applyGlowingEffect(transitionColor, glowColor) {
     ctx.shadowBlur = 10;
-    ctx.shadowColor = "gold"; // Adjust the glow color as needed
-    ctx.strokeStyle = "gold"; // Adjust the stroke color to match the glow
+    ctx.shadowColor = glowColor;
+    ctx.strokeStyle = glowColor;
 
-    // Gradually change the star ship's color
-    const transitionColor = "gold"; // Final color
-    const transitionDuration = 2000; // Transition duration in milliseconds
-
+    const transitionDuration = 2000;
     const currentTime = Date.now();
     const elapsedTime = currentTime - player.starTransitionStartTime;
 
@@ -280,37 +271,61 @@ function drawRotatedShip(ctx, camX, camY, player, points) {
     ctx.strokeStyle = `rgb(${r},${g},${b})`;
   }
 
+  let centerX = player.x;
+  let centerY = player.y;
+  let angle = player.angle;
+  let color = player.color;
+  let name = player.name;
+
+  if (player.invincibleTimer > 10 || (player.invincibleTimer > 0 && !player.isUserControlledCharacter)) {
+    applyGlowingEffect("gold", "gold");
+  }
+
   ctx.beginPath();
 
-  // Move to the first point after rotating
   let rotatedPoint = rotatePoint(points[0].x, points[0].y, angle);
   ctx.moveTo(centerX - camX + rotatedPoint.x, centerY - camY + rotatedPoint.y);
 
-  // Create a line for each point
   for (let i = 1; i < points.length; i++) {
     rotatedPoint = rotatePoint(points[i].x, points[i].y, angle);
     ctx.lineTo(centerX - camX + rotatedPoint.x, centerY - camY + rotatedPoint.y);
   }
 
-  ctx.strokeStyle = color;
-  ctx.stroke();
-  ctx.closePath();
-  ctx.strokeStyle = color;
-  ctx.stroke();
-  ctx.closePath();
-  // Calculate position for the name (above the unrotated center of the ship)
-  const namePositionX = centerX - camX;
-  const namePositionY = centerY - camY - 15; // You can adjust this value for the desired distance
+  try {
+    if (typeof player.isInSpawnProtectionTime === 'function') {
+      if (player.isInSpawnProtectionTime()) {
+        applyGlowingEffect("white", "white");
+      } else {
+        ctx.strokeStyle = color;
+      }
+    } else {
+      // console.log("isInSpawnProtectionTime method does not exist");
+    }
+  } catch (error) {
+    console.log("An error occurred:", error);
+  }
 
-  // Draw the name
+  ctx.stroke();
+  ctx.closePath();
+  ctx.strokeStyle = color;
+  ctx.stroke();
+  ctx.closePath();
+
+  ctx.globalAlpha = 1;
+
+  const namePositionX = centerX - camX;
+  const namePositionY = centerY - camY - 15;
+
   ctx.fillStyle = color;
-  ctx.font = "14px Arial"; // Adjust font size and family as needed
+  ctx.font = "14px Arial";
   ctx.textAlign = "center";
   ctx.fillText(name, namePositionX, namePositionY);
+
   if (player.recentKillTicks > 0) {
     player.recentKillTicks -= 1;
     drawKillInfo(ctx, player, player.recentKillText, camX, camY);
   }
+
   ctx.shadowBlur = 0;
 }
 
@@ -433,16 +448,24 @@ function drawPowerupLevels(ctx, player, otherPlayers, bots) {
     boxHeight += textHeight + gap;
   }
 
-  otherPlayers.forEach((player) => {
-    let playerName = player.name || "Unknown";
-    const score = player.powerUps * 100;
-    const playerPowerupText = playerName + `: ${score}`;
-    const textWidth = ctx.measureText(playerPowerupText).width;
-    maxTextWidth = Math.max(maxTextWidth, textWidth);
-    boxHeight += textHeight + gap;
+  otherPlayers.forEach((otherPlayer) => {
+    if (!otherPlayer.isDead && otherPlayer.isPlaying) {
+      if (!otherPlayer.name) {
+        // console.log("unnamed other player");
+      }
+      let playerName = otherPlayer.name || "Unknown";
+      const score = otherPlayer.powerUps * 100;
+      const playerPowerupText = playerName + `: ${score}`;
+      const textWidth = ctx.measureText(playerPowerupText).width;
+      maxTextWidth = Math.max(maxTextWidth, textWidth);
+      boxHeight += textHeight + gap;
+    }
   });
 
   bots.forEach((bot) => {
+    if (!bot.name) {
+      // console.log("unnamed other player");
+    }
     let playerName = bot.name || "Unknown";
     const score = bot.powerUps * 100;
     const playerPowerupText = playerName + `: ${score}`;
@@ -495,13 +518,15 @@ function drawPowerupLevels(ctx, player, otherPlayers, bots) {
   });
 
   allPlayers.forEach((currentPlayer) => {
-    let playerName = currentPlayer.name || "Unknown";
-    const score = currentPlayer.powerUps * 100;
-    const playerPowerupText = playerName + `: ${score}`;
+    if (!currentPlayer.isDead && currentPlayer.isPlaying) {
+      let playerName = currentPlayer.name || "Unknown";
+      const score = currentPlayer.powerUps * 100;
+      const playerPowerupText = playerName + `: ${score}`;
 
-    ctx.fillStyle = currentPlayer.color;
-    ctx.fillText(playerPowerupText, boxX + boxWidth - boxPadding, currentY);
-    currentY += textHeight + gap;
+      ctx.fillStyle = currentPlayer.color;
+      ctx.fillText(playerPowerupText, boxX + boxWidth - boxPadding, currentY);
+      currentY += textHeight + gap;
+    }
   });
 }
 
@@ -510,7 +535,7 @@ export function drawKillInfo(ctx, player, score, camX, camY) {
   let centerY = player.y;
   // Calculate position for the score (above the unrotated center of the ship)
   const scorePositionX = centerX - camX;
-  const scorePositionY = centerY - camY - 15; // You can adjust this value for the desired distance
+  const scorePositionY = centerY - camY - 35; // You can adjust this value for the desired distance
 
   // Draw the score
   ctx.fillStyle = player.color;
@@ -542,18 +567,12 @@ export function renderDebugInfo(ctx, player, bots) {
   ctx.fillStyle = player.color;
   ctx.fillText(executionTimeText, 558, topGap + gap * 4 - textHeight);
 
-  // if (topDailyScoresString != "") {
-  //   var scores = topDailyScoresString.split("; ");
-  //   for (var i = 0; i < scores.length; i++) {
-  //     ctx.fillText(scores[i], 558, topGap + gap * (3 + i) - textHeight);
-  //   }
-  // }
   bots.forEach((bot, index) => {
     let botInfo;
     if (bot.botState == BotState.FOLLOW_PLAYER) {
-      botInfo = `bot state: ${bot.botState} following: ${bot.followingPlayerID} `;
+      botInfo = `${bot.name} state: ${bot.botState} following: ${bot.followingPlayerID} `;
     } else {
-      botInfo = `bot state: ${bot.botState} aiming: ${bot.randomTarget.x},${bot.randomTarget.y} `;
+      botInfo = `${bot.name} state: ${bot.botState} aiming: ${bot.randomTarget.x},${bot.randomTarget.y} `;
     }
     ctx.fillText(botInfo, 958, topGap + gap * index - textHeight);
   });

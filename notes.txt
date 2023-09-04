@@ -104,8 +104,9 @@ maybe also moving large obstacles (non-lethal?) pushing? and lethal.
 level ups? more gauges?
 worldDimensions maybe don't let Player know about this an have to always pass in a parameter to methods?
 camera shake
-bots should "attack" when have star only ?
-bots should "run" when don't? - or go for powerups?
+
+bots should "run" from players with powerups?
+
 faster when star??
 gauge to show invicibletime? or use audio? - stop flashing slightly before? - for local player only?
 display combo multiplier in ui (when above 1)?
@@ -136,3 +137,51 @@ another, closer, "inRangeticks variable for botstate?
 r2d2 sound for bumble boost?
 seems to random to get hit, no prolonged engagement either get hit or don't and not engaged anymore...
 2nd (3rd, 4th) state for after something.. is collectively achieved, opens worm hole etc, opens part of the edge .. boss?
+
+as masterpeer need to process otherplayers' movement based on prev velocity and mouse position and space press might improve detection of collisions 
+as nonmaster peer need to process otherplayers' and bots movement based on.....
+instead/as well as power ups we have gates.... which maybe are also portals?.. randomly?
+gates could be curated or iteligently generated in sets to allow for mini circuits/building up flowgates could blinks before for "gate" I'm thinking   |----|     so 2 lines marking the frame and a 'large" opening you go through in a particular direction (2 choices of direction, but could have directional ones.)
+
+idea of a crash? hitting a gate  edge too fast? need to at least deal with collision... unless hitting edge kills always
+faster you go through a gate the more points/ more stuff?
+
+speed being a factor in normal kills? your velocity or relative impact velocity? could give more points/star time for fast, or too slow might not kill?
+
+as combo (or some kinda of gate combo) builds could enter state of more difficult generated gate patterns.
+
+notion of health?health could decrease and gating could increase, like arcade checkpoint race system
+botstate to try to traverse the gates
+
+make bot an inherited calss from player?
+bots don't seem to be colliding with each other
+
+instead of lore do pilot stats.
+instead of hover over 1 or 2 have a 
+safe starting/respawning area? forcefielded off?
+separate p2p connection and db connection
+
+name? space.io? 
+
+maybe have an "enemy object" that is a forcefield that will pull in / push out to implement those.
+
+bot could consider bouncing off the wall as means to quickly boost towards the center - should be a late implementation since walls may go and would be a very specific implementation
+    -maybe not too tricky, check if close to a wall and if target is perpendiulatly far from the wall and momentum perpendicual component of velocity is towards the wall and would be a good candiate to head to wall.
+    
+issue where sometimes old connections get joined to and if they have a low id they will be master but not send anything(since they're closed) can I somehow close these?
+
+as the bots get better I'll need to add in some more flaws. 
+   maybe they set course less frequently, and a a distance set an inaccurate target
+   variable for last course correction perhaps and use that and distance from taget to decide whether to adjust or hold.
+   maybe hold course for just a moment after getting power up for example
+   while no thrust
+   could use boost when far and chasing
+
+maybe star drains slower if no throttle at all.
+
+more pilot stats e.g. 
+    speed,boost speed, invicible time,push/pull strength
+
+
+when observing a bot and they die, should switch to a different one.
+sometimes non-master can not get credited for powerup collection (even when connection seems good otherwise)

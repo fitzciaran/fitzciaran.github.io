@@ -1,6 +1,29 @@
-import { bots, otherPlayers, player, worldDimensions, colors, PilotName, acceleration, setCam, camX, camY, ctx } from "./astroids.js";
-import { shuffleArray, setEndGameMessage, maxInvincibilityTime } from "./gameLogic.js";
+import {
+  bots,
+  otherPlayers,
+  player,
+  worldDimensions,
+  colors,
+  PilotName,
+  acceleration,
+  setCam,
+  camX,
+  camY,
+  ctx,
+  setGameState,
+  GameState,
+  globalPowerUps,
+} from "./astroids.js";
+import { shuffleArray, setEndGameMessage, maxInvincibilityTime,spawnProtectionTime } from "./gameLogic.js";
 import { drawKillInfo } from "./canvasDrawingFunctions.js";
+import {
+  attemptConnections,
+  timeSinceAnyMessageRecieved,
+  setTimeSinceAnyMessageRecieved,
+  ticksSinceLastConnectionAttempt,
+  setTicksSinceLastConnectionAttempt,
+  wrappedResolveConflicts,
+} from "./connectionHandlers.js";
 
 const bounceFactor = 1.5;
 const offset = 1;
@@ -24,6 +47,12 @@ export class Player {
     this.name = name;
     this.lives = 1;
     this.isMaster = true;
+    this.isDead = false;
+    this.isPlaying = true;
+    this.invincibleTimer = 0;
+    this.comboScaler = 1;
+    this.isUserControlledCharacter = false;
+    this.kills = 0;
     this.isBot = false;
     this.playerAngleData = {};
     this.mousePosX = 0;
@@ -34,28 +63,16 @@ export class Player {
     this.space = false;
     this.shift = false;
     this.ticksSincePowerUpCollection = -1;
-    this.previousAngleDifference = 0;
-    this.previousTurnDirection = 0;
-    this.botState = BotState.FOLLOW_PLAYER;
-    this.followingPlayerID = "";
-    this.timeOfLastMessage = "";
-    this.timeOfLastActive = "";
-    this.randomTarget = { x: 0, y: 0 };
     this.targetedBy = [];
-    this.inRangeTicks = 0;
-    this.isDead = false;
-    this.isPlaying = true;
-    this.invincibleTimer = 0;
-    this.comboScaler = 1;
-    this.isUserControlledCharacter = false;
-    this.kills = 0;
+    this.timeSinceSpawned = 0;
+    this.timeSinceSentMessageThatWasRecieved = 0;
   }
 
   resetState(keepName, keepColor) {
     this.x = 1200 + Math.random() * (worldDimensions.width - 2400);
     this.y = 600 + Math.random() * (worldDimensions.height - 1200);
     this.powerUps = 0;
-    if (keepColor) {
+    if (!keepColor) {
       this.color = colors[Math.floor(Math.random() * colors.length)];
     }
     this.angle = 0;
@@ -66,7 +83,7 @@ export class Player {
     this.followingPlayerID = "";
     this.timeOfLastMessage = "";
     this.timeOfLastActive = "";
-    this.randomTarget = { x: 0, y: 0 };
+    this.randomTarget = { x: 0, y: 0, id: "" };
     this.targetedBy = [];
     this.space = false;
     this.shift = false;
@@ -79,16 +96,17 @@ export class Player {
     this.mousePosY = 0;
     this.currentSpeed = 0;
     this.vel = { x: 0, y: 0 };
+    this.timeSinceSpawned = 0;
   }
 
-  delayReset(framesToDelay) {
+  delayReset(framesToDelay, keepName, keepColor) {
     if (framesToDelay > 0) {
       requestAnimationFrame(() => {
-        this.delayReset(framesToDelay - 1);
+        this.delayReset(framesToDelay - 1, keepName, keepColor);
       });
     } else {
       // Execute the reset after the specified number of frames
-      this.resetState(true, true);
+      this.resetState(keepName, keepColor);
     }
   }
   gotHit() {
@@ -116,6 +134,9 @@ export class Player {
     this.name = newName;
   }
 
+  isInSpawnProtectionTime(){
+    return (this.timeSinceSpawned <= spawnProtectionTime);
+  }
   //   getPlayerIsMaster() {
   //     return this.isMaster;
   //   }
@@ -280,6 +301,11 @@ export class Player {
     setCam(camX, camY);
   }
   updateTick(deltaTime) {
+    if (this.isDead && this.isUserControlledCharacter) {
+      setGameState(GameState.FINISHED);
+      return;
+    }
+    this.timeSinceSpawned++;
     this.updatePlayerAngle();
     this.updatePlayerVelocity(deltaTime);
     this.bouncePlayer();
@@ -297,47 +323,83 @@ export class Player {
     if (this.ticksSincePowerUpCollection > 5) {
       this.ticksSincePowerUpCollection = -1;
     }
+    setTicksSinceLastConnectionAttempt(ticksSinceLastConnectionAttempt + 1);
+    setTimeSinceAnyMessageRecieved(timeSinceAnyMessageRecieved + 1);
+    if (timeSinceAnyMessageRecieved > 100 && ticksSinceLastConnectionAttempt > 3000) {
+        wrappedResolveConflicts(player, otherPlayers, globalPowerUps);
+      //todo do we need to attemptConnections here?
+    }
+    otherPlayers.forEach((otherPlayer) => {
+        otherPlayer.timeSinceSentMessageThatWasRecieved +=1;
+    });
+  }
+
+  howLongSinceActive() {
+    if (this.timeOfLastActive) {
+      const currentTime = Date.now();
+      const timeDifference = currentTime - this.timeOfLastActive;
+      return timeDifference;
+    } else {
+      return 5000;
+    }
+  }
+}
+
+export class Bot extends Player {
+  constructor(id = null, x = null, y = null, powerUps = 0, color = null, angle = 0, pilot = "", name = "") {
+    super(id, x, y, powerUps, color, angle, pilot, name);
+    this.previousAngleDifference = 0;
+    this.previousTurnDirection = 0;
+    this.botState = BotState.FOLLOW_PLAYER;
+    this.followingPlayerID = "";
+    this.timeOfLastMessage = "";
+    this.timeOfLastActive = "";
+    this.randomTarget = { x: 0, y: 0, id: "" };
+    this.inRangeTicks = 0;
+  }
+  updateTick(deltaTime) {
+    if (this.isDead) {
+      //todo delay this?
+      this.resetState(true, true);
+      // delayReset(5,true,true);
+      return;
+    }
+    super.updateTick(deltaTime);
   }
   updateBotInputs() {
-    this.randomlyConsiderChangingState();
-    if (this.botState == BotState.FOLLOW_PLAYER) {
-      if (this.followingPlayerID == "") {
-        //lets try including other bots in the follow candidates
-        let allPlayers = [player, ...otherPlayers, ...bots];
-        //for debuging bot following I won't shuffle this and let it target player if possible
-        //shuffleArray(allPlayers);
-        let playerToFollow = null;
-
-        for (const candidate of allPlayers) {
-          candidate.targetedBy = candidate.targetedBy.filter((id) => id !== this.id);
-
-          if (this.id === candidate.id) {
-            // Don't follow yourself
-            continue; // Skip to the next iteration
-          }
-
-          let candidateHowLongSinceActive = candidate.howLongSinceActive();
-
-          if (candidateHowLongSinceActive < 300 && candidate.targetedBy.length < maxBotsThatCanTargetAtOnce && candidate.isPlaying) {
-            playerToFollow = candidate;
-            playerToFollow.targetedBy.push(this.id);
-            this.followingPlayerID = playerToFollow.id;
-            break;
-          } else {
-            console.log(candidate.name + " is inactive not targeting");
-          }
-        }
+    //this.randomlyConsiderChangingState();
+    if (this.invincibleTimer > 30 && this.botState != BotState.FOLLOW_PLAYER) {
+      this.#setFollowingTarget();
+      if (this.followingPlayerID != "") {
+        this.randomTarget.x = 0;
+        this.randomTarget.y = 0;
+        this.randomTarget.id = "random point";
+        this.botState = BotState.FOLLOW_PLAYER;
       }
+    }
+    if (this.botState == BotState.FOLLOW_PLAYER) {
+      this.#setFollowingTarget();
       if (this.followingPlayerID == "") {
+        //if didn't manage to find a valid target.
         this.botState = BotState.RANDOM;
         return;
       }
 
       const allPlayers = [...otherPlayers, ...bots, player];
       let followingPlayer = allPlayers.find((candidate) => this.followingPlayerID === candidate.id);
+      if (followingPlayer == null) {
+        this.followingPlayerID = "";
+        return;
+      }
       if (followingPlayer.isBot) {
         //if bots are all following each other they can get into a spiral this should break them out of it.
-        this.randomlyConsiderChangingState(0.99);
+        this.randomlyConsiderChangingState(0.95);
+      }
+      if (followingPlayer.invincibleTimer > 10) {
+        this.randomlyConsiderChangingState(0.09);
+      }
+      if (followingPlayer.isDead) {
+        this.followingPlayerID = "";
       }
       let targetX = followingPlayer.x;
       let targetY = followingPlayer.y;
@@ -351,28 +413,75 @@ export class Player {
       let targetX = this.randomTarget.x;
       let targetY = this.randomTarget.y;
       this.#checkIfGotToTarget(targetX, targetY);
-      this.#aimAtTarget(targetX, targetY, 0, 0, 0);
+      this.#aimAtTarget(targetX, targetY, 0, 0, 0.4);
     } else if (this.botState == BotState.COLLECT) {
       if (this.randomTarget.x == 0 && this.randomTarget.y == 0) {
         let powerUpToTarget;
-        if (this.powerUps.length > 0) {
-          const randomIndex = Math.floor(Math.random() * this.powerUps.length);
-          powerUpToTarget = this.powerUps[randomIndex];
+        if (globalPowerUps.length > 0) {
+          const randomIndex = Math.floor(Math.random() * globalPowerUps.length);
+          powerUpToTarget = globalPowerUps[randomIndex];
           this.randomTarget.x = powerUpToTarget.x;
           this.randomTarget.y = powerUpToTarget.y;
+          this.randomTarget.id = powerUpToTarget.id;
         } else {
           this.botState = BotState.RANDOM;
           this.randomTarget.x = 100 + Math.random() * (worldDimensions.width - 200);
           this.randomTarget.y = 100 + Math.random() * (worldDimensions.height - 200);
         }
+      } else {
+        let powerUpStillExists = false;
+        for (let globalPowerUp of globalPowerUps) {
+          if (globalPowerUp.x == this.randomTarget.x && globalPowerUp.y == this.randomTarget.y) {
+            powerUpStillExists = true;
+            break;
+          }
+        }
+        if (!powerUpStillExists) {
+          this.botState = BotState.RANDOM;
+        }
       }
       let targetX = this.randomTarget.x;
       let targetY = this.randomTarget.y;
       this.#checkIfGotToTarget(targetX, targetY);
-      this.#aimAtTarget(targetX, targetY, 0, 0, 0);
+      this.#aimAtTarget(targetX, targetY, 0, 0, 0.4);
     }
   }
 
+  #setFollowingTarget() {
+    if (this.followingPlayerID == "") {
+      //lets try including other bots in the follow candidates
+      let allPlayers = [player, ...otherPlayers, ...bots];
+      //for debuging bot following I won't shuffle this and let it target player if possible
+      //shuffleArray(allPlayers);
+      let playerToFollow = null;
+
+      for (const candidate of allPlayers) {
+        candidate.targetedBy = candidate.targetedBy.filter((id) => id !== this.id);
+
+        if (this.id === candidate.id) {
+          // Don't follow yourself
+          continue; // Skip to the next iteration
+        }
+
+        let candidateHowLongSinceActive = candidate.howLongSinceActive();
+
+        if (
+          candidateHowLongSinceActive < 300 &&
+          candidate.targetedBy.length < maxBotsThatCanTargetAtOnce &&
+          candidate.isPlaying &&
+          candidate.timeSinceSpawned > 600 &&
+          candidate.invincibleTimer < 10
+        ) {
+          playerToFollow = candidate;
+          playerToFollow.targetedBy.push(this.id);
+          this.followingPlayerID = playerToFollow.id;
+          break;
+        } else {
+          //console.log(candidate.name + " is inactive not targeting");
+        }
+      }
+    }
+  }
   //this is doing more than checking if got there refactor this
   #checkIfGotToTarget(targetX, targetY) {
     let currentX = this.x;
@@ -397,6 +506,7 @@ export class Player {
             // this.followingPlayer.targetedBy -= 1;
             followingPlayer.targetedBy = followingPlayer.targetedBy.filter((id) => id !== this.id);
           } else {
+            this.followingPlayerID ="";
             console.log("followingPlayer null ");
           }
           this.followingPlayerID = "";
@@ -419,11 +529,48 @@ export class Player {
       this.chooseNewBotState();
     }
   }
+  //   #aimAtTarget(targetX, targetY, targetVelocityX, targetVelocityY, adjustmentFactor) {
+  //     let currentX = this.x;
+  //     let currentY = this.y;
+  //     let currentVelocityX = this.vel.x;
+  //     let currentVelocityY = this.vel.y;
+  //     // Calculate the distance between the target and current points
+  //     let distance = Math.sqrt((targetX - currentX) ** 2 + (targetY - currentY) ** 2);
+
+  //     // Calculate the time it would take to reach the original target without considering target's velocity
+  //     let currentSpeed = Math.sqrt(currentVelocityX ** 2 + currentVelocityY ** 2);
+  //     let adjustedTargetX = targetX;
+  //     let adjustedTargetY = targetY;
+
+  //     if (currentSpeed != 0) {
+  //       let timeToReachTarget = distance / currentSpeed;
+
+  //       // Calculate the adjusted target by considering a weighted combination of position and velocity
+  //       adjustedTargetX = targetX * (1 - adjustmentFactor) + (targetX + targetVelocityX * timeToReachTarget) * adjustmentFactor;
+  //       adjustedTargetY = targetY * (1 - adjustmentFactor) + (targetY + targetVelocityY * timeToReachTarget) * adjustmentFactor;
+  //     }
+  //     // Calculate the adjusted mouse position
+  //     let mousePos = this.mousePosToPositionAwayFromTarget(adjustedTargetX, adjustedTargetY, 200, this.mousePosX, this.mousePosY);
+
+  //     if (!isNaN(mousePos.X) && !isNaN(mousePos.Y)) {
+  //       this.mousePosX = mousePos.X;
+  //       this.mousePosY = mousePos.Y;
+  //     } else {
+  //       console.log("mousePos NaN");
+  //     }
+  //     this.space = true;
+  //   }
+
   #aimAtTarget(targetX, targetY, targetVelocityX, targetVelocityY, adjustmentFactor) {
     let currentX = this.x;
     let currentY = this.y;
     let currentVelocityX = this.vel.x;
     let currentVelocityY = this.vel.y;
+
+    // Calculate the relative velocity between the bot and the target
+    let relativeVelocityX = targetVelocityX - currentVelocityX;
+    let relativeVelocityY = targetVelocityY - currentVelocityY;
+
     // Calculate the distance between the target and current points
     let distance = Math.sqrt((targetX - currentX) ** 2 + (targetY - currentY) ** 2);
 
@@ -436,9 +583,10 @@ export class Player {
       let timeToReachTarget = distance / currentSpeed;
 
       // Calculate the adjusted target by considering a weighted combination of position and velocity
-      adjustedTargetX = targetX * (1 - adjustmentFactor) + (targetX + targetVelocityX * timeToReachTarget) * adjustmentFactor;
-      adjustedTargetY = targetY * (1 - adjustmentFactor) + (targetY + targetVelocityY * timeToReachTarget) * adjustmentFactor;
+      adjustedTargetX = targetX + relativeVelocityX * adjustmentFactor * timeToReachTarget;
+      adjustedTargetY = targetY + relativeVelocityY * adjustmentFactor * timeToReachTarget;
     }
+
     // Calculate the adjusted mouse position
     let mousePos = this.mousePosToPositionAwayFromTarget(adjustedTargetX, adjustedTargetY, 200, this.mousePosX, this.mousePosY);
 
@@ -505,20 +653,12 @@ export class Player {
   }
   chooseNewBotState() {
     //for now randomly choose new state
-    if (Math.random() > 0.4) {
+    if (Math.random() > 0.8) {
       this.botState = BotState.FOLLOW_PLAYER;
-    } else {
+    } else if (Math.random() > 0.4) {
       this.botState = BotState.RANDOM;
-    }
-  }
-
-  howLongSinceActive() {
-    if (this.timeOfLastActive) {
-      const currentTime = Date.now();
-      const timeDifference = currentTime - this.timeOfLastActive;
-      return timeDifference;
     } else {
-      return 5000;
+      this.botState = BotState.COLLECT;
     }
   }
 }

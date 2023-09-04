@@ -1,13 +1,15 @@
 import { setGameState, GameState, player, setGlobalPowerUps, getGlobalPowerUps, bots, PowerUp, otherPlayers } from "./astroids.js";
-import { sendPlayerStates, sendGameState, isPlayerMasterPeer, addScore, sendBotsState } from "./connectionHandlers.js";
-import {
-  Player,
-} from "./player.js";
+import { sendPlayerStates, sendGameState, isPlayerMasterPeer, sendBotsState } from "./connectionHandlers.js";
+import { addScore } from "./db.js";
+import { Player, Bot } from "./player.js";
+// import { Bot } from "./bot.js";
+
 //finish game after 5 for easier testing the finish
 export let pointsToWin = 5;
 let initialInvincibleTime = 60 * 10;
 export let maxInvincibilityTime = initialInvincibleTime;
 let maxPowerups = 10;
+export let spawnProtectionTime = 100;
 export let endGameMessage = "";
 export let gameWon = false;
 export const pilot1 = {
@@ -20,7 +22,6 @@ export const pilot1 = {
   lore: "Orion is the muscle-bound moral compass of the cosmos. Born in a dying star, Orion's got strength that makes bodybuilders weep and a heart that's never heard of a grey area. He's saved more worlds than he's had hot dinners, and his name is basically a synonym for 'awesome' in every galaxy. But don't worry, he hasn't let it go to his head. He's always ready to lend a hand, or a bicep. Orion: not just a pilot, but a one-man, space-faring beacon of hope.",
 };
 
-
 export const pilot2 = {
   image: new Image(),
   x: 100,
@@ -32,7 +33,7 @@ export const pilot2 = {
 };
 
 export const max_player_name = 15;
-
+let chancePowerUpIsStar = 0.8;
 export function checkWinner(player, otherPlayers) {
   //for now won't have a winner in this sense still thinking about what the game should be
   return false;
@@ -77,12 +78,13 @@ export function generatePowerups(globalPowerUps, worldWidth, worldHeight, colors
     //   y: (Math.random() * 0.8 + 0.1) * worldHeight,
     //   color: colors[Math.floor(Math.random() * colors.length)],
     // };
-    let isStar = (Math.random() > 0.5);
+    let isStar = Math.random() > 1 - chancePowerUpIsStar;
     let powerUp = new PowerUp(
-      Math.random() * 10000,
+      Math.floor(Math.random() * 10000),
       (Math.random() * 0.8 + 0.1) * worldWidth,
       (Math.random() * 0.8 + 0.1) * worldHeight,
-      colors[Math.floor(Math.random() * colors.length)],isStar
+      colors[Math.floor(Math.random() * colors.length)],
+      isStar
     );
     globalPowerUps.push(powerUp);
     setGlobalPowerUps(globalPowerUps);
@@ -130,31 +132,39 @@ export function checkPlayerCollision(playerToCheck, allPlayers) {
     let dx = playerToCheck.x - allPlayers[i].x;
     let dy = playerToCheck.y - allPlayers[i].y;
     let distance = Math.sqrt(dx * dx + dy * dy);
-   
-    if (distance < 20 && playerToCheck.isPlaying == true && allPlayers[i].isPlaying == true) {
+
+    if (distance < 20 && playerToCheck.isPlaying == true && allPlayers[i].isPlaying == true && !playerToCheck.isDead && !allPlayers[i].isDead) {
       // assuming the radius of both ships is 10
       //for now just reset player if a crash
-      if( playerToCheck.invincibleTimer == 0) {
-        playerToCheck.gotHit();
+
+      if (playerToCheck.invincibleTimer == 0) {
+        if (
+          playerToCheck.timeSinceSpawned > spawnProtectionTime &&
+          (allPlayers[i].timeSinceSpawned > spawnProtectionTime || allPlayers[i].invincibleTimer > 0)
+        ) {
+          playerToCheck.gotHit();
+        } //spawn protection todo show an effect to illustrate the protection during this period
       }
-      if ( playerToCheck.invincibleTimer > 0 && !allPlayers[i].isDead && allPlayers[i].invincibleTimer == 0) {
+      if (playerToCheck.invincibleTimer > 0 && allPlayers[i].invincibleTimer == 0 && allPlayers[i].timeSinceSpawned > spawnProtectionTime) {
         playerToCheck.hitOtherPlayer(allPlayers[i]);
       }
-      if (playerToCheck.isBot && playerToCheck.invincibleTimer == 0) {
+      if (playerToCheck.isBot && playerToCheck.invincibleTimer == 0 && playerToCheck.timeSinceSpawned > spawnProtectionTime) {
         // playerToCheck.resetState(true, true);
-        allPlayers[i].delayReset(3);
+        playerToCheck.delayReset(3, true, true);
       }
       if (allPlayers[i] instanceof Player) {
-        // allPlayers[i].resetState(true, true);
-        if ( allPlayers[i].invincibleTimer == 0) {
-          allPlayers[i].gotHit();
+        if (allPlayers[i].invincibleTimer == 0) {
+          if (allPlayers[i].timeSinceSpawned > spawnProtectionTime &&
+            (playerToCheck.timeSinceSpawned > spawnProtectionTime || playerToCheck.invincibleTimer > 0)) {
+            allPlayers[i].gotHit();
+          }
         }
-        if (allPlayers[i].invincibleTimer > 0  && !playerToCheck.isDead && playerToCheck.invincibleTimer == 0) {
+        if (allPlayers[i].invincibleTimer > 0 && playerToCheck.invincibleTimer == 0 && playerToCheck.timeSinceSpawned > spawnProtectionTime) {
           allPlayers[i].hitOtherPlayer(playerToCheck);
         }
-        if (allPlayers[i].isBot && allPlayers[i].invincibleTimer == 0) {
+        if (allPlayers[i].isBot && allPlayers[i].invincibleTimer == 0 && allPlayers[i].timeSinceSpawned > spawnProtectionTime) {
           // allPlayers[i].resetState(true, true);
-          allPlayers[i].delayReset(3);
+          allPlayers[i].delayReset(3, true, true);
         }
       } else {
         console.log("non player in players array");
@@ -188,17 +198,44 @@ export function updateEnemies(deltaTime) {
   // Update the positions, velocities, etc. of the enemies
 }
 
+export function updateOtherPlayers(deltaTime) {
+  otherPlayers.forEach((otherPlayer, index) => {
+    // Check if player is an instance of the Player class
+    if (otherPlayer != null && otherPlayer instanceof Player) {
+      otherPlayer.updateTick(deltaTime);
+    } else {
+      console.log("otherPlayer is not an instance of the Player class. Reinitializing...");
+
+      // Create a new Player object using the properties of the otherplayer
+      const newPlayer = new Player(
+        otherPlayer.id,
+        otherPlayer.x,
+        otherPlayer.y,
+        otherPlayer.powerUps,
+        otherPlayer.color,
+        otherPlayer.angle,
+        otherPlayer.pilot,
+        otherPlayer.name
+        // Add other properties as needed
+      );
+
+      // Replace the old player with the new Player instance in the array
+      otherPlayer[index] = newPlayer;
+    }
+  });
+}
+
 export function updateBots(deltaTime) {
   bots.forEach((bot, index) => {
-    // Check if bot is an instance of the Player class
-    if (bot != null && bot instanceof Player) {
+    // Check if bot is an instance of the Bot class
+    if (bot != null && bot instanceof Bot) {
       bot.updateBotInputs();
       bot.updateTick(deltaTime);
     } else {
-      console.log("Bot is not an instance of the Player class. Reinitializing...");
+      console.log("Bot is not an instance of the Bot class. Reinitializing...");
 
-      // Create a new Player object using the properties of the bot
-      const newPlayer = new Player(
+      // Create a new Bot object using the properties of the bot
+      const newPlayer = new Bot(
         bot.id,
         bot.x,
         bot.y,
@@ -210,22 +247,22 @@ export function updateBots(deltaTime) {
         // Add other properties as needed
       );
 
-      // Replace the old bot with the new Player object in the array
+      // Replace the old bot with the new Bot instance in the array
       bots[index] = newPlayer;
     }
   });
 }
 
 export function updatePowerups(deltaTime) {
-  // Update the positions, velocities, etc. of the powerups
+  // Update the positions, velocities, etc. of the powerups once they move... they need their own update tick
   //setGlobalPowerUps(getGlobalPowerUps());
 }
-export function detectCollisions(player, globalPowerUps, bots, otherPlayers) {
+export function detectCollisions(playerToCheck, globalPowerUps, bots, otherPlayers) {
   // Detect collisions between the player's ship and the powerups or other ships
   // If a collision is detected, update the game state accordingly
-  checkPowerupCollision(player, globalPowerUps);
+  checkPowerupCollision(playerToCheck, globalPowerUps);
   let allPlayers = [...bots, ...otherPlayers, player];
-  checkPlayerCollision(player, allPlayers);
+  checkPlayerCollision(playerToCheck, allPlayers);
 }
 
 export function calculateAngle(player) {
@@ -238,6 +275,7 @@ export function masterPeerUpdateGame(globalPowerUps, otherPlayers, bots, deltaTi
   //eventually run this based on how many bots and existing players in total currently
   createBots();
   updateBots(deltaTime);
+  updateOtherPlayers(deltaTime);
   updateEnemies(deltaTime);
   updatePowerups(deltaTime);
 
@@ -251,6 +289,8 @@ export function masterPeerUpdateGame(globalPowerUps, otherPlayers, bots, deltaTi
   });
 
   // Send the game state to all other peers
+
+  //...not sending game state of otherplayers...hmm?
   sendGameState(globalPowerUps);
   sendBotsState(bots);
 }
@@ -260,8 +300,8 @@ export function createBots() {
   if (bots != null && bots[0] == null) {
     let botID = 1234;
     while (bots != null && bots.length < 4) {
-      // let bot = new Player(botID, null, null, 0, "yellow", 0, "", getRandomName());
-      let bot = new Player(botID, null, null, 0, null, 0, "", getRandomName());
+      // let bot = new Bot(botID, null, null, 0, "yellow", 0, "", getRandomName());
+      let bot = new Bot(botID, null, null, 0, null, 0, "", getRandomName());
       bot.isBot = true;
       // bot.name = getRandomName();
       botID += 1;

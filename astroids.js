@@ -9,15 +9,8 @@ import {
   updateTopScoresInfo,
   setupPilotsImageSources,
 } from "./canvasDrawingFunctions.js";
-import {
-  tryNextId,
-  attemptConnections,
-  connectToPeers,
-  sendPlayerStates,
-  updateConnections,
-  addScore,
-  isPlayerMasterPeer,
-} from "./connectionHandlers.js";
+import { tryNextId, attemptConnections, connectToPeers, sendPlayerStates, updateConnections, isPlayerMasterPeer } from "./connectionHandlers.js";
+import { addScore } from "./db.js";
 import {
   checkWinner,
   generatePowerups,
@@ -116,7 +109,7 @@ player.isUserControlledCharacter = true;
 
 export let otherPlayers = [];
 export let bots = [];
-let globalPowerUps = [];
+export let globalPowerUps = [];
 
 export let camX = player.x - canvas.width / 2;
 export let camY = player.y - canvas.height / 2;
@@ -191,6 +184,7 @@ function updateGame(deltaTime, playerActive) {
   updateConnections(player, otherPlayers, globalPowerUps);
 
   if (checkWinner(player, otherPlayers) || player.isDead) {
+    player.resetState(true,true);
     setGameState(GameState.FINISHED);
   }
 }
