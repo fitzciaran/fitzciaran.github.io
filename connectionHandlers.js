@@ -1,4 +1,5 @@
-import { setGlobalPowerUps, player, otherPlayers, bots, setBots } from "./astroids.js";
+import { setGlobalPowerUps, player, otherPlayers, bots, mines,setBots } from "./astroids.js";
+import { forces } from "./entities.js";
 import {
   resetPowerLevels,
   updateEnemies,
@@ -46,7 +47,7 @@ let peer;
 let connectedPeers = [];
 let connectionBackOffTime = 0;
 
-export function sendPlayerStates(player) {
+export function sendPlayerStates(player,globalPowerUps) {
   // Check if connection is open before sending data
   // Send player state to other players
   let data = {
@@ -57,6 +58,7 @@ export function sendPlayerStates(player) {
     color: player.color,
     angle: player.angle,
     pilot: player.pilot,
+    special: player.special,
     name: player.name,
     lives: player.lives,
     isMaster: player.isMaster,
@@ -64,6 +66,7 @@ export function sendPlayerStates(player) {
     isPlaying: player.isPlaying,
     isStar: player.isStar,
     invincibleTimer: player.invincibleTimer,
+    forceCoolDown: player.forceCoolDown,
     comboScaler: player.comboScaler,
     kills: player.kills,
     playerAngleData: player.playerAngleData,
@@ -90,6 +93,19 @@ export function sendPlayerStates(player) {
       }
     }
   });
+  if (timeSinceMessageFromMaster > 60 * 15 && !isPlayerMasterPeer(player)) {
+    setTimeSinceMessageFromMaster(0);
+    //try removing the current master
+    //issue could be that peer doesn't think it is the master because it is connected to others.. need to sync connected lists I think.
+    // Remove player from otherPlayers array, connections array and connectedPeers (array of id's of the connected peers)
+    // otherPlayers = otherPlayers.filter((player) => player.id !== connectedPeers[0]);
+    // connections = connections.filter((connection) => connection.peer !== connectedPeers[0]);
+    // connectedPeers.splice(0, 1);
+    // setTimeout(() => attemptConnections(player, otherPlayers, globalPowerUps), 50);
+    // //what about "connections" how is connections and connectedPeers synced?
+    // masterPeerId = chooseNewMasterPeer(player, otherPlayers);
+    wrappedResolveConflicts(player, otherPlayers, globalPowerUps);
+  }
 }
 
 export function sendGameState(globalPowerUps) {
@@ -114,11 +130,13 @@ export function sendGameState(globalPowerUps) {
   });
 }
 
-export function sendBotsState(bots) {
+export function sendEntitiesState(bots) {
   // Send game state to other player
   let data = {
     gameState: true,
     bots: bots,
+    mines:mines,
+    forces:forces,
     connectedPeers: connectedPeers,
     //enemies and stuff here
   };
@@ -175,12 +193,14 @@ function handleData(player, otherPlayers, globalPowerUps, data) {
     otherPlayer.color = data.color;
     otherPlayer.angle = data.angle;
     otherPlayer.pilot = data.pilot;
+    otherPlayer.special = data.special;
     otherPlayer.name = data.name;
     otherPlayer.lives = data.lives;
     otherPlayer.isMaster = data.isMaster;
     otherPlayer.isDead = data.isDead;
     otherPlayer.isPlaying = data.isPlaying;
     otherPlayer.invincibleTimer = data.invincibleTimer;
+    otherPlayer.forceCoolDown = data.forceCoolDown;
     otherPlayer.comboScaler = data.comboScaler;
     otherPlayer.kills = data.kills;
     otherPlayer.playerAngleData = data.playerAngleData;
@@ -222,6 +242,15 @@ function handleData(player, otherPlayers, globalPowerUps, data) {
     setTimeSinceMessageFromMaster(0);
     setBots(data.bots);
   }
+  if (data.mines) {
+    setTimeSinceMessageFromMaster(0);
+    setMines(data.mines);
+  }
+  if (data.forces) {
+    setTimeSinceMessageFromMaster(0);
+    setMines(data.forces);
+  }
+
   if (data.connectedPeers) {
     //check if connectedPeers has any id's (strings) not in data.connectedPeers
     let combine = false;
@@ -243,19 +272,6 @@ function handleData(player, otherPlayers, globalPowerUps, data) {
       setTimeout(() => attemptConnections(player, otherPlayers, globalPowerUps), 50);
       sendConnectedPeers();
     }
-  }
-  if (timeSinceMessageFromMaster > 60 * 15 && !isPlayerMasterPeer(player)) {
-    setTimeSinceMessageFromMaster(0);
-    //try removing the current master
-    //issue could be that peer doesn't think it is the master because it is connected to others.. need to sync connected lists I think.
-    // Remove player from otherPlayers array, connections array and connectedPeers (array of id's of the connected peers)
-    // otherPlayers = otherPlayers.filter((player) => player.id !== connectedPeers[0]);
-    // connections = connections.filter((connection) => connection.peer !== connectedPeers[0]);
-    // connectedPeers.splice(0, 1);
-    // setTimeout(() => attemptConnections(player, otherPlayers, globalPowerUps), 50);
-    // //what about "connections" how is connections and connectedPeers synced?
-    // masterPeerId = chooseNewMasterPeer(player, otherPlayers);
-    wrappedResolveConflicts(player, otherPlayers, globalPowerUps);
   }
   handleCounter++;
   // Log the data every 1000 calls
@@ -324,6 +340,9 @@ export function attemptConnections(player, otherPlayers, globalPowerUps) {
 }
 
 export function isPlayerMasterPeer(player) {
+  if(player.id == null){
+    return true;
+  }
   return player.id === masterPeerId;
 }
 
@@ -448,8 +467,8 @@ function setPeer(newPeer) {
 
 //todo this is now also updating game if master peer, need to separate this
 export function updateConnections(player, otherPlayers, globalPowerUps) {
-  if (everConnected) {
-    sendPlayerStates(player);
+  if (everConnected || true) {
+    sendPlayerStates(player,globalPowerUps);
     if (!isPlayerMasterPeer(player)) {
       setTimeSinceMessageFromMaster(timeSinceMessageFromMaster + 1);
     }
@@ -515,7 +534,6 @@ export function createResolveConflictsWrapper() {
     }
   };
 }
-
 
 function resolveConflicts(player, otherPlayers, globalPowerUps) {
   // If there is a conflict between the local game state and the received game state,

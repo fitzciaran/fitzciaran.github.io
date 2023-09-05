@@ -1,19 +1,8 @@
-import { executionTime } from "./astroids.js";
 import { getTopScores } from "./db.js";
-import { BotState, Player } from "./player.js";
-import { isPlayerMasterPeer } from "./connectionHandlers.js";
-import { maxInvincibilityTime, pilot1, pilot2 } from "./gameLogic.js";
+import { drawRoundedRectangle } from "./drawingUtils.js";
 
-let backLayer = new Image();
-let midBackLayer = new Image();
-let middleLayer = new Image();
-let midFrontLayer = new Image();
-let frontLayer = new Image();
-backLayer.src = "images/parallax-space-backgound.png";
-midBackLayer.src = "images/parallax-space-stars.png";
-middleLayer.src = "images/parallax-space-far-planets.png";
-midFrontLayer.src = "images/parallax-space-ring-planet.png";
-frontLayer.src = "images/parallax-space-big-planet.png";
+import { pilot1, pilot2 } from "./gameLogic.js";
+
 let cursorBlink = true;
 let cursorBlinkInterval = setInterval(() => (cursorBlink = !cursorBlink), 450);
 var topDailyScoresString = "";
@@ -21,30 +10,6 @@ export let playButtonX = 0;
 export let playButtonY = 0;
 export let playButtonWidth = 0;
 export let playButtonHeight = 0;
-
-// Export a setupCanvas function that initializes the canvas and returns it
-export function setupCanvas() {
-  const canvas = document.getElementById("gameCanvas");
-  const ctx = canvas.getContext("2d");
-  canvas.style.position = "absolute"; // positioning the canvas to start from the top left corner.
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-  // Disable the default context menu on the canvas
-  canvas.addEventListener("contextmenu", function (e) {
-    e.preventDefault();
-  });
-
-  // Adding event listener to handle window resizing
-  window.addEventListener("resize", function () {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-
-    //since we can now scale the canvas need to adjust the positions
-    centerPilots(canvas);
-  });
-
-  return { canvas, ctx };
-}
 
 function centerPilots(canvas) {
   // Center the pilots
@@ -58,526 +23,8 @@ function centerPilots(canvas) {
   loreTablet.x = canvas.width / 2 - loreTablet.width / 2;
   loreTablet.y = canvas.height / 2 - 100;
 }
-// Export a Basic function that takes the canvas context as an argument as well as camera position
-export function drawBasicBackground(ctx, camX, camY, canvas) {
-  ctx.fillStyle = "#999";
-  ctx.fillRect(camX, camY, canvas.width, canvas.height);
 
-  const gridSize = 100; // change as needed
-  ctx.strokeStyle = "#555";
-  ctx.lineWidth = 0.5;
-
-  // horizontal lines
-  for (let i = camY - (camY % gridSize); i < camY + canvas.height; i += gridSize) {
-    ctx.beginPath();
-    ctx.moveTo(0, i - camY);
-    ctx.lineTo(canvas.width, i - camY);
-    ctx.stroke();
-  }
-
-  // vertical lines
-  for (let i = camX - (camX % gridSize); i < camX + canvas.width; i += gridSize) {
-    ctx.beginPath();
-    ctx.moveTo(i - camX, 0);
-    ctx.lineTo(i - camX, canvas.height);
-    ctx.stroke();
-  }
-}
-
-export function drawBackground(ctx, camX, camY, canvas, backLayer, midBackLayer, middleLayer, midFrontLayer, frontLayer) {
-  // Define scroll speeds for each layer
-  let backScrollSpeedX = -0.06; // Back layer scrolls slowest
-  let midBackScrollSpeedX = -0.12; // Mid-back layer scrolls slower
-  let middleScrollSpeedX = -0.18; // Middle layer scrolls at medium speed
-  let midFrontScrollSpeedX = -0.34; // Mid-front layer scrolls faster
-  let frontScrollSpeedX = -0.51; // Front layer scrolls fastest
-
-  // Define vertical scroll speeds for each layer
-  let backScrollSpeedY = -0.06; // Back layer scrolls slowest
-  let midBackScrollSpeedY = -0.12; // Mid-back layer scrolls slower
-  let middleScrollSpeedY = -0.18; // Middle layer scrolls at medium speed
-  let midFrontScrollSpeedY = -0.34; // Mid-front layer scrolls faster
-  let frontScrollSpeedY = -0.51; // Front layer scrolls fastest
-
-  let scaleX = canvas.width / backLayer.width;
-  let scaleY = canvas.height / backLayer.height;
-
-  // Use the larger scale factor
-  let scale = Math.max(scaleX, scaleY);
-
-  // Calculate the new width and height
-  let newWidth = backLayer.width * scale;
-  let newHeight = backLayer.height * scale;
-
-  // Calculate new positions for each layer
-  let backX = (camX * backScrollSpeedX) % canvas.width;
-  let midBackX = (camX * midBackScrollSpeedX) % canvas.width;
-  let middleX = (camX * middleScrollSpeedX) % canvas.width;
-  // let midFrontX = camX * midFrontScrollSpeedX % canvas.width;
-  // let frontX = camX * frontScrollSpeedX % canvas.width;
-  let midFrontX = camX * midFrontScrollSpeedX;
-  let frontX = camX * frontScrollSpeedX;
-
-  // Calculate new vertical positions for each layer
-  let backY = (camY * backScrollSpeedY) % canvas.height;
-  let midBackY = (camY * midBackScrollSpeedY) % canvas.height;
-  let middleY = (camY * middleScrollSpeedY) % canvas.height;
-  // let midFrontY = camY * midFrontScrollSpeedY % canvas.height;
-  let midFrontY = camY * midFrontScrollSpeedY;
-  // let frontY = camY * frontScrollSpeedY % canvas.height;
-  let frontY = camY * frontScrollSpeedY;
-
-  // Draw each layer at its new position
-  ctx.drawImage(backLayer, backX, backY, newWidth, newHeight);
-
-  //ctx.drawImage(backLayer, backX - newWidth, backY, newWidth, newHeight);
-
-  //this is an image to the right of the main background to cover the righthand edge ( if aspect ratio of background doesn't match aspect ratio of the canvas causing this to be needed)
-  ctx.drawImage(backLayer, newWidth + backX - 1, backY, newWidth, newHeight);
-
-  //these are an images below the main background to cover the bottom edge offset because they don't match up top to bottom ( if aspect ratio of background doesn't match aspect ratio of the canvas causing this to be needed)
-  // ctx.drawImage(backLayer, newWidth + backX - 1, backY + newHeight - 1, newWidth, newHeight);
-  // Calculate the aspect ratio difference
-  let backAspectRatio = 272 / 160;
-  let canvasAspectRatio = canvas.width / canvas.height;
-  const aspectRatioDiff = backAspectRatio - canvasAspectRatio;
-
-  // Calculate offsets based on the aspect ratio difference and window dimensions
-  //sometimes 890 seems to be good sometime 620 (regardless of window resize and refreshes)
-  // let xOffset = 890;
-  let xOffset = 620;
-  let yOffset = 12.5;
-  //xOffset += (Math.abs(aspectRatioDiff) * window.innerHeight) / 2;
-  if (aspectRatioDiff > 0) {
-    // If background is taller, adjust yOffset
-    // yOffset += (aspectRatioDiff * window.innerWidth) / 2;
-  } else if (aspectRatioDiff < 0) {
-    // If background is wider, adjust xOffset
-    //xOffset += (Math.abs(aspectRatioDiff) * window.innerHeight) / 2;
-  }
-  ctx.drawImage(backLayer, backX + xOffset - newWidth + 1, backY + newHeight - yOffset, newWidth, newHeight);
-  ctx.drawImage(backLayer, backX + xOffset, backY + newHeight - yOffset, newWidth, newHeight);
-
-  //this is an image below and to the right of the main background to cover the bottom edge  ( if aspect ratio of background doesn't match aspect ratio of the canvas causing this to be needed)
-
-  //we don't need these because the aspect ratio of current background means it will be the width that will wrap
-  // ctx.drawImage(backLayer, backX, backY - newHeight, newWidth, newHeight);
-  // ctx.drawImage(backLayer, backX - newWidth, backY - newHeight, newWidth, newHeight);
-
-  ctx.drawImage(midBackLayer, midBackX, midBackY, newWidth, newHeight);
-  // ctx.drawImage(midBackLayer, midBackX - newWidth, midBackY, newWidth, newHeight);
-  // ctx.drawImage(midBackLayer, midBackX, midBackY - newHeight, newWidth, newHeight);
-  // ctx.drawImage(midBackLayer, midBackX - newWidth, midBackY - newHeight, newWidth, newHeight);
-
-  ctx.drawImage(middleLayer, middleX, middleY, newWidth, newHeight);
-  // ctx.drawImage(middleLayer, middleX - newWidth, middleY, newWidth, newHeight);
-  // ctx.drawImage(middleLayer, middleX, middleY - newHeight, newWidth, newHeight);
-  // ctx.drawImage(middleLayer, middleX - newWidth, middleY - newHeight, newWidth, newHeight);
-
-  let frontMidOffsetX = 800; // Adjust as needed
-  let frontMidOffsetY = 650; // Adjust as needed
-  ctx.drawImage(midFrontLayer, midFrontX + frontMidOffsetX, midFrontY + frontMidOffsetY, midFrontLayer.width * scale, midFrontLayer.height * scale);
-  // ctx.drawImage(midFrontLayer, midFrontX - newWidth + frontMidOffsetX, midFrontY + frontMidOffsetY, midFrontLayer.width * scale, midFrontLayer.height * scale);
-  // ctx.drawImage(midFrontLayer, midFrontX + frontMidOffsetX, midFrontY - newHeight + frontMidOffsetY, midFrontLayer.width * scale, midFrontLayer.height * scale);
-  // ctx.drawImage(midFrontLayer, midFrontX - newWidth + frontMidOffsetX, midFrontY - newHeight + frontMidOffsetY, midFrontLayer.width * scale, midFrontLayer.height * scale);
-
-  let frontOffsetX = 700; // Adjust as needed
-  let frontOffsetY = 250; // Adjust as needed
-  ctx.drawImage(frontLayer, frontX + frontOffsetX, frontY + frontOffsetY, frontLayer.width * scale, frontLayer.height * scale);
-
-  //draw a second smaller planet
-  frontOffsetX = 1500; // Adjust as needed
-  frontOffsetY = 1050; // Adjust as needed
-  ctx.drawImage(frontLayer, frontX + frontOffsetX, frontY + frontOffsetY, frontLayer.width * scale * 0.6, frontLayer.height * scale * 0.6);
-}
-
-// Export a drawWorldBounds function that takes the canvas context as an argument
-export function drawWorldBounds(ctx, camX, camY, worldWidth, worldHeight) {
-  // Create gradient
-  let gradient = ctx.createLinearGradient(0, 0, worldWidth, worldHeight);
-  gradient.addColorStop("0", "magenta");
-  gradient.addColorStop("0.5", "blue");
-  gradient.addColorStop("1.0", "red");
-
-  // Draw border
-  ctx.lineWidth = 20;
-  ctx.strokeStyle = gradient;
-  ctx.strokeRect(-camX, -camY, worldWidth, worldHeight);
-}
-
-// Export a drawMinimap function
-function drawMinimap(player, otherPlayers, bots, worldWidth, worldHeight) {
-  const minimapCanvas = document.getElementById("minimapCanvas");
-  const minimapCtx = minimapCanvas.getContext("2d");
-
-  const dotSize = 5; // Size of the dot
-  const scaleX = (minimapCanvas.width - dotSize) / worldWidth; // Adjust scale
-  const scaleY = (minimapCanvas.height - dotSize) / worldHeight; // Adjust scale
-
-  // Clear the minimap
-  minimapCtx.clearRect(0, 0, minimapCanvas.width, minimapCanvas.height);
-
-  // Draw a semi-transparent background with a border
-  minimapCtx.fillStyle = "rgba(0, 128, 0, 0.2)"; // Semi-transparent green
-  minimapCtx.fillRect(0, 0, minimapCanvas.width, minimapCanvas.height);
-  minimapCtx.strokeStyle = "rgba(255, 255, 255, 0.8)"; // White border
-  minimapCtx.lineWidth = 3; // Border width
-  minimapCtx.strokeRect(0, 0, minimapCanvas.width, minimapCanvas.height);
-
-  if (player != null && player.isPlaying) {
-    // Draw the player's ship on the minimap
-    minimapCtx.fillStyle = player.color;
-    minimapCtx.fillRect(player.x * scaleX, player.y * scaleY, dotSize, dotSize);
-  }
-  // Draw other players on the minimap
-  otherPlayers.forEach((player) => {
-    if (player != null && player.isPlaying) {
-      minimapCtx.fillStyle = player.color;
-      minimapCtx.fillRect(player.x * scaleX, player.y * scaleY, dotSize, dotSize);
-    }
-  });
-
-  // Draw bots on the minimap
-  bots.forEach((bot) => {
-    minimapCtx.fillStyle = bot.color;
-    minimapCtx.fillRect(bot.x * scaleX, bot.y * scaleY, dotSize, dotSize);
-  });
-}
-
-function drawRotatedShip(ctx, camX, camY, player, points) {
-  if (!player.isPlaying) {
-    return;
-  }
-
-  function applyGlowingEffect(transitionColor, glowColor) {
-    ctx.shadowBlur = 10;
-    ctx.shadowColor = glowColor;
-    ctx.strokeStyle = glowColor;
-
-    const transitionDuration = 2000;
-    const currentTime = Date.now();
-    const elapsedTime = currentTime - player.starTransitionStartTime;
-
-    if (!player.starTransitionStartTime || elapsedTime >= transitionDuration) {
-      player.starTransitionStartTime = currentTime;
-      player.starTransitionStartColor = color;
-    }
-
-    const colorProgress = Math.min(1, elapsedTime / transitionDuration);
-    const r = Math.floor(interpolate(player.starTransitionStartColor.r, transitionColor.r, colorProgress));
-    const g = Math.floor(interpolate(player.starTransitionStartColor.g, transitionColor.g, colorProgress));
-    const b = Math.floor(interpolate(player.starTransitionStartColor.b, transitionColor.b, colorProgress));
-
-    ctx.strokeStyle = `rgb(${r},${g},${b})`;
-  }
-
-  let centerX = player.x;
-  let centerY = player.y;
-  let angle = player.angle;
-  let color = player.color;
-  let name = player.name;
-
-  if (player.invincibleTimer > 10 || (player.invincibleTimer > 0 && !player.isUserControlledCharacter)) {
-    applyGlowingEffect("gold", "gold");
-  }
-
-  ctx.beginPath();
-
-  let rotatedPoint = rotatePoint(points[0].x, points[0].y, angle);
-  ctx.moveTo(centerX - camX + rotatedPoint.x, centerY - camY + rotatedPoint.y);
-
-  for (let i = 1; i < points.length; i++) {
-    rotatedPoint = rotatePoint(points[i].x, points[i].y, angle);
-    ctx.lineTo(centerX - camX + rotatedPoint.x, centerY - camY + rotatedPoint.y);
-  }
-
-  try {
-    if (typeof player.isInSpawnProtectionTime === 'function') {
-      if (player.isInSpawnProtectionTime()) {
-        applyGlowingEffect("white", "white");
-      } else {
-        ctx.strokeStyle = color;
-      }
-    } else {
-      // console.log("isInSpawnProtectionTime method does not exist");
-    }
-  } catch (error) {
-    console.log("An error occurred:", error);
-  }
-
-  ctx.stroke();
-  ctx.closePath();
-  ctx.strokeStyle = color;
-  ctx.stroke();
-  ctx.closePath();
-
-  ctx.globalAlpha = 1;
-
-  const namePositionX = centerX - camX;
-  const namePositionY = centerY - camY - 15;
-
-  ctx.fillStyle = color;
-  ctx.font = "14px Arial";
-  ctx.textAlign = "center";
-  ctx.fillText(name, namePositionX, namePositionY);
-
-  if (player.recentKillTicks > 0) {
-    player.recentKillTicks -= 1;
-    drawKillInfo(ctx, player, player.recentKillText, camX, camY);
-  }
-
-  ctx.shadowBlur = 0;
-}
-
-// Rotate a point (x, y) by a certain angle
-export function rotatePoint(x, y, angle) {
-  return {
-    x: x * Math.cos(angle) - y * Math.sin(angle),
-    y: x * Math.sin(angle) + y * Math.cos(angle),
-  };
-}
-
-// Interpolate between two color components (e.g., red, green, blue)
-function interpolate(start, end, progress) {
-  return start + (end - start) * progress;
-}
-
-export function drawPowerups(globalPowerUps, ctx, camX, camY) {
-  // Draw each dot
-  globalPowerUps.forEach((powerUp) => {
-    if (powerUp.isStar) {
-      // Apply a glowing effect for star ships
-      ctx.shadowBlur = 10;
-      ctx.shadowColor = "gold"; // Adjust the glow color as needed
-      ctx.strokeStyle = "gold"; // Adjust the stroke color to match the glow
-
-      // Gradually change the star ship's color
-      const transitionColor = "gold"; // Final color
-      const transitionDuration = 2000; // Transition duration in milliseconds
-
-      const currentTime = Date.now();
-      const elapsedTime = currentTime - powerUp.starTransitionStartTime;
-
-      if (!powerUp.starTransitionStartTime || elapsedTime >= transitionDuration) {
-        powerUp.starTransitionStartTime = currentTime;
-        powerUp.starTransitionStartColor = powerUp.color;
-      }
-
-      const colorProgress = Math.min(1, elapsedTime / transitionDuration);
-      const r = Math.floor(interpolate(powerUp.starTransitionStartColor.r, transitionColor.r, colorProgress));
-      const g = Math.floor(interpolate(powerUp.starTransitionStartColor.g, transitionColor.g, colorProgress));
-      const b = Math.floor(interpolate(powerUp.starTransitionStartColor.b, transitionColor.b, colorProgress));
-
-      ctx.strokeStyle = `rgb(${r},${g},${b})`;
-    }
-    ctx.beginPath();
-    ctx.arc(powerUp.x - camX, powerUp.y - camY, 10, 0, Math.PI * 2);
-    ctx.fillStyle = powerUp.color;
-    ctx.fill();
-    ctx.shadowBlur = 0;
-  });
-}
-
-export function drawMinimapPowerups(globalPowerUps, worldWidth, worldHeight) {
-  const minimapCanvas = document.getElementById("minimapCanvas");
-  const minimapCtx = minimapCanvas.getContext("2d");
-
-  const powerupSize = 3; // Smaller size for powerups on the minimap
-  const scaleX = (minimapCanvas.width - powerupSize) / worldWidth; // Adjust scale
-  const scaleY = (minimapCanvas.height - powerupSize) / worldHeight; // Adjust scale
-
-  // Draw each powerup on the minimap
-  globalPowerUps.forEach((powerup) => {
-    minimapCtx.fillStyle = powerup.color;
-    minimapCtx.fillRect(powerup.x * scaleX, powerup.y * scaleY, powerupSize, powerupSize);
-  });
-}
-
-function drawInvincibilityGauge(ctx, player, centerX, bottomY) {
-  const gaugeWidth = 200; // Adjust the width of the gauge
-  const gaugeHeight = 50; // Adjust the height of the gauge
-  const borderWidth = 7; // Adjust the border width
-  const gaugeColor = "#ff9900"; // Fill color of the gauge
-  const borderColor = "#333"; // Border color
-
-  // Calculate the gauge boundaries based on fillPercent
-  const fillPercent = player.invincibleTimer / maxInvincibilityTime;
-  const fillWidth = gaugeWidth * fillPercent;
-
-  // Create a linear gradient for the gauge background
-  const gradient = ctx.createLinearGradient(centerX - gaugeWidth / 2, bottomY - gaugeHeight, centerX + gaugeWidth / 2, bottomY);
-
-  // Define gradient colors
-  gradient.addColorStop(0, "rgba(0, 0, 0, 0.5)"); // Start with transparent black
-  gradient.addColorStop(0.5, "rgba(255, 255, 255, 0.3)"); // Middle with semi-transparent white
-  gradient.addColorStop(1, "rgba(0, 0, 0, 0.5)"); // End with transparent black
-
-  // Draw the gradient background
-  ctx.fillStyle = gradient;
-  ctx.fillRect(centerX - gaugeWidth / 2, bottomY - gaugeHeight, gaugeWidth, gaugeHeight);
-
-  // Draw the gauge fill based on fillPercent
-  ctx.fillStyle = gaugeColor;
-  ctx.fillRect(
-    centerX - gaugeWidth / 2 + borderWidth,
-    bottomY - gaugeHeight + borderWidth,
-    Math.max(0, fillWidth - borderWidth * 2),
-    gaugeHeight - borderWidth * 2
-  );
-}
-
-function drawPowerupLevels(ctx, player, otherPlayers, bots) {
-  const topGap = 20;
-  const textHeight = 20; // Adjust this to the size of your text
-  const gap = 16; // Gap between lines
-  const boxPadding = 10; // Padding around the box
-  let boxWidth = 200; // Width of the box
-  let boxHeight = 2 * boxPadding; // Start with padding at the top and bottom
-
-  // Measure the maximum text width to align to the right of the box
-  let maxTextWidth = 0;
-
-  ctx.font = "14px Arial";
-
-  if (player != null) {
-    const score = player.powerUps * 100;
-    const myPowerupText = `${player.name}: ${score}`;
-    ctx.fillStyle = player.color;
-    const textWidth = ctx.measureText(myPowerupText).width;
-    maxTextWidth = Math.max(maxTextWidth, textWidth);
-    boxHeight += textHeight + gap;
-  }
-
-  otherPlayers.forEach((otherPlayer) => {
-    if (!otherPlayer.isDead && otherPlayer.isPlaying) {
-      if (!otherPlayer.name) {
-        // console.log("unnamed other player");
-      }
-      let playerName = otherPlayer.name || "Unknown";
-      const score = otherPlayer.powerUps * 100;
-      const playerPowerupText = playerName + `: ${score}`;
-      const textWidth = ctx.measureText(playerPowerupText).width;
-      maxTextWidth = Math.max(maxTextWidth, textWidth);
-      boxHeight += textHeight + gap;
-    }
-  });
-
-  bots.forEach((bot) => {
-    if (!bot.name) {
-      // console.log("unnamed other player");
-    }
-    let playerName = bot.name || "Unknown";
-    const score = bot.powerUps * 100;
-    const playerPowerupText = playerName + `: ${score}`;
-    const textWidth = ctx.measureText(playerPowerupText).width;
-    maxTextWidth = Math.max(maxTextWidth, textWidth);
-    boxHeight += textHeight + gap;
-  });
-
-  //size box to fit the largest name/score combno, with a min size
-  boxWidth = Math.max(150, maxTextWidth + 20);
-
-  // Calculate the position of the box
-  const boxX = 100; // Adjust this as needed
-  const boxY = topGap - boxPadding;
-
-  // Create a gradient for the box background
-  const gradient = ctx.createLinearGradient(boxX, boxY, boxX + boxWidth, boxY + boxHeight);
-  gradient.addColorStop(0, "rgba(0, 0, 0, 0.2)"); // Transparent black
-  gradient.addColorStop(1, "rgba(0, 0, 0, 0.5)"); // Semi-transparent black
-
-  // Draw the box background with gradient
-  ctx.fillStyle = gradient;
-  ctx.strokeStyle = "#555"; // Border color
-  // ctx.strokeStyle = gradient; // Border color
-  ctx.lineWidth = 2; // Border width
-  ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
-  ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
-
-  ctx.textAlign = "center";
-
-  // Draw the text inside the box
-  let currentY = boxY + boxPadding + textHeight + 10;
-  ctx.fillStyle = "white";
-  ctx.fillText("Leaderboard", boxX + boxWidth / 2, boxY + boxPadding + 5);
-
-  ctx.textAlign = "right";
-
-  // Combine all players (including player) and bots into a single array
-  let allPlayers;
-  if (player == null || player.name == "") {
-    allPlayers = [...otherPlayers, ...bots];
-  } else {
-    allPlayers = [player, ...otherPlayers, ...bots];
-  }
-  ctx.font = "14px Arial";
-
-  // Sort allPlayers by score in descending order
-  allPlayers.sort((a, b) => {
-    return b.powerUps - a.powerUps;
-  });
-
-  allPlayers.forEach((currentPlayer) => {
-    if (!currentPlayer.isDead && currentPlayer.isPlaying) {
-      let playerName = currentPlayer.name || "Unknown";
-      const score = currentPlayer.powerUps * 100;
-      const playerPowerupText = playerName + `: ${score}`;
-
-      ctx.fillStyle = currentPlayer.color;
-      ctx.fillText(playerPowerupText, boxX + boxWidth - boxPadding, currentY);
-      currentY += textHeight + gap;
-    }
-  });
-}
-
-export function drawKillInfo(ctx, player, score, camX, camY) {
-  let centerX = player.x;
-  let centerY = player.y;
-  // Calculate position for the score (above the unrotated center of the ship)
-  const scorePositionX = centerX - camX;
-  const scorePositionY = centerY - camY - 35; // You can adjust this value for the desired distance
-
-  // Draw the score
-  ctx.fillStyle = player.color;
-  ctx.font = "25px Arial"; // Adjust font size and family as needed
-  ctx.textAlign = "center";
-  ctx.fillText(score, scorePositionX, scorePositionY);
-}
-
-export function renderDebugInfo(ctx, player, bots) {
-  ctx.textAlign = "start";
-  const topGap = 100;
-  const gap = 16; // Gap between lines
-  const textHeight = 75; // Adjust this to the size of your text
-  ctx.font = "14px Arial";
-  const myIDText = `My ID: ${player.id}`;
-  ctx.fillStyle = player.color;
-  ctx.fillText(myIDText, 558, topGap - textHeight);
-  //also render some other useful debug stuff
-  const myDistanceFactorText = `distanceFactor ${player.distanceFactor}`;
-  ctx.fillStyle = player.color;
-  ctx.fillText(myDistanceFactorText, 558, topGap + gap - textHeight);
-
-  const isMasterText = `is Master =  ${isPlayerMasterPeer(player)}`;
-  ctx.fillStyle = player.color;
-  ctx.fillText(isMasterText, 558, topGap + gap * 2 - textHeight);
-  ctx.fillText(`invicible state: ${player.invincibleTimer}`, 558, topGap + gap * 3 - textHeight);
-
-  const executionTimeText = `executionTime =  ${executionTime}`;
-  ctx.fillStyle = player.color;
-  ctx.fillText(executionTimeText, 558, topGap + gap * 4 - textHeight);
-
-  bots.forEach((bot, index) => {
-    let botInfo;
-    if (bot.botState == BotState.FOLLOW_PLAYER) {
-      botInfo = `${bot.name} state: ${bot.botState} following: ${bot.followingPlayerID} `;
-    } else {
-      botInfo = `${bot.name} state: ${bot.botState} aiming: ${bot.randomTarget.x},${bot.randomTarget.y} `;
-    }
-    ctx.fillText(botInfo, 958, topGap + gap * index - textHeight);
-  });
-}
-
+//should probably refactor this so logic lives elsewhere
 export function updateTopScoresInfo() {
   var date = new Date();
   var dateString = date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate();
@@ -595,7 +42,23 @@ export function drawWinnerMessage(ctx, canvas, message) {
   ctx.font = "70px Arial";
   ctx.fillStyle = "white";
   ctx.textAlign = "center";
-  ctx.fillText(message, canvas.width / 2, canvas.height / 2);
+  // Check if the message contains a newline character
+  if (message.includes("\n")) {
+    const messageParts = message.split("\n");
+    const lineHeight = 70; // Adjust this value as needed for spacing
+
+    // Calculate the position for the first part of the message
+    const firstPartY = canvas.height / 2 - (lineHeight * (messageParts.length )) / 2;
+
+    // Draw each part of the message
+    messageParts.forEach((part, index) => {
+      const y = firstPartY + lineHeight * index;
+      ctx.fillText(part, canvas.width / 2, y);
+    });
+  } else {
+    // If there is no newline character, draw the message as-is
+    ctx.fillText(message, canvas.width / 2, canvas.height / 2);
+  }
 
   ctx.font = "20px Arial";
   ctx.fillStyle = "white";
@@ -614,24 +77,6 @@ export function drawWinnerMessage(ctx, canvas, message) {
 
   let radius = 10; // Radius for rounded corners
   drawPlayButton(ctx, buttonX, buttonY, buttonWidth, buttonHeight, radius);
-}
-
-export function drawScene(player, otherPlayers, bots, ctx, camX, camY, worldDimensions, canvas, shipPoints, globalPowerUps) {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  drawBackground(ctx, camX, camY, canvas, backLayer, midBackLayer, middleLayer, midFrontLayer, frontLayer);
-  drawWorldBounds(ctx, camX, camY, worldDimensions.width, worldDimensions.height);
-  ctx.lineWidth = 2;
-  otherPlayers.forEach((player) => drawRotatedShip(ctx, camX, camY, player, shipPoints));
-  bots.forEach((bot) => drawRotatedShip(ctx, camX, camY, bot, shipPoints));
-  drawPowerups(globalPowerUps, ctx, camX, camY);
-  drawMinimap(player, otherPlayers, bots, worldDimensions.width, worldDimensions.height);
-  drawMinimapPowerups(globalPowerUps, worldDimensions.width, worldDimensions.height);
-  if (player != null) {
-    drawRotatedShip(ctx, camX, camY, player, shipPoints);
-    renderDebugInfo(ctx, player, bots);
-    drawInvincibilityGauge(ctx, player, canvas.width / 2, canvas.height - 70);
-  }
-  drawPowerupLevels(ctx, player, otherPlayers, bots);
 }
 
 export const loreTablet = {
@@ -883,19 +328,8 @@ function drawPlayButton(ctx, buttonX, buttonY, buttonWidth, buttonHeight, radius
   } catch (Exception) {
     console.log("gradient issue");
   }
-  // Draw rounded rectangle
-  ctx.beginPath();
-  ctx.moveTo(buttonX + radius, buttonY);
-  ctx.lineTo(buttonX + buttonWidth - radius, buttonY);
-  ctx.arcTo(buttonX + buttonWidth, buttonY, buttonX + buttonWidth, buttonY + radius, radius);
-  ctx.lineTo(buttonX + buttonWidth, buttonY + buttonHeight - radius);
-  ctx.arcTo(buttonX + buttonWidth, buttonY + buttonHeight, buttonX + buttonWidth - radius, buttonY + buttonHeight, radius);
-  ctx.lineTo(buttonX + radius, buttonY + buttonHeight);
-  ctx.arcTo(buttonX, buttonY + buttonHeight, buttonX, buttonY + buttonHeight - radius, radius);
-  ctx.lineTo(buttonX, buttonY + radius);
-  ctx.arcTo(buttonX, buttonY, buttonX + radius, buttonY, radius);
-  ctx.closePath();
-  ctx.fill();
+
+  drawRoundedRectangle(ctx, buttonX, buttonY, buttonWidth, buttonHeight, radius);
 
   // Write "Play" on the button
   ctx.fillStyle = "white";
@@ -903,8 +337,6 @@ function drawPlayButton(ctx, buttonX, buttonY, buttonWidth, buttonHeight, radius
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText("Play", buttonX + buttonWidth / 2, buttonY + buttonHeight / 2);
-  // playButtonX = buttonX + buttonWidth / 2;
-  // playButtonY = buttonY + buttonHeight / 2;
   playButtonX = buttonX;
   playButtonY = buttonY;
   playButtonWidth = buttonWidth;

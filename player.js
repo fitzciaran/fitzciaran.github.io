@@ -14,8 +14,7 @@ import {
   GameState,
   globalPowerUps,
 } from "./astroids.js";
-import { shuffleArray, setEndGameMessage, maxInvincibilityTime,spawnProtectionTime } from "./gameLogic.js";
-import { drawKillInfo } from "./canvasDrawingFunctions.js";
+import { drawKillInfo } from "./gameDrawing.js";
 import {
   attemptConnections,
   timeSinceAnyMessageRecieved,
@@ -24,6 +23,8 @@ import {
   setTicksSinceLastConnectionAttempt,
   wrappedResolveConflicts,
 } from "./connectionHandlers.js";
+import { forces, ForceArea } from "./entities.js";
+import { shuffleArray, setEndGameMessage, maxInvincibilityTime, spawnProtectionTime, maxSpecialMeter } from "./gameLogic.js";
 
 const bounceFactor = 1.5;
 const offset = 1;
@@ -33,6 +34,12 @@ export const BotState = {
   FOLLOW_PLAYER: "followPlayer",
   RANDOM: "random",
   COLLECT: "collect",
+};
+
+export const Special = {
+  BOOST: "boost",
+  FORCE_PULL: "pull",
+  FORCE_PUSH: "push",
 };
 
 export class Player {
@@ -50,6 +57,7 @@ export class Player {
     this.isDead = false;
     this.isPlaying = true;
     this.invincibleTimer = 0;
+    this.forceCoolDown = 0;
     this.comboScaler = 1;
     this.isUserControlledCharacter = false;
     this.kills = 0;
@@ -62,10 +70,13 @@ export class Player {
     this.distanceFactor = 0;
     this.space = false;
     this.shift = false;
+    this.u = false;
     this.ticksSincePowerUpCollection = -1;
     this.targetedBy = [];
     this.timeSinceSpawned = 0;
     this.timeSinceSentMessageThatWasRecieved = 0;
+    this.special = Special.FORCE_PULL;
+    this.specialMeter = 100;
   }
 
   resetState(keepName, keepColor) {
@@ -109,10 +120,14 @@ export class Player {
       this.resetState(keepName, keepColor);
     }
   }
-  gotHit() {
+  gotHit(hitBy) {
     this.isDead = true;
     if (this == player) {
-      setEndGameMessage("Score: " + this.powerUps * 100);
+      if (hitBy != null && hitBy != "") {
+        setEndGameMessage("Killed by: " + hitBy + "\nScore: " + this.powerUps * 100);
+      } else {
+        setEndGameMessage("Score: " + this.powerUps * 100);
+      }
     }
   }
   addScore(scoreToAdd) {
@@ -124,6 +139,11 @@ export class Player {
   }
   setPilot(newPilot) {
     this.pilot = newPilot;
+    if (this.pilot == PilotName.PILOT_1) {
+      this.special = Special.FORCE_PULL;
+    } else if (this.pilot == PilotName.PILOT_2) {
+      this.special = Special.FORCE_PUSH;
+    }
   }
 
   getPlayerName() {
@@ -134,8 +154,8 @@ export class Player {
     this.name = newName;
   }
 
-  isInSpawnProtectionTime(){
-    return (this.timeSinceSpawned <= spawnProtectionTime);
+  isInSpawnProtectionTime() {
+    return this.timeSinceSpawned <= spawnProtectionTime;
   }
   //   getPlayerIsMaster() {
   //     return this.isMaster;
@@ -234,20 +254,39 @@ export class Player {
       pilotBoostFactor = 0.6;
     }
     if (this.shift && this.invincibleTimer > 0) {
-      if (this.invincibleTimer > 0) {
-        this.invincibleTimer -= 5;
-        this.invincibleTimer = Math.max(this.invincibleTimer, 0);
+      if (this.special == Special.BOOST) {
+        if (this.invincibleTimer > 0) {
+          this.invincibleTimer -= 5;
+          this.invincibleTimer = Math.max(this.invincibleTimer, 0);
+        }
+        if (this.pilot == PilotName.PILOT_1) {
+          pilotBoostFactor = 3;
+        } else if (this.pilot == PilotName.PILOT_2) {
+          pilotBoostFactor = 6;
+        }
       }
-      if (this.pilot == PilotName.PILOT_1) {
-        pilotBoostFactor = 3;
-      } else if (this.pilot == PilotName.PILOT_2) {
-        pilotBoostFactor = 6;
+    }
+    if (this.shift && this.specialMeter > 0) {
+      //todo specials other than boost shouldn't be triggered here
+      if (this.special == Special.FORCE_PULL || this.special == Special.FORCE_PUSH) {
+        // if (this.forceCoolDown < 1) {
+        //try a gradual effect
+        //this.forceCoolDown = 200;
+        this.specialMeter -= 3;
+        this.specialMeter = Math.max(this.specialMeter, 0);
+        let attractive = true;
+        if (this.special == Special.FORCE_PUSH) {
+          attractive = false;
+        }
+        let force = new ForceArea(null, this.x, this.y, 0.2, 5, 200, attractive, "red", this);
+        forces.push(force);
       }
+      //  }
     }
     this.vel.x *= newFriction;
     this.vel.y *= newFriction;
 
-    if (this.space || this.shift) {
+    if (this.space) {
       let mouseToCenter = { x: dx / distance, y: dy / distance };
       if (distance == 0 || isNaN(distance)) {
         mouseToCenter = { x: 0, y: 0 };
@@ -310,11 +349,17 @@ export class Player {
     this.updatePlayerVelocity(deltaTime);
     this.bouncePlayer();
     this.updatePlayerPosition(deltaTime);
+    if (this.u) {
+      this.invincibleTimer += 10;
+    }
     if (this.invincibleTimer > 0) {
       this.invincibleTimer -= 1;
       if (this.invincibleTimer == 0) {
         this.comboScaler = 1;
       }
+    }
+    if (this.specialMeter < maxSpecialMeter) {
+      this.specialMeter++;
     }
 
     if (this.ticksSincePowerUpCollection > -1) {
@@ -323,14 +368,15 @@ export class Player {
     if (this.ticksSincePowerUpCollection > 5) {
       this.ticksSincePowerUpCollection = -1;
     }
+    this.forceCoolDown = Math.max(this.forceCoolDown - 1, 0);
     setTicksSinceLastConnectionAttempt(ticksSinceLastConnectionAttempt + 1);
     setTimeSinceAnyMessageRecieved(timeSinceAnyMessageRecieved + 1);
     if (timeSinceAnyMessageRecieved > 100 && ticksSinceLastConnectionAttempt > 3000) {
-        wrappedResolveConflicts(player, otherPlayers, globalPowerUps);
+      wrappedResolveConflicts(player, otherPlayers, globalPowerUps);
       //todo do we need to attemptConnections here?
     }
     otherPlayers.forEach((otherPlayer) => {
-        otherPlayer.timeSinceSentMessageThatWasRecieved +=1;
+      otherPlayer.timeSinceSentMessageThatWasRecieved += 1;
     });
   }
 
@@ -357,6 +403,7 @@ export class Bot extends Player {
     this.randomTarget = { x: 0, y: 0, id: "" };
     this.inRangeTicks = 0;
   }
+
   updateTick(deltaTime) {
     if (this.isDead) {
       //todo delay this?
@@ -366,9 +413,11 @@ export class Bot extends Player {
     }
     super.updateTick(deltaTime);
   }
+
   updateBotInputs() {
     //this.randomlyConsiderChangingState();
     if (this.invincibleTimer > 30 && this.botState != BotState.FOLLOW_PLAYER) {
+      //if bot is invicible should look for a target if possible
       this.#setFollowingTarget();
       if (this.followingPlayerID != "") {
         this.randomTarget.x = 0;
@@ -387,7 +436,7 @@ export class Bot extends Player {
 
       const allPlayers = [...otherPlayers, ...bots, player];
       let followingPlayer = allPlayers.find((candidate) => this.followingPlayerID === candidate.id);
-      if (followingPlayer == null) {
+      if (followingPlayer == null || followingPlayer.isDead || !followingPlayer.isPlaying) {
         this.followingPlayerID = "";
         return;
       }
@@ -464,13 +513,15 @@ export class Bot extends Player {
         }
 
         let candidateHowLongSinceActive = candidate.howLongSinceActive();
-
+        let distance = Math.sqrt((this.x - candidate.x) ** 2 + (this.y - candidate.y) ** 2);
         if (
+          distance < 1000 &&
           candidateHowLongSinceActive < 300 &&
           candidate.targetedBy.length < maxBotsThatCanTargetAtOnce &&
           candidate.isPlaying &&
           candidate.timeSinceSpawned > 600 &&
-          candidate.invincibleTimer < 10
+          candidate.invincibleTimer < 10 &&
+          !candidate.isDead
         ) {
           playerToFollow = candidate;
           playerToFollow.targetedBy.push(this.id);
@@ -506,7 +557,7 @@ export class Bot extends Player {
             // this.followingPlayer.targetedBy -= 1;
             followingPlayer.targetedBy = followingPlayer.targetedBy.filter((id) => id !== this.id);
           } else {
-            this.followingPlayerID ="";
+            this.followingPlayerID = "";
             console.log("followingPlayer null ");
           }
           this.followingPlayerID = "";
@@ -529,37 +580,6 @@ export class Bot extends Player {
       this.chooseNewBotState();
     }
   }
-  //   #aimAtTarget(targetX, targetY, targetVelocityX, targetVelocityY, adjustmentFactor) {
-  //     let currentX = this.x;
-  //     let currentY = this.y;
-  //     let currentVelocityX = this.vel.x;
-  //     let currentVelocityY = this.vel.y;
-  //     // Calculate the distance between the target and current points
-  //     let distance = Math.sqrt((targetX - currentX) ** 2 + (targetY - currentY) ** 2);
-
-  //     // Calculate the time it would take to reach the original target without considering target's velocity
-  //     let currentSpeed = Math.sqrt(currentVelocityX ** 2 + currentVelocityY ** 2);
-  //     let adjustedTargetX = targetX;
-  //     let adjustedTargetY = targetY;
-
-  //     if (currentSpeed != 0) {
-  //       let timeToReachTarget = distance / currentSpeed;
-
-  //       // Calculate the adjusted target by considering a weighted combination of position and velocity
-  //       adjustedTargetX = targetX * (1 - adjustmentFactor) + (targetX + targetVelocityX * timeToReachTarget) * adjustmentFactor;
-  //       adjustedTargetY = targetY * (1 - adjustmentFactor) + (targetY + targetVelocityY * timeToReachTarget) * adjustmentFactor;
-  //     }
-  //     // Calculate the adjusted mouse position
-  //     let mousePos = this.mousePosToPositionAwayFromTarget(adjustedTargetX, adjustedTargetY, 200, this.mousePosX, this.mousePosY);
-
-  //     if (!isNaN(mousePos.X) && !isNaN(mousePos.Y)) {
-  //       this.mousePosX = mousePos.X;
-  //       this.mousePosY = mousePos.Y;
-  //     } else {
-  //       console.log("mousePos NaN");
-  //     }
-  //     this.space = true;
-  //   }
 
   #aimAtTarget(targetX, targetY, targetVelocityX, targetVelocityY, adjustmentFactor) {
     let currentX = this.x;

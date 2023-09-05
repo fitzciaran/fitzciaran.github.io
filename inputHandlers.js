@@ -14,6 +14,7 @@ let keys = {
   right: false,
   space: false,
   shift: false,
+  u: false,
 };
 
 export let mousePos = { x: 0, y: 0 };
@@ -51,6 +52,9 @@ function handleInputEvents(canvas, player) {
     if (e.button === 2) {
       player.shift = true;
       keys.shift = true;
+    } else if (e.button === 1) {
+      player.u = true;
+      keys.u = true;
     } else {
       player.space = true;
       keys.space = true;
@@ -61,6 +65,9 @@ function handleInputEvents(canvas, player) {
     if (e.button === 2) {
       player.shift = false;
       keys.shift = false;
+    } else if (e.button === 1) {
+      player.u = false;
+      keys.u = false;
     } else {
       player.space = false;
       keys.space = false;

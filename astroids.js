@@ -1,19 +1,20 @@
 import {
-  setupCanvas,
-  drawScene,
-  drawPreGameOverlay,
   setupPilotsImages,
   drawNameEntry,
   drawWinnerMessage,
   drawNameCursor,
   updateTopScoresInfo,
   setupPilotsImageSources,
+  drawPreGameOverlay,
 } from "./canvasDrawingFunctions.js";
+import { drawScene } from "./gameDrawing.js";
 import { tryNextId, attemptConnections, connectToPeers, sendPlayerStates, updateConnections, isPlayerMasterPeer } from "./connectionHandlers.js";
+import { setupCanvas,setupSpikeyBallPoints } from "./drawingUtils.js";
 import { addScore } from "./db.js";
 import {
   checkWinner,
   generatePowerups,
+  generateMines,
   checkPowerupCollision,
   endGameMessage,
   setGameWon,
@@ -60,12 +61,7 @@ export const colors = [
   "crimson",
   "white",
 ];
-const shipPoints = [
-  { x: 0, y: -20 },
-  { x: -10, y: 20 },
-  { x: 0, y: 10 },
-  { x: 10, y: 20 },
-];
+
 export const acceleration = 0.25;
 
 let lastTime = Date.now();
@@ -94,12 +90,14 @@ let playerToSpectate = null;
 let prioritizeHumanSpectate = false;
 
 export class PowerUp {
-  constructor(id = null, x = null, y = null, color = null, isStar = false) {
+  constructor(id = null, x = null, y = null, color = null, isStar = false, radius = 5, value = 1) {
     this.id = id;
     this.x = x;
     this.y = y;
     this.color = color;
     this.isStar = isStar;
+    this.radius = radius;
+    this.value = value;
   }
 }
 
@@ -109,6 +107,7 @@ player.isUserControlledCharacter = true;
 
 export let otherPlayers = [];
 export let bots = [];
+export let mines = [];
 export let globalPowerUps = [];
 
 export let camX = player.x - canvas.width / 2;
@@ -166,17 +165,18 @@ function updateGame(deltaTime, playerActive) {
     // Detect collisions with powerups or other ships
     detectCollisions(player, globalPowerUps, bots, otherPlayers);
 
-    if (isPlayerMasterPeer(player)) {
+    //todo might have to uncomment the condition
+    // if (isPlayerMasterPeer(player)) {
       // This peer is the master, so it runs the game logic for shared objects
-      masterPeerUpdateGame(globalPowerUps, otherPlayers, bots, deltaTime);
-    }
+      masterPeerUpdateGame(player,globalPowerUps, otherPlayers, bots, deltaTime);
+    // }
   }
 
   if (playerActive) {
-    drawScene(player, otherPlayers, bots, ctx, camX, camY, worldDimensions, canvas, shipPoints, globalPowerUps);
+    drawScene(player, otherPlayers, bots, mines,ctx, camX, camY, worldDimensions, canvas, globalPowerUps);
   } else {
     camFollowPlayer(deltaTime);
-    drawScene(null, otherPlayers, bots, ctx, camX, camY, worldDimensions, canvas, shipPoints, globalPowerUps);
+    drawScene(null, otherPlayers, bots, mines,ctx, camX, camY, worldDimensions, canvas, globalPowerUps);
   }
   // if (isPlayerMasterPeer(player)) {
   //   masterPeerUpdateGame(globalPowerUps,otherPlayers,bots,deltaTime);
@@ -184,8 +184,8 @@ function updateGame(deltaTime, playerActive) {
   updateConnections(player, otherPlayers, globalPowerUps);
 
   if (checkWinner(player, otherPlayers) || player.isDead) {
-    player.resetState(true,true);
     setGameState(GameState.FINISHED);
+    player.resetState(true, true);
   }
 }
 
@@ -232,12 +232,15 @@ function updateName() {
 }
 
 function updateWinState() {
-  //drawScene(player, otherPlayers, bots, ctx, camX, camY, worldDimensions, canvas, shipPoints, globalPowerUps);
+  //drawScene(player, otherPlayers, bots, mines,ctx, camX, camY, worldDimensions, canvas, globalPowerUps);
   drawWinnerMessage(ctx, canvas, endGameMessage);
 }
 
 export function setGlobalPowerUps(newPowerUps) {
   globalPowerUps = newPowerUps;
+}
+export function setMines(newMines) {
+  mines = newMines;
 }
 
 export function getGlobalPowerUps() {
@@ -280,15 +283,15 @@ export function setGameState(newState) {
 
     setupWinStateEventListeners(window, canvas);
     if (isPlayerMasterPeer(player)) {
-      sendPlayerStates(player);
+      sendPlayerStates(player, globalPowerUps);
     }
   }
 
   if (newState !== GameState.FINISHED && prevGameState === GameState.FINISHED) {
-    resetPowerLevels(player, otherPlayers);
+    resetPowerLevels(player, otherPlayers, globalPowerUps);
     setGameWon(false);
-    pilot2.selected = false;
-    pilot1.selected = true;
+    // pilot2.selected = false;
+    // pilot1.selected = true;
     removeWinStateEventListeners(window, canvas);
   }
 
@@ -357,9 +360,15 @@ window.addEventListener("load", function () {
   // setInterval(() => connectToPeers(player, otherPlayers, globalPowerUps), 6000);
   setTimeout(() => connectToPeers(player, otherPlayers, globalPowerUps), 6000);
 
-  setInterval(() => generatePowerups(globalPowerUps, worldDimensions.width, worldDimensions.height, colors), 3000);
-  setInterval(() => connectToPeers(player, otherPlayers, globalPowerUps), 35000);
+  setTimeout(() => generatePowerups(globalPowerUps, worldDimensions.width, worldDimensions.height, colors), 300);
+  setTimeout(() => generateMines(worldDimensions.width, worldDimensions.height, colors), 310);
 
+  setInterval(() => generatePowerups(globalPowerUps, worldDimensions.width, worldDimensions.height, colors), 3000);
+  setInterval(() => generateMines(worldDimensions.width, worldDimensions.height, colors), 3100);
+
+  setInterval(() => connectToPeers(player, otherPlayers, globalPowerUps), 35000);
+  
+  setupSpikeyBallPoints();
   //don;t need to under master system
   //setInterval(() => sendPowerups(globalPowerUps), 3000);
 

@@ -1,43 +1,31 @@
-put in a click to start first menu real info screen
-
 pilot select should be one image and click through options
-should be able to select color and....other stuff?
+    should be able to select color and....other stuff?
 powerups shouldn't spawn too close to ships (not super important for now)
-create a lot of enums instead of random string passing around
+
 start building test suite for this project
 shooting stars effect
 gravity black hole - reappear warp
 powerups and black holes disappear after time, blinking out at the end.
-moving power powerUps
-different size different score powerUps
+moving powerUps
+
 lobby selection
-1 player mode?
+    simple lobby system could just be selecting from a list of lobbies and that sets which array of id's you use - from there it works the same p2p as now
+
+1 player mode select?
 select ship - different stats - different... special?
     specials... invicible, knock away in radius,mines?
-enter name
-lobby
-ai ships
-starting menu
-starting lore screens (mk1 style)
-different craft/ pilots
-char select effects/ design
-pilot select
 
+char select effects/ design
 music
 sound effects
-review acceleration
+
 need some forground objects to get sense of speed
-reset camera on new game (check how it's done the first time)
-simple lobby system could just be selecting from a list of lobbies and that sets which array of id's you use - from there it works the same p2p as now
 
 When a ship collides with one of these the ship should get slightly bigger. 
-We'll need to keep track of all ships size
-When ships collide with each other the biggest should "win" and the smaller should be removed from the game for 3 seconds before respawning at a random location 
+    We'll need to keep track of all ships size
+    When ships collide with each other the biggest should "win" and the smaller should be removed from the game for 3 seconds before respawning at a random location 
 or the front of the ship stabs?
-show the game at all times with name entry and ship selection together
-kill bonus 
-some kind of win condition?
-keep camera more centered need to keep visability
+
 shrinking level - could be all around or could be left to right to require progress
 
 some kind of share option - a la wordle 
@@ -51,6 +39,8 @@ general racing
     "jumps?"
     lap records
     daily/all time leaderboards
+
+    gates
 procedural level generation?
 
 basic carfootball style game?
@@ -185,3 +175,32 @@ more pilot stats e.g.
 
 when observing a bot and they die, should switch to a different one.
 sometimes non-master can not get credited for powerup collection (even when connection seems good otherwise)
+
+timesince last message from master check shouldn't be in handledata since if no data to handle we don't get there to fix the connection issue
+bot should give up on target following if target is dead!
+
+apply less pull if they are star?
+pull into front rather than full circle around? - maybe as different power?
+drain their force power if in the pull range?
+
+collision should be based on actual hitbox, 
+bot targeting could be based on distance - if the bot "sees" a target it will go for it.... periodically could check it's "sight"
+    could/should the facing direction be factored into this?
+
+move powerups to entity
+    move collision to general entity check with onColide function(method?) to run.
+
+build charge if still? or if press/hold a charge button?
+    inv power?
+    a boost charge?
+
+a brake?
+a control style switch? (follow mouse?)
+
+circles you have to stop in / stay in for x seconds for ... something? power up? charging in there?
+mines need to spawn away from ships and ships need to spawn away from mines
+
+if non master maybe try doing everything except the sending?
+I think master might need to send state of otherplayers, so if master registers they've picked a powerup and gain invincibility for e.g. they should recieve that info about their state
+    hmm inlcude otherplayers in sendEntitiesState?.... but what about non-master inputs... they need to send something.... maybe only update some values (powerup / maxInvincibilityTime) 
+        and leave others (angle, velocity...but even velocity can be effected by pull/push which master would need to determine... maybe just don't update angle and mousex,y, space/shift)

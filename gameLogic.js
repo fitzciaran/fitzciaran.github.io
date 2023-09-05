@@ -1,14 +1,21 @@
-import { setGameState, GameState, player, setGlobalPowerUps, getGlobalPowerUps, bots, PowerUp, otherPlayers } from "./astroids.js";
-import { sendPlayerStates, sendGameState, isPlayerMasterPeer, sendBotsState } from "./connectionHandlers.js";
+import { setGameState, GameState, player, setGlobalPowerUps, setMines, bots, PowerUp, otherPlayers, mines } from "./astroids.js";
+import { sendPlayerStates, sendGameState, isPlayerMasterPeer, sendEntitiesState } from "./connectionHandlers.js";
 import { addScore } from "./db.js";
+import { forces, Mine } from "./entities.js";
 import { Player, Bot } from "./player.js";
 // import { Bot } from "./bot.js";
+
+//if mess with these need to change the collision detection - factor these in
+export const shipScale = 2;
+export const mineScale = 0.7;
 
 //finish game after 5 for easier testing the finish
 export let pointsToWin = 5;
 let initialInvincibleTime = 60 * 10;
 export let maxInvincibilityTime = initialInvincibleTime;
+export let maxSpecialMeter = 100;
 let maxPowerups = 10;
+let maxMines = 15;
 export let spawnProtectionTime = 100;
 export let endGameMessage = "";
 export let gameWon = false;
@@ -33,7 +40,7 @@ export const pilot2 = {
 };
 
 export const max_player_name = 15;
-let chancePowerUpIsStar = 0.8;
+let chancePowerUpIsStar = 0.2;
 export function checkWinner(player, otherPlayers) {
   //for now won't have a winner in this sense still thinking about what the game should be
   return false;
@@ -78,16 +85,27 @@ export function generatePowerups(globalPowerUps, worldWidth, worldHeight, colors
     //   y: (Math.random() * 0.8 + 0.1) * worldHeight,
     //   color: colors[Math.floor(Math.random() * colors.length)],
     // };
-    let isStar = Math.random() > 1 - chancePowerUpIsStar;
+    let isStar = false;
+    let radius = 50;
+    let value = 2;
+
+    if (Math.random() > 1 - chancePowerUpIsStar) {
+      isStar = true;
+      radius = 15;
+      value = 1;
+    }
+
     let powerUp = new PowerUp(
       Math.floor(Math.random() * 10000),
       (Math.random() * 0.8 + 0.1) * worldWidth,
       (Math.random() * 0.8 + 0.1) * worldHeight,
       colors[Math.floor(Math.random() * colors.length)],
-      isStar
+      isStar,
+      radius,
+      value
     );
     globalPowerUps.push(powerUp);
-    setGlobalPowerUps(globalPowerUps);
+    // setGlobalPowerUps(globalPowerUps);
     // Send the powerups every time you generate one
     // sendPowerups(globalPowerUps);
 
@@ -95,34 +113,77 @@ export function generatePowerups(globalPowerUps, worldWidth, worldHeight, colors
   }
 }
 
+export function generateMines(worldWidth, worldHeight, colors) {
+  if (!isPlayerMasterPeer(player)) {
+    return;
+  }
+  // Check if there are less than max powerups powerups
+  while (mines.length < maxMines) {
+    let powerUp = new Mine(
+      Math.floor(Math.random() * 10000),
+      (Math.random() * 0.8 + 0.1) * worldWidth,
+      (Math.random() * 0.8 + 0.1) * worldHeight,
+      100,
+      10,
+      colors[Math.floor(Math.random() * colors.length)]
+    );
+    mines.push(powerUp);
+  }
+}
+
 export function checkPowerupCollision(playerToCheck, globalPowerUps) {
-  // if (!isPlayerMasterPeer(player)) {
-  //   return;
-  // }
   for (let i = 0; i < globalPowerUps.length; i++) {
     let dx = playerToCheck.x - globalPowerUps[i].x;
     let dy = playerToCheck.y - globalPowerUps[i].y;
     let distance = Math.sqrt(dx * dx + dy * dy);
 
-    if (distance < 20) {
-      // assuming the radius of both ship and powerup is 10
+    if (distance < 10 * shipScale + globalPowerUps[i].radius) {
+      // assuming the radius of ship is 10 - todo update for better hitbox on ship
       if (playerToCheck.ticksSincePowerUpCollection == -1) {
         //may need to make this an array of "recently collected / iteracted stuff" to be more robust in the future rather than a simple power up timer
-        playerToCheck.powerUps += 1;
+        playerToCheck.powerUps += globalPowerUps[i].value;
         playerToCheck.ticksSincePowerUpCollection = 0;
         if (globalPowerUps[i].isStar) {
           playerToCheck.invincibleTimer = initialInvincibleTime;
         }
+        globalPowerUps.splice(i, 1);
       }
-      globalPowerUps.splice(i, 1);
       // sendPowerups(globalPowerUps);
       setGlobalPowerUps(globalPowerUps);
       //cf test do we need this looks like yes
       //sendGameState(globalPowerUps);
-      break; // exit the loop to avoid possible index errors - does that mean we can only register 1 collection per tick?
+      break; // exit the loop to avoid possible index errors - does that mean we can only register 1 collection per tick? if so we could simply schedule the removal of collected until after this loop
     }
   }
 }
+
+//todo more generic entity based collision function, maybe each entity has its own action upon collision
+export function checkMineCollision(playerToCheck, mines) {
+  for (let i = 0; i < mines.length; i++) {
+    let dx = playerToCheck.x - mines[i].x;
+    let dy = playerToCheck.y - mines[i].y;
+    let distance = Math.sqrt(dx * dx + dy * dy);
+
+    if (distance < 10 * shipScale + mines[i].radius) {
+      // assuming the radius of ship is 10 - todo update for better hitbox on ship
+      if (playerToCheck.invincibleTimer == 0 && player.timeSinceSpawned > spawnProtectionTime) {
+        //may need to make this an array of "recently collected / iteracted stuff" to be more robust in the future rather than a simple power up timer
+        playerToCheck.gotHit("a mine");
+        playerToCheck.ticksSincePowerUpCollection = 0;
+        if (mines[i].isStar) {
+          playerToCheck.invincibleTimer = initialInvincibleTime;
+        }
+        mines.splice(i, 1);
+      }
+      // sendPowerups(globalPowerUps);
+      setMines(mines);
+      //cf test do we need this looks like yes
+      //sendGameState(globalPowerUps);
+      break; // exit the loop to avoid possible index errors - does that mean we can only register 1 collection per tick? if so we could simply schedule the removal of collected until after this loop
+    }
+  }
+}
+
 export function checkPlayerCollision(playerToCheck, allPlayers) {
   for (let i = 0; i < allPlayers.length; i++) {
     if (playerToCheck.id == allPlayers[i].id) {
@@ -133,8 +194,14 @@ export function checkPlayerCollision(playerToCheck, allPlayers) {
     let dy = playerToCheck.y - allPlayers[i].y;
     let distance = Math.sqrt(dx * dx + dy * dy);
 
-    if (distance < 20 && playerToCheck.isPlaying == true && allPlayers[i].isPlaying == true && !playerToCheck.isDead && !allPlayers[i].isDead) {
-      // assuming the radius of both ships is 10
+    if (
+      distance < 20 * shipScale &&
+      playerToCheck.isPlaying == true &&
+      allPlayers[i].isPlaying == true &&
+      !playerToCheck.isDead &&
+      !allPlayers[i].isDead
+    ) {
+      // assuming hitbox  of both ships is simple radius
       //for now just reset player if a crash
 
       if (playerToCheck.invincibleTimer == 0) {
@@ -142,7 +209,7 @@ export function checkPlayerCollision(playerToCheck, allPlayers) {
           playerToCheck.timeSinceSpawned > spawnProtectionTime &&
           (allPlayers[i].timeSinceSpawned > spawnProtectionTime || allPlayers[i].invincibleTimer > 0)
         ) {
-          playerToCheck.gotHit();
+          playerToCheck.gotHit(allPlayers[i].name);
         } //spawn protection todo show an effect to illustrate the protection during this period
       }
       if (playerToCheck.invincibleTimer > 0 && allPlayers[i].invincibleTimer == 0 && allPlayers[i].timeSinceSpawned > spawnProtectionTime) {
@@ -154,9 +221,11 @@ export function checkPlayerCollision(playerToCheck, allPlayers) {
       }
       if (allPlayers[i] instanceof Player) {
         if (allPlayers[i].invincibleTimer == 0) {
-          if (allPlayers[i].timeSinceSpawned > spawnProtectionTime &&
-            (playerToCheck.timeSinceSpawned > spawnProtectionTime || playerToCheck.invincibleTimer > 0)) {
-            allPlayers[i].gotHit();
+          if (
+            allPlayers[i].timeSinceSpawned > spawnProtectionTime &&
+            (playerToCheck.timeSinceSpawned > spawnProtectionTime || playerToCheck.invincibleTimer > 0)
+          ) {
+            allPlayers[i].gotHit(playerToCheck.name);
           }
         }
         if (allPlayers[i].invincibleTimer > 0 && playerToCheck.invincibleTimer == 0 && playerToCheck.timeSinceSpawned > spawnProtectionTime) {
@@ -173,7 +242,7 @@ export function checkPlayerCollision(playerToCheck, allPlayers) {
   }
 }
 
-export function resetPowerLevels(player, otherPlayers) {
+export function resetPowerLevels(player, otherPlayers, globalPowerUps) {
   // Reset my powerUps
   player.powerUps = 0;
 
@@ -183,7 +252,7 @@ export function resetPowerLevels(player, otherPlayers) {
   });
 
   // Send updated powerUps to other players
-  sendPlayerStates(player);
+  sendPlayerStates(player, globalPowerUps);
 }
 
 function shipHitsBorder(x, y) {
@@ -196,6 +265,60 @@ export function setGameWon(won) {
 
 export function updateEnemies(deltaTime) {
   // Update the positions, velocities, etc. of the enemies
+  for (let force of forces) {
+    if (force.duration > 0) {
+      // for (let effectedPlayer of allPlayers){
+      if (force.tracks != null && force.tracks.isPlaying && !force.tracks.isDead) {
+        force.x = force.tracks.x;
+        force.y = force.tracks.y;
+      }
+      // }
+      force.setDuration(force.duration - 1);
+    }
+  }
+}
+
+export function checkForcesCollision(playerToCheck, forces) {
+  for (let force of forces) {
+    if (playerToCheck == force.tracks) {
+      continue;
+    }
+
+    // Calculate the distance between the player and the center of the circle
+    const dx = playerToCheck.x - force.x;
+    const dy = playerToCheck.y - force.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    if (distance > force.radius) {
+      continue;
+    }
+    // Calculate the proportional force strength
+    let strength = 0;
+    if (distance > 0 && distance <= 50) {
+      // Calculate strength based on the inverse square of the distance
+      strength = force.force / 2500 / (distance * distance);
+    } else if (distance > 50 && distance <= force.radius) {
+      // Gradual decrease in force from max at 50 to 40% at force.radius
+      const maxForce = force.force;
+      const minForce = 0.4 * maxForce;
+      const forceRange = maxForce - minForce;
+      const distanceRange = force.radius - 50;
+      const forceIncrement = forceRange / distanceRange;
+      strength = maxForce - forceIncrement * (distance - 50);
+    }
+
+    // Calculate the force components
+    let forceX = (dx / distance) * strength;
+    let forceY = (dy / distance) * strength;
+
+    if (force.isAttractive) {
+      forceX *= -1;
+      forceY *= -1;
+    }
+
+    // Apply the force to playerToCheck's velocity
+    playerToCheck.vel.x += forceX;
+    playerToCheck.vel.y += forceY;
+  }
 }
 
 export function updateOtherPlayers(deltaTime) {
@@ -261,15 +384,17 @@ export function detectCollisions(playerToCheck, globalPowerUps, bots, otherPlaye
   // Detect collisions between the player's ship and the powerups or other ships
   // If a collision is detected, update the game state accordingly
   checkPowerupCollision(playerToCheck, globalPowerUps);
+  checkMineCollision(playerToCheck, mines);
   let allPlayers = [...bots, ...otherPlayers, player];
   checkPlayerCollision(playerToCheck, allPlayers);
+  checkForcesCollision(playerToCheck, forces);
 }
 
 export function calculateAngle(player) {
   return Math.atan2(player.mousePosY - player.y, player.mousePosX - player.x);
 }
 
-export function masterPeerUpdateGame(globalPowerUps, otherPlayers, bots, deltaTime) {
+export function masterPeerUpdateGame(player, globalPowerUps, otherPlayers, bots, deltaTime) {
   // This peer is the master, so it runs the game logic for shared objects
 
   //eventually run this based on how many bots and existing players in total currently
@@ -282,17 +407,22 @@ export function masterPeerUpdateGame(globalPowerUps, otherPlayers, bots, deltaTi
   // The master peer also detects collisions between all ships and powerups
   otherPlayers.forEach((otherPlayer) => {
     detectCollisions(otherPlayer, globalPowerUps, bots, otherPlayers);
+    checkForcesCollision(otherPlayer, forces);
   });
 
   bots.forEach((bot) => {
     detectCollisions(bot, globalPowerUps, bots, otherPlayers);
+    checkForcesCollision(bot, forces);
   });
 
   // Send the game state to all other peers
 
   //...not sending game state of otherplayers...hmm?
-  sendGameState(globalPowerUps);
-  sendBotsState(bots);
+  //todo might need to undo condition
+  if (isPlayerMasterPeer(player)) {
+    sendGameState(globalPowerUps);
+    sendEntitiesState(bots);
+  }
 }
 
 //for now just create 4
