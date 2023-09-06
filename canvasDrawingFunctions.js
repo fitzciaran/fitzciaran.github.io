@@ -1,5 +1,5 @@
 import { getTopScores } from "./db.js";
-import { drawRoundedRectangle } from "./drawingUtils.js";
+import { drawRoundedRectangle, loreTablet } from "./drawingUtils.js";
 
 import { pilot1, pilot2 } from "./gameLogic.js";
 
@@ -10,19 +10,6 @@ export let playButtonX = 0;
 export let playButtonY = 0;
 export let playButtonWidth = 0;
 export let playButtonHeight = 0;
-
-function centerPilots(canvas) {
-  // Center the pilots
-  pilot1.x = canvas.width / 2 - pilot1.width * 2;
-  pilot2.x = canvas.width / 2 + pilot2.width;
-
-  pilot1.y = canvas.height / 6;
-  pilot2.y = canvas.height / 6;
-
-  // Position the lore tablet
-  loreTablet.x = canvas.width / 2 - loreTablet.width / 2;
-  loreTablet.y = canvas.height / 2 - 100;
-}
 
 //should probably refactor this so logic lives elsewhere
 export function updateTopScoresInfo() {
@@ -78,14 +65,6 @@ export function drawWinnerMessage(ctx, canvas, message) {
   let radius = 10; // Radius for rounded corners
   drawPlayButton(ctx, buttonX, buttonY, buttonWidth, buttonHeight, radius);
 }
-
-export const loreTablet = {
-  x: 0,
-  y: -300,
-  width: 450,
-  height: 450,
-  image: new Image(),
-};
 
 let loreIndex = 0;
 let lineCount = 0;
@@ -245,16 +224,6 @@ function animateLoreText(ctx, lore, loreIndex, lineCount) {
 
     loreIndex++;
   }
-}
-
-export function setupPilotsImageSources() {
-  pilot1.image.src = "images/wolf.webp";
-  pilot2.image.src = "images/slippy.webp";
-}
-export function setupPilotsImages(canvas) {
-  setupPilotsImageSources();
-  loreTablet.image.src = "images/tablet.png";
-  centerPilots(canvas);
 }
 
 export function drawNameEntry(canvas, ctx, name, x, y) {

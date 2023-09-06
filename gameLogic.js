@@ -1,7 +1,8 @@
-import { setGameState, GameState, player, setGlobalPowerUps, setMines, bots, PowerUp, otherPlayers, mines } from "./astroids.js";
-import { sendPlayerStates, sendGameState, isPlayerMasterPeer, sendEntitiesState } from "./connectionHandlers.js";
+import { setGameState, GameState, player, setGlobalPowerUps, setMines, bots, otherPlayers, mines } from "./astroids.js";
+import { isPlayerMasterPeer } from "./connectionHandlers.js";
+import { sendPlayerStates, sendGameState, sendEntitiesState } from "./handleData.js";
 import { addScore } from "./db.js";
-import { forces, Mine } from "./entities.js";
+import { forces, Mine, PowerUp } from "./entities.js";
 import { Player, Bot } from "./player.js";
 // import { Bot } from "./bot.js";
 
@@ -324,7 +325,7 @@ export function checkForcesCollision(playerToCheck, forces) {
 export function updateOtherPlayers(deltaTime) {
   otherPlayers.forEach((otherPlayer, index) => {
     // Check if player is an instance of the Player class
-    if (otherPlayer != null && otherPlayer instanceof Player) {
+    if (otherPlayer != null && otherPlayer instanceof Player && otherPlayer.name != "") {
       otherPlayer.updateTick(deltaTime);
     } else {
       console.log("otherPlayer is not an instance of the Player class. Reinitializing...");
@@ -351,11 +352,8 @@ export function updateOtherPlayers(deltaTime) {
 export function updateBots(deltaTime) {
   bots.forEach((bot, index) => {
     // Check if bot is an instance of the Bot class
-    if (bot != null && bot instanceof Bot) {
-      bot.updateBotInputs();
-      bot.updateTick(deltaTime);
-    } else {
-      console.log("Bot is not an instance of the Bot class. Reinitializing...");
+    if (bot == null || !(bot instanceof Bot)) {
+      // console.log("Bot is not an instance of the Bot class. Reinitializing...");
 
       // Create a new Bot object using the properties of the bot
       const newPlayer = new Bot(
@@ -372,6 +370,10 @@ export function updateBots(deltaTime) {
 
       // Replace the old bot with the new Bot instance in the array
       bots[index] = newPlayer;
+    }
+    if (bot != null && bot instanceof Bot) {
+      bot.updateBotInputs();
+      bot.updateTick(deltaTime);
     }
   });
 }

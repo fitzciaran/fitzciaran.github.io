@@ -204,3 +204,5 @@ if non master maybe try doing everything except the sending?
 I think master might need to send state of otherplayers, so if master registers they've picked a powerup and gain invincibility for e.g. they should recieve that info about their state
     hmm inlcude otherplayers in sendEntitiesState?.... but what about non-master inputs... they need to send something.... maybe only update some values (powerup / maxInvincibilityTime) 
         and leave others (angle, velocity...but even velocity can be effected by pull/push which master would need to determine... maybe just don't update angle and mousex,y, space/shift)
+
+still the issue where a collision is clearly detect (e.g. go over mine and mine disappears) but the hit doesn't register for non-master peer.

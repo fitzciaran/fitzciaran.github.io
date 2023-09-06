@@ -1,5 +1,9 @@
 export let forces = [];
 
+export function setForces(newForces){
+    forces = newForces;
+}
+
 export class Entity {
   constructor(id = null, x = null, y = null) {
     this.id = id;
@@ -37,11 +41,21 @@ export class Enemy extends Entity {
   }
 }
 
-export class Mine extends Entity {
+export class Mine extends Enemy {
   constructor(id = null, x = null, y = null, duration = -1, radius = 20, color = "red") {
     super(id, x, y);
     this.duration = duration;
     this.radius = radius;
     this.color = color;
+  }
+}
+
+export class PowerUp extends Entity {
+  constructor(id = null, x = null, y = null, color = null, isStar = false, radius = 5, value = 1) {
+    super(id, x, y);
+    this.color = color;
+    this.isStar = isStar;
+    this.radius = radius;
+    this.value = value;
   }
 }

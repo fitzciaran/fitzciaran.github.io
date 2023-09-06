@@ -43,7 +43,18 @@ export const Special = {
 };
 
 export class Player {
-  constructor(id = null, x = null, y = null, powerUps = 0, color = null, angle = 0, pilot = "", name = "") {
+  constructor(
+    id = null,
+    x = null,
+    y = null,
+    powerUps = 0,
+    color = null,
+    angle = 0,
+    pilot = "",
+    name = "",
+    isPlaying = true,
+    isUserControlledCharacter = false
+  ) {
     this.id = id;
     this.x = x !== null ? x : 1200 + Math.random() * (worldDimensions.width - 2400);
     this.y = y !== null ? y : 600 + Math.random() * (worldDimensions.height - 1200);
@@ -52,14 +63,14 @@ export class Player {
     this.angle = angle;
     this.pilot = pilot;
     this.name = name;
+    this.isPlaying = isPlaying;
+    this.isUserControlledCharacter = isUserControlledCharacter;
     this.lives = 1;
     this.isMaster = true;
     this.isDead = false;
-    this.isPlaying = true;
     this.invincibleTimer = 0;
     this.forceCoolDown = 0;
     this.comboScaler = 1;
-    this.isUserControlledCharacter = false;
     this.kills = 0;
     this.isBot = false;
     this.playerAngleData = {};
@@ -392,8 +403,9 @@ export class Player {
 }
 
 export class Bot extends Player {
-  constructor(id = null, x = null, y = null, powerUps = 0, color = null, angle = 0, pilot = "", name = "") {
-    super(id, x, y, powerUps, color, angle, pilot, name);
+  constructor(id = null, x = null, y = null, powerUps = 0, color = null, angle = 0, pilot = "", name = "", isPlaying = true,
+  isUserControlledCharacter = false) {
+    super(id, x, y, powerUps, color, angle, pilot, name, isPlaying, isUserControlledCharacter = false);
     this.previousAngleDifference = 0;
     this.previousTurnDirection = 0;
     this.botState = BotState.FOLLOW_PLAYER;
@@ -417,83 +429,94 @@ export class Bot extends Player {
   updateBotInputs() {
     //this.randomlyConsiderChangingState();
     if (this.invincibleTimer > 30 && this.botState != BotState.FOLLOW_PLAYER) {
-      //if bot is invicible should look for a target if possible
-      this.#setFollowingTarget();
+      this.setFollowingTarget();
       if (this.followingPlayerID != "") {
-        this.randomTarget.x = 0;
-        this.randomTarget.y = 0;
-        this.randomTarget.id = "random point";
-        this.botState = BotState.FOLLOW_PLAYER;
+        this.setRandomTarget(0, 0, "random point");
+        this.setBotState(BotState.FOLLOW_PLAYER);
       }
     }
-    if (this.botState == BotState.FOLLOW_PLAYER) {
-      this.#setFollowingTarget();
-      if (this.followingPlayerID == "") {
-        //if didn't manage to find a valid target.
-        this.botState = BotState.RANDOM;
-        return;
-      }
 
-      const allPlayers = [...otherPlayers, ...bots, player];
-      let followingPlayer = allPlayers.find((candidate) => this.followingPlayerID === candidate.id);
-      if (followingPlayer == null || followingPlayer.isDead || !followingPlayer.isPlaying) {
-        this.followingPlayerID = "";
-        return;
-      }
-      if (followingPlayer.isBot) {
-        //if bots are all following each other they can get into a spiral this should break them out of it.
-        this.randomlyConsiderChangingState(0.95);
-      }
-      if (followingPlayer.invincibleTimer > 10) {
-        this.randomlyConsiderChangingState(0.09);
-      }
-      if (followingPlayer.isDead) {
-        this.followingPlayerID = "";
-      }
-      let targetX = followingPlayer.x;
-      let targetY = followingPlayer.y;
-      this.#checkIfGotToTarget(targetX, targetY);
-      this.#aimAtTarget(targetX, targetY, followingPlayer.vel.x, followingPlayer.vel.y, 0.4);
+    if (this.botState == BotState.FOLLOW_PLAYER) {
+      this.handleFollowPlayerState();
     } else if (this.botState == BotState.RANDOM) {
-      if (this.randomTarget.x == 0 && this.randomTarget.y == 0) {
-        this.randomTarget.x = 100 + Math.random() * (worldDimensions.width - 200);
-        this.randomTarget.y = 100 + Math.random() * (worldDimensions.height - 200);
-      }
-      let targetX = this.randomTarget.x;
-      let targetY = this.randomTarget.y;
-      this.#checkIfGotToTarget(targetX, targetY);
-      this.#aimAtTarget(targetX, targetY, 0, 0, 0.4);
+      this.handleRandomState();
     } else if (this.botState == BotState.COLLECT) {
-      if (this.randomTarget.x == 0 && this.randomTarget.y == 0) {
-        let powerUpToTarget;
-        if (globalPowerUps.length > 0) {
-          const randomIndex = Math.floor(Math.random() * globalPowerUps.length);
-          powerUpToTarget = globalPowerUps[randomIndex];
-          this.randomTarget.x = powerUpToTarget.x;
-          this.randomTarget.y = powerUpToTarget.y;
-          this.randomTarget.id = powerUpToTarget.id;
-        } else {
-          this.botState = BotState.RANDOM;
-          this.randomTarget.x = 100 + Math.random() * (worldDimensions.width - 200);
-          this.randomTarget.y = 100 + Math.random() * (worldDimensions.height - 200);
-        }
-      } else {
-        let powerUpStillExists = false;
-        for (let globalPowerUp of globalPowerUps) {
-          if (globalPowerUp.x == this.randomTarget.x && globalPowerUp.y == this.randomTarget.y) {
-            powerUpStillExists = true;
-            break;
-          }
-        }
-        if (!powerUpStillExists) {
-          this.botState = BotState.RANDOM;
-        }
-      }
-      let targetX = this.randomTarget.x;
-      let targetY = this.randomTarget.y;
-      this.#checkIfGotToTarget(targetX, targetY);
-      this.#aimAtTarget(targetX, targetY, 0, 0, 0.4);
+      this.handleCollectState();
     }
+  }
+
+  handleFollowPlayerState() {
+    this.setFollowingTarget();
+    if (this.followingPlayerID == "") {
+      this.setBotState(BotState.RANDOM);
+      // return;
+      this.handleRandomState();
+    }
+
+    const allPlayers = [...otherPlayers, ...bots, player];
+    let followingPlayer = allPlayers.find((candidate) => this.followingPlayerID === candidate.id);
+    if (followingPlayer == null || followingPlayer.isDead || !followingPlayer.isPlaying) {
+      this.followingPlayerID = "";
+      return;
+    }
+    if (followingPlayer.isBot) {
+      this.randomlyConsiderChangingState(0.95);
+    }
+    if (followingPlayer.invincibleTimer > 10) {
+      this.randomlyConsiderChangingState(0.09);
+    }
+    if (followingPlayer.isDead) {
+      this.followingPlayerID = "";
+    }
+    this.handleTargeting(followingPlayer.x, followingPlayer.y, followingPlayer.vel.x, followingPlayer.vel.y, 0.4);
+  }
+
+  handleRandomState() {
+    if (this.randomTarget.x == 0 && this.randomTarget.y == 0) {
+      this.setRandomTarget(100 + Math.random() * (worldDimensions.width - 200), 100 + Math.random() * (worldDimensions.height - 200));
+    }
+    this.handleTargeting(this.randomTarget.x, this.randomTarget.y, 0, 0, 0.4);
+  }
+
+  handleCollectState() {
+    if (this.randomTarget.x == 0 && this.randomTarget.y == 0) {
+      let powerUpToTarget;
+      if (globalPowerUps.length > 0) {
+        const randomIndex = Math.floor(Math.random() * globalPowerUps.length);
+        powerUpToTarget = globalPowerUps[randomIndex];
+        this.setRandomTarget(powerUpToTarget.x, powerUpToTarget.y, powerUpToTarget.id);
+      } else {
+        this.setBotState(BotState.RANDOM);
+        this.setRandomTarget(100 + Math.random() * (worldDimensions.width - 200), 100 + Math.random() * (worldDimensions.height - 200));
+      }
+    } else {
+      let powerUpStillExists = globalPowerUps.some(
+        (globalPowerUp) => globalPowerUp.x == this.randomTarget.x && globalPowerUp.y == this.randomTarget.y
+      );
+      if (!powerUpStillExists) {
+        this.setBotState(BotState.RANDOM);
+      }
+    }
+    this.handleTargeting(this.randomTarget.x, this.randomTarget.y, 0, 0, 0.4);
+  }
+
+  setFollowingTarget() {
+    // Set following target logic here
+  }
+
+  setRandomTarget(x, y, id) {
+    this.randomTarget.x = x;
+    this.randomTarget.y = y;
+    this.randomTarget.id = id;
+  }
+
+  setBotState(state) {
+    this.botState = state;
+  }
+
+  handleTargeting(targetX, targetY, velX, velY, factor) {
+    this.#checkIfGotToTarget(targetX, targetY);
+    this.#aimAtTarget(targetX, targetY, velX, velY, factor);
   }
 
   #setFollowingTarget() {

@@ -1,15 +1,9 @@
-import {
-  setupPilotsImages,
-  drawNameEntry,
-  drawWinnerMessage,
-  drawNameCursor,
-  updateTopScoresInfo,
-  setupPilotsImageSources,
-  drawPreGameOverlay,
-} from "./canvasDrawingFunctions.js";
+import { drawNameEntry, drawWinnerMessage, drawNameCursor, updateTopScoresInfo, drawPreGameOverlay } from "./canvasDrawingFunctions.js";
+import { setupPilotsImageSources, setupPilotsImages } from "./drawingUtils.js";
 import { drawScene } from "./gameDrawing.js";
-import { tryNextId, attemptConnections, connectToPeers, sendPlayerStates, updateConnections, isPlayerMasterPeer } from "./connectionHandlers.js";
-import { setupCanvas,setupSpikeyBallPoints } from "./drawingUtils.js";
+import { tryNextId, attemptConnections, connectToPeers, updateConnections, isPlayerMasterPeer } from "./connectionHandlers.js";
+import { sendPlayerStates } from "./handleData.js";
+import { setupCanvas, setupSpikeyBallPoints } from "./drawingUtils.js";
 import { addScore } from "./db.js";
 import {
   checkWinner,
@@ -80,31 +74,16 @@ export const PilotName = {
   PILOT_2: "pilot2",
 };
 
-//switch this to intro once windowloaded
 let gameState = GameState.UNSET;
-// let pilotSelected = "";
 let accumulator = 0;
 let fixedDeltaTime = 1 / 60; // 60 updates per second
 let playerToSpectate = null;
 //if below is true if there are any connected humans they will first be used to spectate if possible
 let prioritizeHumanSpectate = false;
 
-export class PowerUp {
-  constructor(id = null, x = null, y = null, color = null, isStar = false, radius = 5, value = 1) {
-    this.id = id;
-    this.x = x;
-    this.y = y;
-    this.color = color;
-    this.isStar = isStar;
-    this.radius = radius;
-    this.value = value;
-  }
-}
-
-export const player = new Player(null, null, null, 0, null, 0, "", "");
-player.isPlaying = false;
-player.isUserControlledCharacter = true;
-
+export const player = new Player(null, null, null, 0, null, 0, "", "", false, true);
+// player.isPlaying = false;
+// player.isUserControlledCharacter = true;
 export let otherPlayers = [];
 export let bots = [];
 export let mines = [];
@@ -167,16 +146,16 @@ function updateGame(deltaTime, playerActive) {
 
     //todo might have to uncomment the condition
     // if (isPlayerMasterPeer(player)) {
-      // This peer is the master, so it runs the game logic for shared objects
-      masterPeerUpdateGame(player,globalPowerUps, otherPlayers, bots, deltaTime);
+    // This peer is the master, so it runs the game logic for shared objects
+    masterPeerUpdateGame(player, globalPowerUps, otherPlayers, bots, deltaTime);
     // }
   }
 
   if (playerActive) {
-    drawScene(player, otherPlayers, bots, mines,ctx, camX, camY, worldDimensions, canvas, globalPowerUps);
+    drawScene(player, otherPlayers, bots, mines, ctx, camX, camY, worldDimensions, canvas, globalPowerUps);
   } else {
     camFollowPlayer(deltaTime);
-    drawScene(null, otherPlayers, bots, mines,ctx, camX, camY, worldDimensions, canvas, globalPowerUps);
+    drawScene(null, otherPlayers, bots, mines, ctx, camX, camY, worldDimensions, canvas, globalPowerUps);
   }
   // if (isPlayerMasterPeer(player)) {
   //   masterPeerUpdateGame(globalPowerUps,otherPlayers,bots,deltaTime);
@@ -367,7 +346,7 @@ window.addEventListener("load", function () {
   setInterval(() => generateMines(worldDimensions.width, worldDimensions.height, colors), 3100);
 
   setInterval(() => connectToPeers(player, otherPlayers, globalPowerUps), 35000);
-  
+
   setupSpikeyBallPoints();
   //don;t need to under master system
   //setInterval(() => sendPowerups(globalPowerUps), 3000);

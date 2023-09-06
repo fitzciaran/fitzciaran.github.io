@@ -1,4 +1,35 @@
 export const spikeyBallPoints = [];
+import { pilot1, pilot2 } from "./gameLogic.js";
+export const loreTablet = {
+  x: 0,
+  y: -300,
+  width: 450,
+  height: 450,
+  image: new Image(),
+};
+
+function centerPilots(canvas) {
+  // Center the pilots
+  pilot1.x = canvas.width / 2 - pilot1.width * 2;
+  pilot2.x = canvas.width / 2 + pilot2.width;
+
+  pilot1.y = canvas.height / 6;
+  pilot2.y = canvas.height / 6;
+
+  // Position the lore tablet
+  loreTablet.x = canvas.width / 2 - loreTablet.width / 2;
+  loreTablet.y = canvas.height / 2 - 100;
+}
+
+export function setupPilotsImageSources() {
+  pilot1.image.src = "images/wolf.webp";
+  pilot2.image.src = "images/slippy.webp";
+}
+export function setupPilotsImages(canvas) {
+  setupPilotsImageSources();
+  loreTablet.image.src = "images/tablet.png";
+  centerPilots(canvas);
+}
 
 // Export a setupCanvas function that initializes the canvas and returns it
 export function setupCanvas() {
