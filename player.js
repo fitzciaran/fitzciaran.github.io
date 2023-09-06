@@ -402,6 +402,11 @@ export class Player {
   }
 }
 
+export function createBotFromObject(obj) {
+  let bot = new Bot(obj.id,obj.x,obj.y, obj.powerUps,obj.color,obj.angle,obj.pilot,obj.name,obj.isPlaying,obj.isUserControlledCharacter )
+  return bot;
+}
+
 export class Bot extends Player {
   constructor(id = null, x = null, y = null, powerUps = 0, color = null, angle = 0, pilot = "", name = "", isPlaying = true,
   isUserControlledCharacter = false) {

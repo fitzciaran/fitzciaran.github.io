@@ -274,7 +274,11 @@ export function updateEnemies(deltaTime) {
         force.y = force.tracks.y;
       }
       // }
-      force.setDuration(force.duration - 1);
+      try {
+        force.setDuration(force.duration - 1);
+      } catch (Exception) {
+        console.log("force issue");
+      }
     }
   }
 }
@@ -325,8 +329,10 @@ export function checkForcesCollision(playerToCheck, forces) {
 export function updateOtherPlayers(deltaTime) {
   otherPlayers.forEach((otherPlayer, index) => {
     // Check if player is an instance of the Player class
-    if (otherPlayer != null && otherPlayer instanceof Player && otherPlayer.name != "") {
-      otherPlayer.updateTick(deltaTime);
+    if (otherPlayer != null && otherPlayer instanceof Player) {
+      if (otherPlayer.name != "") {
+        otherPlayer.updateTick(deltaTime);
+      }
     } else {
       console.log("otherPlayer is not an instance of the Player class. Reinitializing...");
 
@@ -339,8 +345,8 @@ export function updateOtherPlayers(deltaTime) {
         otherPlayer.color,
         otherPlayer.angle,
         otherPlayer.pilot,
-        otherPlayer.name
-        // Add other properties as needed
+        otherPlayer.name,
+        otherPlayer.isPlaying
       );
 
       // Replace the old player with the new Player instance in the array
@@ -382,7 +388,7 @@ export function updatePowerups(deltaTime) {
   // Update the positions, velocities, etc. of the powerups once they move... they need their own update tick
   //setGlobalPowerUps(getGlobalPowerUps());
 }
-export function detectCollisions(playerToCheck, globalPowerUps, bots, otherPlayers) {
+export function detectCollisions(playerToCheck, globalPowerUps, bots, otherPlayers, forces) {
   // Detect collisions between the player's ship and the powerups or other ships
   // If a collision is detected, update the game state accordingly
   checkPowerupCollision(playerToCheck, globalPowerUps);
@@ -408,13 +414,11 @@ export function masterPeerUpdateGame(player, globalPowerUps, otherPlayers, bots,
 
   // The master peer also detects collisions between all ships and powerups
   otherPlayers.forEach((otherPlayer) => {
-    detectCollisions(otherPlayer, globalPowerUps, bots, otherPlayers);
-    checkForcesCollision(otherPlayer, forces);
+    detectCollisions(otherPlayer, globalPowerUps, bots, otherPlayers, forces);
   });
 
   bots.forEach((bot) => {
-    detectCollisions(bot, globalPowerUps, bots, otherPlayers);
-    checkForcesCollision(bot, forces);
+    detectCollisions(bot, globalPowerUps, bots, otherPlayers, forces);
   });
 
   // Send the game state to all other peers

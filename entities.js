@@ -1,3 +1,5 @@
+import { Player } from "./player.js";
+
 export let forces = [];
 
 export function setForces(newForces){
@@ -59,3 +61,18 @@ export class PowerUp extends Entity {
     this.value = value;
   }
 }
+
+export function createForceFromObject(obj) {
+    let tracks = new Player(obj.tracks.id,obj.tracks.x,obj.tracks.y, obj.tracks.powerUps,obj.tracks.color,obj.tracks.angle,obj.tracks.pilot,obj.tracks.name,obj.tracks.isPlaying,obj.tracks.isUserControlledCharacter );
+    let force = new ForceArea(obj.id,obj.x,obj.y, obj.force,obj.duration,obj.radius,obj.isAttractive,obj.color,tracks );
+    return force;
+  }
+  export function createMineFromObject(obj) {
+    let mine = new Mine(obj.id,obj.x,obj.y, obj.duration,obj.radius,obj.color )
+    return mine;
+  }
+  export function createPowerUpFromObject(obj) {
+    let powerUp = new PowerUp(obj.id,obj.x,obj.y,obj.color,obj.isStar,obj.radius,obj.value )
+    return powerUp;
+  }
+      

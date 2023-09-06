@@ -206,3 +206,7 @@ I think master might need to send state of otherplayers, so if master registers 
         and leave others (angle, velocity...but even velocity can be effected by pull/push which master would need to determine... maybe just don't update angle and mousex,y, space/shift)
 
 still the issue where a collision is clearly detect (e.g. go over mine and mine disappears) but the hit doesn't register for non-master peer.
+
+for fast speeds might need to calculate movement in half or quater frames to check for collision.
+
+might have to rethink the force having as reference to tracks player

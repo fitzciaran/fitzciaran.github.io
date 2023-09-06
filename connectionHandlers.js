@@ -1,14 +1,6 @@
 import {  otherPlayers } from "./astroids.js";
 
 import {
-  resetPowerLevels,
-  updateEnemies,
-  updatePowerups,
-  pointsToWin,
-  checkWinner,
-  detectCollisions,
-  updateBots,
-  masterPeerUpdateGame,
   shuffleArray,
 } from "./gameLogic.js";
 

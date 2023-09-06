@@ -1,5 +1,6 @@
 import { drawNameEntry, drawWinnerMessage, drawNameCursor, updateTopScoresInfo, drawPreGameOverlay } from "./canvasDrawingFunctions.js";
 import { setupPilotsImageSources, setupPilotsImages } from "./drawingUtils.js";
+import { forces } from "./entities.js";
 import { drawScene } from "./gameDrawing.js";
 import { tryNextId, attemptConnections, connectToPeers, updateConnections, isPlayerMasterPeer } from "./connectionHandlers.js";
 import { sendPlayerStates } from "./handleData.js";
@@ -142,7 +143,7 @@ function updateGame(deltaTime, playerActive) {
 
   if (playerActive || isPlayerMasterPeer(player)) {
     // Detect collisions with powerups or other ships
-    detectCollisions(player, globalPowerUps, bots, otherPlayers);
+    detectCollisions(player, globalPowerUps, bots, otherPlayers,forces);
 
     //todo might have to uncomment the condition
     // if (isPlayerMasterPeer(player)) {
