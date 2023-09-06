@@ -378,7 +378,10 @@ export function updateBots(deltaTime) {
       bots[index] = newPlayer;
     }
     if (bot != null && bot instanceof Bot) {
-      bot.updateBotInputs();
+      //todo not sure about this conditional
+      if (isPlayerMasterPeer(player)) {
+        bot.updateBotInputs();
+      }
       bot.updateTick(deltaTime);
     }
   });

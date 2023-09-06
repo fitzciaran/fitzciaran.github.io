@@ -1,5 +1,5 @@
 import { maxInvincibilityTime, maxSpecialMeter } from "./gameLogic.js";
-import { isPlayerMasterPeer } from "./connectionHandlers.js";
+import { isPlayerMasterPeer,timeSinceAnyMessageRecieved,timeSinceMessageFromMaster } from "./connectionHandlers.js";
 import { BotState, Player } from "./player.js";
 import { executionTime } from "./astroids.js";
 
@@ -25,6 +25,14 @@ export function renderDebugInfo(ctx, player, bots) {
   const executionTimeText = `executionTime =  ${executionTime}`;
   ctx.fillStyle = player.color;
   ctx.fillText(executionTimeText, 558, topGap + gap * 4 - textHeight);
+
+  const timeSinceAnyMessageRecievedText = `timeSinceAnyMessageRecieved =  ${timeSinceAnyMessageRecieved}`;
+  ctx.fillStyle = player.color;
+  ctx.fillText(timeSinceAnyMessageRecievedText, 558, topGap + gap * 5 - textHeight);
+
+  const timeSinceMessageFromMasterText = `timeSinceMessageFromMaster =  ${timeSinceMessageFromMaster}`;
+  ctx.fillStyle = player.color;
+  ctx.fillText(timeSinceMessageFromMasterText, 558, topGap + gap * 6 - textHeight);
 
   bots.forEach((bot, index) => {
     let botInfo;

@@ -140,10 +140,10 @@ function updateGame(deltaTime, playerActive) {
   // if (player.invincibleTimer > 0) {
   //   player.invincibleTimer -= 1;
   // }
-
-  if (playerActive || isPlayerMasterPeer(player)) {
+  //todo work out what to do here, do we do this for every local or not?
+  if (true || playerActive || isPlayerMasterPeer(player)) {
     // Detect collisions with powerups or other ships
-    detectCollisions(player, globalPowerUps, bots, otherPlayers,forces);
+    detectCollisions(player, globalPowerUps, bots, otherPlayers, forces);
 
     //todo might have to uncomment the condition
     // if (isPlayerMasterPeer(player)) {
@@ -170,22 +170,37 @@ function updateGame(deltaTime, playerActive) {
 }
 
 function camFollowPlayer(deltaTime) {
+  let allPlayers = null;
+  if (prioritizeHumanSpectate) {
+    allPlayers = [...bots, player];
+    shuffleArray(allPlayers);
+    //let shuffledOtherPlayers = shuffleArray([...otherPlayers]);
+    allPlayers = [...otherPlayers, ...bots, player];
+  } else {
+    allPlayers = [...bots, ...otherPlayers, player];
+    shuffleArray(allPlayers);
+  }
+  let inPlayersList = allPlayers.includes(playerToSpectate);
+  if (!inPlayersList && playerToSpectate != null) {
+    for (let candidate of allPlayers) {
+      if (candidate != null && candidate.id === playerToSpectate.id && candidate.name === playerToSpectate.name) {
+        playerToSpectate = candidate;
+        inPlayersList = true;
+        break; // Exit the loop once a matching player is found
+      }
+    }
+  }
+  let recentlyActive = false;
   if (playerToSpectate != null) {
+    recentlyActive = playerToSpectate.howLongSinceActive() < 1000;
+  }
+  if (playerToSpectate != null && inPlayersList && (recentlyActive || playerToSpectate.isBot)) {
+    //  if (playerToSpectate != null && !playerToSpectate.isDead && allPlayers.includes(playerToSpectate) && (playerToSpectate.howLongSinceActive() < 5000)) {
     updateCamera(playerToSpectate, deltaTime);
   } else {
-    let allPlayers = null;
-    if (prioritizeHumanSpectate) {
-      allPlayers = [...bots, player];
-      shuffleArray(allPlayers);
-      //let shuffledOtherPlayers = shuffleArray([...otherPlayers]);
-      allPlayers = [...otherPlayers, ...bots, player];
-    } else {
-      allPlayers = [...bots, ...otherPlayers, player];
-      shuffleArray(allPlayers);
-    }
-
     for (let candidate of allPlayers) {
-      if (candidate != null && candidate.id != player.id) {
+      if (candidate != null && candidate.id != player.id && (candidate.howLongSinceActive() < 1000 || candidate.isBot)) {
+        // if (candidate != null && !candidate.isDead && candidate.id != player.id && (candidate.howLongSinceActive() < 5000)) {
         playerToSpectate = candidate;
         updateCamera(playerToSpectate, deltaTime);
         break; // Exit the loop once a valid playerToSpectate is found

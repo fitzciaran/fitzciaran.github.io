@@ -1,6 +1,7 @@
 import {
   connections,
   connectedPeers,
+  setConnectedPeers,
   timeSinceMessageFromMaster,
   setTimeSinceMessageFromMaster,
   setTimeSinceAnyMessageRecieved,
@@ -236,7 +237,7 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
 
     if (combine) {
       // Combine the arrays and set connectedPeers = the combined array
-      connectedPeers = [...new Set([...data.connectedPeers, ...connectedPeers])];
+      setConnectedPeers([...new Set([...data.connectedPeers, ...connectedPeers])]);
       // connectedPeers.forEach((connectedID) => {
       //   connection.
       // });

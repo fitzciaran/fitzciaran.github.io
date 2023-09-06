@@ -403,14 +403,34 @@ export class Player {
 }
 
 export function createBotFromObject(obj) {
-  let bot = new Bot(obj.id,obj.x,obj.y, obj.powerUps,obj.color,obj.angle,obj.pilot,obj.name,obj.isPlaying,obj.isUserControlledCharacter )
+  let bot = new Bot(obj.id, obj.x, obj.y, obj.powerUps, obj.color, obj.angle, obj.pilot, obj.name, obj.isPlaying, obj.isUserControlledCharacter);
+  bot.timeOfLastActive = obj.timeOfLastActive;
+  bot.playerAngleData = obj.playerAngleData;
+  bot.mousePosX = obj.mousePosX;
+  bot.mousePosY = obj.mousePosY;
+  bot.currentSpeed = obj.currentSpeed;
+  bot.vel = obj.vel;
+  bot.distanceFactor = obj.distanceFactor;
+  bot.space = obj.space;
+  bot.shift = obj.shift;
+  bot.u =obj.u;
   return bot;
 }
 
 export class Bot extends Player {
-  constructor(id = null, x = null, y = null, powerUps = 0, color = null, angle = 0, pilot = "", name = "", isPlaying = true,
-  isUserControlledCharacter = false) {
-    super(id, x, y, powerUps, color, angle, pilot, name, isPlaying, isUserControlledCharacter = false);
+  constructor(
+    id = null,
+    x = null,
+    y = null,
+    powerUps = 0,
+    color = null,
+    angle = 0,
+    pilot = "",
+    name = "",
+    isPlaying = true,
+    isUserControlledCharacter = false
+  ) {
+    super(id, x, y, powerUps, color, angle, pilot, name, isPlaying, (isUserControlledCharacter = false));
     this.previousAngleDifference = 0;
     this.previousTurnDirection = 0;
     this.botState = BotState.FOLLOW_PLAYER;
@@ -419,6 +439,7 @@ export class Bot extends Player {
     this.timeOfLastActive = "";
     this.randomTarget = { x: 0, y: 0, id: "" };
     this.inRangeTicks = 0;
+    this.isBot = true;
   }
 
   updateTick(deltaTime) {

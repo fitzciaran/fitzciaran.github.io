@@ -37,6 +37,9 @@ let index = 0;
 
 let peer;
 export let connectedPeers = [];
+export function setConnectedPeers(newConnectedPeers){
+  connectToPeers = newConnectedPeers;
+}
 let connectionBackOffTime = 0;
 
 // Wait for a short delay to allow time for the connections to be attempted
