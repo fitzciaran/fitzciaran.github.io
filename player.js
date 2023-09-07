@@ -88,6 +88,7 @@ export class Player {
     this.timeSinceSentMessageThatWasRecieved = 0;
     this.special = Special.FORCE_PULL;
     this.specialMeter = 100;
+    this.usingSpecial = 0;
   }
 
   resetState(keepName, keepColor) {
@@ -277,7 +278,12 @@ export class Player {
         }
       }
     }
-    if (this.shift && this.specialMeter > 0) {
+    if (this.shift && (this.specialMeter > 50 || (this.usingSpecial && this.specialMeter > 1))) {
+      if (this.usingSpecial < 1) {
+        //initial cost more than keeping it going
+        this.specialMeter = Math.max(this.specialMeter - 10, 0);
+      }
+      this.usingSpecial = 3;
       //todo specials other than boost shouldn't be triggered here
       if (this.special == Special.FORCE_PULL || this.special == Special.FORCE_PUSH) {
         // if (this.forceCoolDown < 1) {
@@ -285,11 +291,14 @@ export class Player {
         //this.forceCoolDown = 200;
         this.specialMeter -= 3;
         this.specialMeter = Math.max(this.specialMeter, 0);
+        if (this.specialMeter == 0) {
+          this.usingSpecial = 0;
+        }
         let attractive = true;
         if (this.special == Special.FORCE_PUSH) {
           attractive = false;
         }
-        let force = new ForceArea(null, this.x, this.y, 0.2, 5, 200, attractive, "red", this);
+        let force = new ForceArea(null, this.x, this.y, 0.5, 5, 200, attractive, "red", this);
         forces.push(force);
       }
       //  }
@@ -330,6 +339,12 @@ export class Player {
       }
     } else {
       console.log("Invalid velocity values: x =", this.vel.x, "y =", this.vel.y);
+      if (isNaN(this.vel.x)) {
+        this.vel.x = 0;
+      }
+      if (isNaN(this.vel.y)) {
+        this.vel.y = 0;
+      }
     }
   }
 
@@ -361,7 +376,9 @@ export class Player {
     this.bouncePlayer();
     this.updatePlayerPosition(deltaTime);
     if (this.u) {
+      //this is a debug cheat
       this.invincibleTimer += 10;
+      this.specialMeter += 10;
     }
     if (this.invincibleTimer > 0) {
       this.invincibleTimer -= 1;
@@ -372,6 +389,7 @@ export class Player {
     if (this.specialMeter < maxSpecialMeter) {
       this.specialMeter++;
     }
+    this.usingSpecial = Math.max(this.usingSpecial - 1, 0);
 
     if (this.ticksSincePowerUpCollection > -1) {
       this.ticksSincePowerUpCollection++;
@@ -413,7 +431,9 @@ export function createBotFromObject(obj) {
   bot.distanceFactor = obj.distanceFactor;
   bot.space = obj.space;
   bot.shift = obj.shift;
-  bot.u =obj.u;
+  bot.u = obj.u;
+  bot.timeSinceSpawned = obj.timeSinceSpawned;
+  bot.isDead = bot.isDead;
   return bot;
 }
 

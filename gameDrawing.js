@@ -1,5 +1,6 @@
-import { renderDebugInfo, drawPowerupLevels, drawInvincibilityGauge,drawSpecialGauge } from "./drawGameUI.js";
+import { renderDebugInfo, drawPowerupLevels, drawInvincibilityGauge, drawSpecialGauge } from "./drawGameUI.js";
 import { rotateAndScalePoint, interpolate, spikeyBallPoints } from "./drawingUtils.js";
+import { forces } from "./entities.js";
 import { shipScale, mineScale } from "./gameLogic.js";
 
 let backLayer = new Image();
@@ -29,6 +30,7 @@ export function drawScene(player, otherPlayers, bots, mines, ctx, camX, camY, wo
   bots.forEach((bot) => drawRotatedShip(ctx, camX, camY, bot, shipPoints));
   drawPowerups(globalPowerUps, ctx, camX, camY);
   mines.forEach((mine) => drawEnemy(ctx, camX, camY, mine, spikeyBallPoints));
+  forces.forEach((force) => drawForce(ctx, camX, camY, force, spikeyBallPoints));
   drawMinimap(player, otherPlayers, bots, worldDimensions.width, worldDimensions.height);
   drawMinimapPowerups(globalPowerUps, worldDimensions.width, worldDimensions.height);
   if (player != null) {
@@ -329,6 +331,109 @@ export function drawEnemy(ctx, camX, camY, mine, points) {
   ctx.stroke();
   ctx.closePath();
   ctx.strokeStyle = color;
+  ctx.stroke();
+  ctx.closePath();
+}
+
+function drawForce(ctx, camX, camY, force, points) {
+  if (force.duration <= 0) {
+    return;
+  }
+  let centerX = force.x - camX;
+  let centerY = force.y - camY;
+  let color = force.color;
+  let radius = force.radius;
+  let attractive = force.isAttractive;
+
+  // Adjust the position based on the viewport
+  let screenX = centerX;
+  let screenY = centerY;
+
+  ctx.beginPath();
+  ctx.arc(screenX, screenY, radius, 0, Math.PI * 2);
+  ctx.strokeStyle = color;
+  ctx.stroke();
+  ctx.closePath();
+
+  // Draw arrows based on force type (attractive or repulsive)
+  ctx.beginPath();
+  ctx.moveTo(screenX, screenY);
+
+  //   for (let i = 0; i < 360; i += 45) {
+  //     let angle = (i * Math.PI) / 180;
+
+  //     if (attractive) {
+  //       //draw inwards arrows
+  //       let arrowX = screenX + 0.8 * radius * Math.cos(angle);
+  //       let arrowY = screenY + 0.8 * radius * Math.sin(angle);
+  //       // Calculate the coordinates for the arrowhead
+  //       let arrowheadX = arrowX - 100 * Math.cos(angle); // Adjust arrowhead length as needed
+  //       let arrowheadY = arrowY - 100 * Math.sin(angle); // Adjust arrowhead length as needed
+
+  //       ctx.moveTo(arrowheadX, arrowheadY);
+  //       ctx.lineTo(arrowX, arrowY); // Draw the arrow line
+  //     //   Draw the arrowhead for arrows pointing away from the center
+  //       ctx.moveTo(arrowheadX, arrowheadY);
+  //       ctx.lineTo(
+  //         arrowheadX + 15 * Math.cos(angle + Math.PI / 8), // Adjust arrowhead size as needed
+  //         arrowheadY + 15 * Math.sin(angle + Math.PI / 8) // Adjust arrowhead size as needed
+  //       );
+  //       ctx.moveTo(arrowheadX, arrowheadY);
+  //       ctx.lineTo(
+  //         arrowheadX + 15 * Math.cos(angle - Math.PI / 8), // Adjust arrowhead size as needed
+  //         arrowheadY + 15 * Math.sin(angle - Math.PI / 8) // Adjust arrowhead size as needed
+  //       );
+  //     } else {
+  //         }
+  //   }
+  for (let i = 0; i < 360; i += 45) {
+    let angle = (i * Math.PI) / 180;
+
+    if (attractive) {
+      //draw inwards arrows
+      let arrowX = screenX + 0.8 * radius * Math.cos(angle);
+      let arrowY = screenY + 0.8 * radius * Math.sin(angle);
+      // Calculate the coordinates for the arrowhead
+      let arrowheadX = arrowX - 100 * Math.cos(angle); // Adjust arrowhead length as needed
+      let arrowheadY = arrowY - 100 * Math.sin(angle); // Adjust arrowhead length as needed
+
+      ctx.moveTo(arrowheadX, arrowheadY);
+      ctx.lineTo(arrowX, arrowY); // Draw the arrow line
+      //   Draw the arrowhead for arrows pointing away from the center
+      ctx.moveTo(arrowheadX, arrowheadY);
+      ctx.lineTo(
+        arrowheadX + 15 * Math.cos(angle + Math.PI / 8), // Adjust arrowhead size as needed
+        arrowheadY + 15 * Math.sin(angle + Math.PI / 8) // Adjust arrowhead size as needed
+      );
+      ctx.moveTo(arrowheadX, arrowheadY);
+      ctx.lineTo(
+        arrowheadX + 15 * Math.cos(angle - Math.PI / 8), // Adjust arrowhead size as needed
+        arrowheadY + 15 * Math.sin(angle - Math.PI / 8) // Adjust arrowhead size as needed
+      );
+    } else {
+      // Draw outwards arrows
+      let arrowX = screenX + 0.3 * radius * Math.cos(angle);
+      let arrowY = screenY + 0.3 * radius * Math.sin(angle);
+      // Calculate the coordinates for the arrowhead
+      let arrowheadX = arrowX + 100 * Math.cos(angle); // Adjust arrowhead length as needed
+      let arrowheadY = arrowY + 100 * Math.sin(angle); // Adjust arrowhead length as needed
+
+      ctx.moveTo(arrowheadX, arrowheadY);
+      ctx.lineTo(arrowX, arrowY); // Draw the arrow line
+    //   Draw the arrowhead for arrows pointing away from the center
+      ctx.moveTo(arrowheadX, arrowheadY);
+      ctx.lineTo(
+        arrowheadX - 15 * Math.cos(angle + Math.PI / 8), // Adjust arrowhead size as needed
+        arrowheadY - 15 * Math.sin(angle + Math.PI / 8) // Adjust arrowhead size as needed
+      );
+      ctx.moveTo(arrowheadX, arrowheadY);
+      ctx.lineTo(
+        arrowheadX - 15 * Math.cos(angle - Math.PI / 8), // Adjust arrowhead size as needed
+        arrowheadY - 15 * Math.sin(angle - Math.PI / 8) // Adjust arrowhead size as needed
+      );
+    }
+  }
+
   ctx.stroke();
   ctx.closePath();
 }

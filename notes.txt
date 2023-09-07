@@ -211,7 +211,9 @@ for fast speeds might need to calculate movement in half or quater frames to che
 
 might have to rethink the force having as reference to tracks player
 
-should spectate on killed screen
-
 player property for still in initial setup?
-put timeSinceAnyMessageRecieved and timeSinceMessageFromMaster on the debug output draw
+
+credit "pushed" kills?
+
+could put a collectedby property on powerups then schedule removal for a few frames time, but during that time only the "collectedby" player will have acknowledgement of collection (also don't draw while scheduled removal)
+    more hacks to combat the big issue of p2p tho isnt it?

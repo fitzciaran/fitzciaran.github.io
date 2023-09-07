@@ -1,4 +1,4 @@
-import { drawNameEntry, drawWinnerMessage, drawNameCursor, updateTopScoresInfo, drawPreGameOverlay } from "./canvasDrawingFunctions.js";
+import { drawNameEntry, drawGameOverMessage, drawNameCursor, updateTopScoresInfo, drawPreGameOverlay } from "./canvasDrawingFunctions.js";
 import { setupPilotsImageSources, setupPilotsImages } from "./drawingUtils.js";
 import { forces } from "./entities.js";
 import { drawScene } from "./gameDrawing.js";
@@ -212,7 +212,10 @@ function camFollowPlayer(deltaTime) {
 function setupPilots(canvas, ctx) {
   setupPilotsImageSources();
   addPilotEventListners(canvas, ctx);
-  pilot1.selected = true;
+  //todo will need to update this if multiple pilots 
+  if (!pilot2.selected) {
+    pilot1.selected = true;
+  }
 }
 
 function updatePilot() {
@@ -228,7 +231,7 @@ function updateName() {
 
 function updateWinState() {
   //drawScene(player, otherPlayers, bots, mines,ctx, camX, camY, worldDimensions, canvas, globalPowerUps);
-  drawWinnerMessage(ctx, canvas, endGameMessage);
+  drawGameOverMessage(ctx, canvas, endGameMessage);
 }
 
 export function setGlobalPowerUps(newPowerUps) {

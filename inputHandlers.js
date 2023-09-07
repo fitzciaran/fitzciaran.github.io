@@ -1,5 +1,5 @@
 import { camX, camY, getGameState, setGameState, getCanvas, GameState, PilotName, player } from "./astroids.js";
-import { drawNameEntry, playButtonX, playButtonY, playButtonWidth, playButtonHeight } from "./canvasDrawingFunctions.js";
+import { drawNameEntry, playButtonX, playButtonY, playButtonWidth, playButtonHeight , menuButtonX, menuButtonY, menuButtonWidth, menuButtonHeight } from "./canvasDrawingFunctions.js";
 import { pilot1, pilot2, calculateAngle, getRandomName, max_player_name } from "./gameLogic.js";
 
 let pilotMouseMoveListener;
@@ -287,5 +287,14 @@ function handleWinStateClick(event) {
   if (event.clientX > buttonX && event.clientX < buttonX + buttonWidth && event.clientY > buttonY && event.clientY < buttonY + buttonHeight) {
     // Play button has been clicked
     setGameState(GameState.GAME);
+  }
+  buttonX = menuButtonX;
+  buttonY = menuButtonY;
+  buttonWidth = menuButtonWidth;
+  buttonHeight = menuButtonHeight;
+  // Check if the mouse click is within the bounds of the menu button
+  if (event.clientX > buttonX && event.clientX < buttonX + buttonWidth && event.clientY > buttonY && event.clientY < buttonY + buttonHeight) {
+    // Menu button has been clicked
+    setGameState(GameState.INTRO);
   }
 }

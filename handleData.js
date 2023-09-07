@@ -245,12 +245,12 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
       sendConnectedPeers();
     }
   }
-  handleCounter++;
-  // Log the data every 1000 calls
-  if (handleCounter === 1000) {
-    console.log("handling data:", data);
-    handleCounter = 0; // reset the counter
-  }
+//   handleCounter++;
+//   // Log the data every 1000 calls
+//   if (handleCounter === 1000) {
+//     console.log("handling data:", data);
+//     handleCounter = 0; // reset the counter
+//   }
 }
 
 function differsFrom(firstArray, secondArray) {

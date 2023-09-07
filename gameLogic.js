@@ -14,7 +14,7 @@ export const mineScale = 0.7;
 export let pointsToWin = 5;
 let initialInvincibleTime = 60 * 10;
 export let maxInvincibilityTime = initialInvincibleTime;
-export let maxSpecialMeter = 100;
+export let maxSpecialMeter = 200;
 let maxPowerups = 10;
 let maxMines = 15;
 export let spawnProtectionTime = 100;
@@ -167,14 +167,10 @@ export function checkMineCollision(playerToCheck, mines) {
 
     if (distance < 10 * shipScale + mines[i].radius) {
       // assuming the radius of ship is 10 - todo update for better hitbox on ship
-      if (playerToCheck.invincibleTimer == 0 && player.timeSinceSpawned > spawnProtectionTime) {
-        //may need to make this an array of "recently collected / iteracted stuff" to be more robust in the future rather than a simple power up timer
+      if (playerToCheck.invincibleTimer == 0 && playerToCheck.timeSinceSpawned > spawnProtectionTime) {
         playerToCheck.gotHit("a mine");
-        playerToCheck.ticksSincePowerUpCollection = 0;
-        if (mines[i].isStar) {
-          playerToCheck.invincibleTimer = initialInvincibleTime;
-        }
-        mines.splice(i, 1);
+        mines[i].hitFrames = 5;
+        // mines.splice(i, 1);
       }
       // sendPowerups(globalPowerUps);
       setMines(mines);
@@ -286,6 +282,10 @@ export function updateEnemies(deltaTime) {
 export function checkForcesCollision(playerToCheck, forces) {
   for (let force of forces) {
     if (playerToCheck == force.tracks) {
+      continue;
+    }
+    if (playerToCheck != null && force.tracks != null && playerToCheck.id === force.tracks.id && playerToCheck.name === force.tracks.name) {
+      //might not be matching above if force.tracks has been recreated after being serialised and sent.
       continue;
     }
 
@@ -424,6 +424,14 @@ export function masterPeerUpdateGame(player, globalPowerUps, otherPlayers, bots,
     detectCollisions(bot, globalPowerUps, bots, otherPlayers, forces);
   });
 
+  // Remove mines with hit frames that have expired.
+  for (let i = mines.length - 1; i >= 0; i--) {
+    if (mines[i].hitFrames > 0) {
+      mines[i].hitFrames--;
+      // If hit frames have expired, remove the mine.
+      mines.splice(i, 1);
+    }
+  }
   // Send the game state to all other peers
 
   //...not sending game state of otherplayers...hmm?

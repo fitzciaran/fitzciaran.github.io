@@ -11,6 +11,11 @@ export let playButtonY = 0;
 export let playButtonWidth = 0;
 export let playButtonHeight = 0;
 
+export let menuButtonX = 0;
+export let menuButtonY = 0;
+export let menuButtonWidth = 0;
+export let menuButtonHeight = 0;
+
 //should probably refactor this so logic lives elsewhere
 export function updateTopScoresInfo() {
   var date = new Date();
@@ -25,7 +30,7 @@ export function updateTopScoresInfo() {
     });
 }
 
-export function drawWinnerMessage(ctx, canvas, message) {
+export function drawGameOverMessage(ctx, canvas, message) {
   ctx.font = "70px Arial";
   ctx.fillStyle = "white";
   ctx.textAlign = "center";
@@ -35,7 +40,7 @@ export function drawWinnerMessage(ctx, canvas, message) {
     const lineHeight = 70; // Adjust this value as needed for spacing
 
     // Calculate the position for the first part of the message
-    const firstPartY = canvas.height / 2 - (lineHeight * (messageParts.length )) / 2;
+    const firstPartY = canvas.height / 2 - (lineHeight * messageParts.length) / 2;
 
     // Draw each part of the message
     messageParts.forEach((part, index) => {
@@ -61,9 +66,20 @@ export function drawWinnerMessage(ctx, canvas, message) {
   let buttonHeight = 40;
   let buttonX = canvas.width / 2 - buttonWidth / 2;
   let buttonY = canvas.height / 2 + 80;
-
+  let gap = 30;
   let radius = 10; // Radius for rounded corners
-  drawPlayButton(ctx, buttonX, buttonY, buttonWidth, buttonHeight, radius);
+  drawButton(ctx, buttonX, buttonY, buttonWidth, buttonHeight, radius, "Play");
+  playButtonX = buttonX;
+  playButtonY = buttonY;
+  playButtonWidth = buttonWidth;
+  playButtonHeight = buttonHeight;
+
+  buttonY = buttonY + buttonHeight + gap;
+  drawButton(ctx, buttonX, buttonY, buttonWidth, buttonHeight, radius, "Menu", "blue","darkblue");
+  menuButtonX = buttonX;
+  menuButtonY = buttonY;
+  menuButtonWidth = buttonWidth;
+  menuButtonHeight = buttonHeight;
 }
 
 let loreIndex = 0;
@@ -282,16 +298,20 @@ export function drawNameEntry(canvas, ctx, name, x, y) {
   let buttonHeight = 20;
   let radius = 10; // Radius for rounded corners
 
-  drawPlayButton(ctx, buttonX, buttonY, buttonWidth, buttonHeight, radius);
+  drawButton(ctx, buttonX, buttonY, buttonWidth, buttonHeight, radius, "Play");
+  playButtonX = buttonX;
+  playButtonY = buttonY;
+  playButtonWidth = buttonWidth;
+  playButtonHeight = buttonHeight;
 }
 
-function drawPlayButton(ctx, buttonX, buttonY, buttonWidth, buttonHeight, radius) {
+function drawButton(ctx, buttonX, buttonY, buttonWidth, buttonHeight, radius, text, color1 = "green", color2 = "darkgreen") {
   // Create gradient
   let gradient;
   try {
     gradient = ctx.createLinearGradient(buttonX, buttonY, buttonX, buttonY + buttonHeight);
-    gradient.addColorStop(0, "green");
-    gradient.addColorStop(1, "darkgreen");
+    gradient.addColorStop(0, color1);
+    gradient.addColorStop(1, color2);
 
     ctx.fillStyle = gradient;
   } catch (Exception) {
@@ -305,11 +325,7 @@ function drawPlayButton(ctx, buttonX, buttonY, buttonWidth, buttonHeight, radius
   ctx.font = "12px Arial";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText("Play", buttonX + buttonWidth / 2, buttonY + buttonHeight / 2);
-  playButtonX = buttonX;
-  playButtonY = buttonY;
-  playButtonWidth = buttonWidth;
-  playButtonHeight = buttonHeight;
+  ctx.fillText(text, buttonX + buttonWidth / 2, buttonY + buttonHeight / 2);
 }
 
 export function drawNameCursor(canvas, ctx, name, x, y) {

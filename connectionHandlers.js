@@ -160,7 +160,7 @@ export function tryNextId(player) {
 }
 
 function addConnectionHandlers(player, otherPlayers, conn, globalPowerUps) {
-  console.log("adding connection handlers");
+  // console.log("adding connection handlers");
   conn.on("open", function () {
     console.log("Connection opened with peer:", conn.peer);
     connections.push(conn);

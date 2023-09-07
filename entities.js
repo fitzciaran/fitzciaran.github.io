@@ -49,6 +49,7 @@ export class Mine extends Enemy {
     this.duration = duration;
     this.radius = radius;
     this.color = color;
+    this.hitFrames = 0;
   }
 }
 
