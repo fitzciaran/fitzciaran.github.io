@@ -36,7 +36,7 @@ export function drawScene(player, otherPlayers, bots, mines, ctx, camX, camY, wo
   if (player != null) {
     drawRotatedShip(ctx, camX, camY, player, shipPoints);
     renderDebugInfo(ctx, player, bots);
-    drawInvincibilityGauge(ctx, player, canvas.width / 2, canvas.height - 70);
+    // drawInvincibilityGauge(ctx, player, canvas.width / 2, canvas.height - 70);
     drawSpecialGauge(ctx, player, canvas.width / 2, canvas.height - 20);
   }
   drawPowerupLevels(ctx, player, otherPlayers, bots);
@@ -309,7 +309,11 @@ function drawRotatedShip(ctx, camX, camY, player, points) {
     player.recentKillTicks -= 1;
     drawKillInfo(ctx, player, player.recentKillText, camX, camY);
   }
-
+  const invincibleGuagePositionX = centerX - camX;
+  const invincibleGuagePositionY = centerY - camY - 25;
+  if (player.invincibleTimer > 0) {
+    drawInvincibilityGauge(ctx, player, invincibleGuagePositionX, invincibleGuagePositionY, 70, 15, 2);
+  }
   ctx.shadowBlur = 0;
 }
 
@@ -420,7 +424,7 @@ function drawForce(ctx, camX, camY, force, points) {
 
       ctx.moveTo(arrowheadX, arrowheadY);
       ctx.lineTo(arrowX, arrowY); // Draw the arrow line
-    //   Draw the arrowhead for arrows pointing away from the center
+      //   Draw the arrowhead for arrows pointing away from the center
       ctx.moveTo(arrowheadX, arrowheadY);
       ctx.lineTo(
         arrowheadX - 15 * Math.cos(angle + Math.PI / 8), // Adjust arrowhead size as needed

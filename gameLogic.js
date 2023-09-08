@@ -167,8 +167,13 @@ export function checkMineCollision(playerToCheck, mines) {
 
     if (distance < 10 * shipScale + mines[i].radius) {
       // assuming the radius of ship is 10 - todo update for better hitbox on ship
-      if (playerToCheck.invincibleTimer == 0 && playerToCheck.timeSinceSpawned > spawnProtectionTime) {
+      if (playerToCheck.invincibleTimer == 0 && playerToCheck.timeSinceSpawned > spawnProtectionTime && mines[i].hitFrames < 1) {
         playerToCheck.gotHit("a mine");
+        mines[i].hitFrames = 5;
+        // mines.splice(i, 1);
+      }
+      if (playerToCheck.invincibleTimer > 0 && playerToCheck.timeSinceSpawned > spawnProtectionTime && mines[i].hitFrames < 1) {
+        playerToCheck.invincibleTimer = Math.max(playerToCheck.invincibleTimer - 100, 0);
         mines[i].hitFrames = 5;
         // mines.splice(i, 1);
       }

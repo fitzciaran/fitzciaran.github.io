@@ -221,7 +221,7 @@ export class Player {
       this.comboScaler += 1;
     }
 
-    this.invincibleTimer += 300;
+    this.invincibleTimer -= 150;
     this.invincibleTimer = Math.min(this.invincibleTimer, maxInvincibilityTime);
     // drawKillInfo(ctx, this, score, camX, camY);
   }

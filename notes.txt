@@ -217,3 +217,7 @@ credit "pushed" kills?
 
 could put a collectedby property on powerups then schedule removal for a few frames time, but during that time only the "collectedby" player will have acknowledgement of collection (also don't draw while scheduled removal)
     more hacks to combat the big issue of p2p tho isnt it?
+
+
+invicibletime goes down when hits
+gauage appears above player

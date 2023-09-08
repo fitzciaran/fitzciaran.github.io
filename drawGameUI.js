@@ -1,5 +1,5 @@
 import { maxInvincibilityTime, maxSpecialMeter } from "./gameLogic.js";
-import { isPlayerMasterPeer,timeSinceAnyMessageRecieved,timeSinceMessageFromMaster } from "./connectionHandlers.js";
+import { isPlayerMasterPeer, timeSinceAnyMessageRecieved, timeSinceMessageFromMaster } from "./connectionHandlers.js";
 import { BotState, Player } from "./player.js";
 import { executionTime } from "./astroids.js";
 
@@ -45,20 +45,17 @@ export function renderDebugInfo(ctx, player, bots) {
   });
 }
 
-export function drawInvincibilityGauge(ctx, player, centerX, bottomY) {
+export function drawInvincibilityGauge(ctx, player, centerX, bottomY, gaugeWidth = 200, gaugeHeight = 50,borderWidth = 7) {
   const fillPercent = player.invincibleTimer / maxInvincibilityTime;
-  drawGauge(ctx, centerX, bottomY, fillPercent,"#ff9900");
+  drawGauge(ctx, centerX, bottomY, fillPercent, "#ff9900", gaugeWidth, gaugeHeight,borderWidth);
 }
 
-export function drawSpecialGauge(ctx, player, centerX, bottomY) {
+export function drawSpecialGauge(ctx, player, centerX, bottomY, gaugeWidth = 200, gaugeHeight = 50,borderWidth = 7) {
   const fillPercent = player.specialMeter / maxSpecialMeter;
-  drawGauge(ctx, centerX, bottomY, fillPercent,"#00FF00");
+  drawGauge(ctx, centerX, bottomY, fillPercent, "#00FF00", gaugeWidth, gaugeHeight,borderWidth);
 }
 
-function drawGauge(ctx, centerX, bottomY, fillPercent,color) {
-  const gaugeWidth = 200; // Adjust the width of the gauge
-  const gaugeHeight = 50; // Adjust the height of the gauge
-  const borderWidth = 7; // Adjust the border width
+function drawGauge(ctx, centerX, bottomY, fillPercent, color, gaugeWidth = 200, gaugeHeight = 50,borderWidth = 7) {
   const gaugeColor = color; // Fill color of the gauge
   const borderColor = "#333"; // Border color
 
