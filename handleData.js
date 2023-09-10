@@ -182,7 +182,7 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
     otherPlayer.timeOfLastActive = data.timeOfLastActive;
     otherPlayer.hitBy = data.hitBy;
 
-    if (isPlayerMasterPeer(player) && otherPlayer.isMaster  && !otherPlayer.isBot) {
+    if (isPlayerMasterPeer(player) && otherPlayer.isMaster && !otherPlayer.isBot) {
       wrappedResolveConflicts(player, otherPlayers, globalPowerUps);
     }
   }
@@ -291,8 +291,28 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
   }
   if (data.mines) {
     setTimeSinceMessageFromMaster(0);
-    const mineInstances = data.mines.map(createMineFromObject);
-    setMines(mineInstances);
+    //const mineInstances = data.mines.map(createMineFromObject);
+    //setMines(mineInstances);
+    for (const receivedMine of data.mines) {
+      // Find the corresponding local bot by ID
+      const localMine = findMineById(receivedMine.id);
+      const interpFactor = 0.2;
+      if (localMine) {
+        //if the local force is the current local players force don't need to update it
+        // If the local force exists, interpolate its position
+        // This assumes you have a variable for interpolation factor (e.g., interpFactor)
+        localMine.x = localMine.x + (receivedMine.x - localMine.x) * interpFactor;
+        localMine.y = localMine.y + (receivedMine.y - localMine.y) * interpFactor;
+        localMine.force = receivedMine.force;
+        localMine.duration = receivedMine.duration;
+        localMine.radius = receivedMine.radius;
+        localMine.hitFrames = receivedMine.hitFrames;
+        localMine.color = receivedMine.color;
+      } else {
+        // If the local mine doesn't exist, add it to the mines array
+        mines.push(createMineFromObject(receivedMine));
+      }
+    }
   }
   if (data.forces) {
     setTimeSinceMessageFromMaster(0);
@@ -304,18 +324,23 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
       const localForce = findForceById(receivedForce.id);
       const interpFactor = 0.2;
       if (localForce) {
-        // If the local force exists, interpolate its position
-        // This assumes you have a variable for interpolation factor (e.g., interpFactor)
-        localForce.x = localForce.x + (receivedForce.x - localForce.x) * interpFactor;
-        localForce.y = localForce.y + (receivedForce.y - localForce.y) * interpFactor;
-        localForce.force = receivedForce.force;
-        localForce.duration = receivedForce.duration;
-        localForce.radius = receivedForce.radius;
-        localForce.isAttractive = receivedForce.isAttractive;
-        localForce.color = receivedForce.color;
-        localForce.tracks = receivedForce.tracks;
-      } else {
-        // If the local bot doesn't exist, add it to the bots array
+        if (localForce.tracks.id != player.id) {
+          //if the local force is the current local players force don't need to update it
+          // If the local force exists, interpolate its position
+          // This assumes you have a variable for interpolation factor (e.g., interpFactor)
+          localForce.x = localForce.x + (receivedForce.x - localForce.x) * interpFactor;
+          localForce.y = localForce.y + (receivedForce.y - localForce.y) * interpFactor;
+          localForce.force = receivedForce.force;
+          localForce.duration = receivedForce.duration;
+          localForce.radius = receivedForce.radius;
+          localForce.isAttractive = receivedForce.isAttractive;
+          localForce.color = receivedForce.color;
+          localForce.tracks = receivedForce.tracks;
+        } else {
+          console.log("currentplayers force");
+        }
+      } else if (receivedForce.tracks.id != player.id) {
+        // If the local force doesn't exist, add it to the forces array
         forces.push(receivedForce);
       }
     }
@@ -387,9 +412,13 @@ function findBotById(id) {
   return bots.find((bot) => bot.id === id);
 }
 
-// Function to find a bot by ID in the bots array
+// Function to find a force by ID in the forces array
 function findForceById(id) {
   return forces.find((force) => force.id === id);
+}
+// Function to find a bot by ID in the bots array
+function findMineById(id) {
+  return mines.find((mine) => mine.id === id);
 }
 
 function differsFrom(firstArray, secondArray) {

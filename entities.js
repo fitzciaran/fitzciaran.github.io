@@ -62,7 +62,8 @@ export class Mine extends Enemy {
     if (!existingForce) {
       // If no force with the same id exists, create a new one
       if (this.force !== 0) {
-        let minesForce = new ForceArea("mine-" + this.id, this.x, this.y, 0.3, 10, 200, this.force == 1, "red", this);
+        let minesForce = new ForceArea("mine-" + this.id, this.x, this.y, 0.3, 10, 200, this.force == 1, "pink", this);
+        //currently mine doesn't keep a reference to it's force, is that fine?
         forces.push(minesForce);
       }
     }else{
@@ -82,6 +83,7 @@ export class PowerUp extends Entity {
 }
 
 export function createForceFromObject(obj) {
+    //why is tracks a new player not a found one?
   let tracks = new Player(
     obj.tracks.id,
     obj.tracks.x,

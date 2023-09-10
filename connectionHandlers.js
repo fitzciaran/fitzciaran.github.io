@@ -265,9 +265,14 @@ export function chooseNewMasterPeer(player, otherPlayers) {
   otherPlayers.forEach((otherPlayer) => {
     if (otherPlayer.timeSinceSentMessageThatWasRecieved > 60) {
       connectedPeers = connectedPeers.filter((peer) => peer !== otherPlayer.id);
+    } else {
+      if (!connectedPeers.includes(otherPlayer.id)) {
+        connectedPeers.push(otherPlayer.id);
+      }
     }
   });
   if (connectedPeers.length > 0) {
+    connectedPeers.sort();
     masterPeerId = connectedPeers[0];
 
     if (masterPeerId === player.id) {
@@ -329,6 +334,8 @@ function resolveConnectionConflicts(player, otherPlayers, globalPowerUps) {
   // connections = connections.filter((connection) => connection.peer !== connectedPeers[0]);
   // connectedPeers.splice(0, 1);
   //might not be able to attempt connections again without issues
-  // setTimeout(() => attemptConnections(player, otherPlayers, globalPowerUps), 50);
+  if (timeSinceAnyMessageRecieved > 1000) {
+    setTimeout(() => attemptConnections(player, otherPlayers, globalPowerUps), 50);
+  }
   masterPeerId = chooseNewMasterPeer(player, otherPlayers);
 }

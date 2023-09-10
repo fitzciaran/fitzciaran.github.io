@@ -247,3 +247,5 @@ Be more selective about what data send? currently sending everything for bots/fo
 Don't convert all bot (and forces/mines etc) to proper class since we don't them in most cases anyway. - optimise
 
 spawn warning for mines for example
+
+still issue with the interpoloation of position of crafts/forces
