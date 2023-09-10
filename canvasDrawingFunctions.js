@@ -236,7 +236,7 @@ function renderInfoText(ctx, lore, x, y, maxWidth) {
         const gaugeHeight = fontSize; // Match the height with the font size
         const filled = speedValue; // Use the speed value
         const total = 5; // Assuming the total is always 5
-        drawFilledGauge(ctx, centerX, currentY + 15, gaugeWidth, gaugeHeight, 7, filled, total);
+        drawFilledGauge(ctx, centerX, currentY + 15, gaugeWidth, gaugeHeight, 3, filled, total,"blue");
         currentY += lineHeight; // Move to the next line
         continue; // Skip the rest of the loop for this section
       }

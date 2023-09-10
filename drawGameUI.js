@@ -49,9 +49,9 @@ export function renderDebugInfo(ctx, player, bots) {
   });
 }
 
-export function drawFilledGauge(ctx, centerX, bottomY, gaugeWidth = 200, gaugeHeight = 50, borderWidth = 7, filled, total) {
+export function drawFilledGauge(ctx, centerX, bottomY, gaugeWidth = 200, gaugeHeight = 50, borderWidth = 7, filled, total,color="#ff9900") {
   const fillPercent = filled / total;
-  drawGauge(ctx, centerX, bottomY, fillPercent, "#ff9900", gaugeWidth, gaugeHeight, borderWidth);
+  drawGauge(ctx, centerX, bottomY, fillPercent,color, gaugeWidth, gaugeHeight, borderWidth);
 }
 
 export function drawInvincibilityGauge(ctx, player, centerX, bottomY, gaugeWidth = 200, gaugeHeight = 50, borderWidth = 7) {
