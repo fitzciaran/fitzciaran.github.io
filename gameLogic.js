@@ -27,7 +27,7 @@ export const pilot1 = {
   width: 100,
   height: 100,
   selected: false,
-  lore: "Orion is the muscle-bound moral compass of the cosmos. Born in a dying star, Orion's got strength that makes bodybuilders weep and a heart that's never heard of a grey area. He's saved more worlds than he's had hot dinners, and his name is basically a synonym for 'awesome' in every galaxy. But don't worry, he hasn't let it go to his head. He's always ready to lend a hand, or a bicep. Orion: not just a pilot, but a one-man, space-faring beacon of hope.",
+  lore: "Orion, Speed: 4, Special: Gravity Attract, Agressive - likes to get powered up and use Gravity Attract to get kills",
 };
 
 export const pilot2 = {
@@ -37,7 +37,7 @@ export const pilot2 = {
   width: 100,
   height: 100,
   selected: false,
-  lore: "Bumble, the hero nobody asked for, and who just won't go away. He's got a unique talent for tripping over absolutely nothing and a flying skill that's... well, let's just call it 'creative'. He might not have Orion's strength, or any gazelle's grace, or even the reflexes of a half-asleep sloth, but boy, does he have determination. And a knack for surviving situations he really shouldn't. Bumble is proof that some people have no potential.",
+  lore: "Bumble, Speed: 3, Special: Gravity Repel, Defensive - not so fast but can use Gravity Repel to keep attackers away ",
 };
 
 export const max_player_name = 15;

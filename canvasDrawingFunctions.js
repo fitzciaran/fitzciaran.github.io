@@ -198,27 +198,53 @@ export function drawPreGameOverlay(canvas, ctx) {
 
 function renderLoreText(ctx, lore, x, y, maxWidth) {
   // Set font and color
-  ctx.font = "23px Gothic";
-  ctx.fillStyle = "coral";
   ctx.textAlign = "start";
+  let sections = lore.split(",");
+  let currentY = y;
 
-  let words = lore.split(" ");
-  let line = "";
-  let lineHeight = 25; // Line height
+  for (let i = 0; i < sections.length; i++) {
+    let section = sections[i].trim();
 
-  for (let n = 0; n < words.length; n++) {
-    let testLine = line + words[n] + " ";
-    let metrics = ctx.measureText(testLine);
-    let testWidth = metrics.width;
-    if (testWidth > maxWidth && n > 0) {
-      ctx.fillText(line, x, y);
-      line = words[n] + " ";
-      y += lineHeight;
+    // Determine font size and line height based on section index
+    let fontSize;
+    let lineHeight;
+    if (i === 0) {
+      // First section (title) should be the biggest
+      fontSize = 50;
+      lineHeight = fontSize * 1.5; // Adjust the multiple as needed
+    } else if (i === sections.length - 1) {
+      // Last section (description) should be the smallest
+      fontSize = 20;
+      lineHeight = fontSize * 1.2; // Adjust the multiple as needed
     } else {
-      line = testLine;
+      // Other sections can have a default size
+      fontSize = 33;
+      lineHeight = fontSize * 1.3; // Adjust the multiple as needed
     }
+
+    ctx.font = fontSize + "px Gothic";
+    ctx.fillStyle = "coral";
+
+    let words = section.split(" ");
+    let line = "";
+
+    for (let n = 0; n < words.length; n++) {
+      let testLine = line + words[n] + " ";
+      let metrics = ctx.measureText(testLine);
+      let testWidth = metrics.width;
+
+      if (testWidth > maxWidth && n > 0) {
+        ctx.fillText(line, x, currentY);
+        line = words[n] + " ";
+        currentY += lineHeight;
+      } else {
+        line = testLine;
+      }
+    }
+
+    ctx.fillText(line, x, currentY);
+    currentY += lineHeight; // Move to the next section
   }
-  ctx.fillText(line, x, y);
 }
 
 //wip

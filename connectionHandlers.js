@@ -39,7 +39,7 @@ let index = 0;
 let peer;
 export let connectedPeers = [];
 export function setConnectedPeers(newConnectedPeers) {
-  connectToPeers = newConnectedPeers;
+  connectedPeers = newConnectedPeers;
 }
 let connectionBackOffTime = 0;
 
@@ -101,23 +101,32 @@ export function connectToPeers(player, otherPlayers, globalPowerUps) {
     if (id !== player.id) {
       // Check if a connection with this id already exists
       let existingConnection = connections.find((conn) => conn.peer === id);
-      if (!existingConnection) {
+      if (!existingConnection || !existingConnection.open) {
+        // If the connection doesn't exist or is closed, retry it
         let conn = null;
         if (peer) {
           conn = peer.connect(id);
         } else {
-          if (Math.random() > 0.9) {
-            console.log("peer undefined in connect to peeers");
-          }
+          console.log("peer undefined in connect to peers");
         }
         if (conn != null && conn != undefined) {
-          connections.push(conn); // Add the connection to the array
+          // If the connection was successfully (re)established, update or replace it
+          if (existingConnection) {
+            // If there was an existing connection, replace it with the new one
+            const index = connections.indexOf(existingConnection);
+            if (index !== -1) {
+              connections.splice(index, 1, conn);
+            }
+          } else {
+            // If there wasn't an existing connection, add the new one to the array
+            connections.push(conn);
+          }
           everConnected = true;
           //todo carefully assess result of removing this
           addConnectionHandlers(player, otherPlayers, conn, globalPowerUps);
         }
       } else {
-        // console.log("existing connection with: " + id);
+        // The existing connection is open, so no action needed
       }
     }
   });

@@ -249,3 +249,8 @@ Don't convert all bot (and forces/mines etc) to proper class since we don't them
 spawn warning for mines for example
 
 still issue with the interpoloation of position of crafts/forces
+
+boost areas are just forces now... well current forces are point based maybe need direction based variant 
+
+  //gotHit and addScore are both doing an additional key function of sending the playerstates as master. 
+  //Need to unpick this, maybe there should be events for gotHit and addscore and masterpeer responds to such events with sending player state for the given player

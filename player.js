@@ -32,8 +32,8 @@ const bounceFactor = 1.5;
 const offset = 1;
 const minBounceSpeed = 5;
 const maxBotsThatCanTargetAtOnce = 1;
-const maxVel = 1000000; 
-const minVel = -1000000; 
+const maxVel = 1000000;
+const minVel = -1000000;
 
 export const BotState = {
   FOLLOW_PLAYER: "followPlayer",
@@ -144,6 +144,8 @@ export class Player {
       this.resetState(keepName, keepColor);
     }
   }
+  //gotHit and addScore are both doing an additional key function of sending the playerstates as master.
+  //Need to unpick this, maybe there should be events for gotHit and addscore and masterpeer responds to such events with sending player state for the given player
   gotHit(hitBy) {
     this.setIsDead(true);
     this.hitBy = hitBy;
@@ -200,46 +202,45 @@ export class Player {
     this.kills += 1;
     let score = 2 * this.comboScaler;
     score += Math.round(playerThatGotHit.powerUps / 3);
-
-    this.addScore(score);
     this.recentKillTicks = 60;
-    score *= 100;
+    let textScore = score * 100;
     switch (this.comboScaler) {
       case 1:
-        this.recentKillText = "KILL " + score;
+        this.recentKillText = "KILL " + textScore;
         break;
       case 2:
-        this.recentKillText = "Double KILL " + score;
+        this.recentKillText = "Double KILL " + textScore;
         break;
       case 3:
-        this.recentKillText = "Triple KILL " + score;
+        this.recentKillText = "Triple KILL " + textScore;
         break;
       case 4:
-        this.recentKillText = "QUAD KILL " + score;
+        this.recentKillText = "QUAD KILL " + textScore;
         break;
       case 5:
-        this.recentKillText = "PENTA KILL " + score;
+        this.recentKillText = "PENTA KILL " + textScore;
         break;
       case 6:
-        this.recentKillText = "HEXAKILL " + score;
+        this.recentKillText = "HEXAKILL " + textScore;
         break;
       case 7:
-        this.recentKillText = "SEPTAKILL " + score;
+        this.recentKillText = "SEPTAKILL " + textScore;
         break;
       case 8:
-        this.recentKillText = "OCTAKILL " + score;
+        this.recentKillText = "OCTAKILL " + textScore;
         break;
       case 9:
-        this.recentKillText = "NINELIFE KILL " + score;
+        this.recentKillText = "NINELIFE KILL " + textScore;
         break;
       default:
-        this.recentKillText = "MONSTER KILL " + score;
+        this.recentKillText = "MONSTER KILL " + textScore;
         break;
     }
     if (this.comboScaler < 10) {
       this.comboScaler += 1;
     }
     this.setInvincibleTimer(this.invincibleTimer - 150);
+    this.addScore(score);
   }
 
   setInvincibleTimer(newTime) {
