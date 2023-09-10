@@ -1,5 +1,5 @@
 export const spikeyBallPoints = [];
-import { pilot1, pilot2 } from "./gameLogic.js";
+import { pilots } from "./gameLogic.js";
 export const loreTablet = {
   x: 0,
   y: -300,
@@ -9,12 +9,45 @@ export const loreTablet = {
 };
 
 function centerPilots(canvas) {
-  // Center the pilots
-  pilot1.x = canvas.width / 2 - pilot1.width * 2;
-  pilot2.x = canvas.width / 2 + pilot2.width;
+  // Calculate the horizontal gap between pilots (excluding the central gap)
+  const gapBetweenPilots = 20; // Gap between all pilots except the central gap
+  const centralGap = 300; // Width of the central gap
 
-  pilot1.y = canvas.height / 6;
-  pilot2.y = canvas.height / 6;
+  // Calculate the total width occupied by all pilots (excluding the central gap)
+  let totalWidth = 0;
+
+  for (let i = 0; i < pilots.length; i++) {
+    totalWidth += pilots[i].width;
+  }
+
+  // Calculate the total width including the central gap
+  totalWidth += centralGap;
+
+  // Calculate the starting x-position to center the pilots
+  const startX = (canvas.width - totalWidth) / 2 + gapBetweenPilots;
+
+  // Calculate the y-position for all pilots
+  const yPosition = canvas.height / 6;
+
+  // Calculate the index at which to start adding the central gap
+  const startIndexForCentralGap = Math.floor(pilots.length / 2) - 1;
+
+  // Set the positions for each pilot, taking the central gap into account
+  let currentX = startX;
+  for (let i = 0; i < pilots.length; i++) {
+    const pilot = pilots[i];
+    pilot.x = currentX;
+
+    if (i === startIndexForCentralGap) {
+      // Leave the central gap after half of the pilots
+      currentX += centralGap;
+    } else if (i < pilots.length - 1) {
+      // Add the regular gap between pilots
+      currentX += pilot.width + gapBetweenPilots;
+    }
+
+    pilot.y = yPosition;
+  }
 
   // Position the lore tablet
   loreTablet.x = canvas.width / 2 - loreTablet.width / 2;
@@ -22,9 +55,13 @@ function centerPilots(canvas) {
 }
 
 export function setupPilotsImageSources() {
-  pilot1.image.src = "images/wolf.webp";
-  pilot2.image.src = "images/slippy.webp";
+  // Set image sources for each pilot
+  for (let i = 0; i < pilots.length; i++) {
+    const pilot = pilots[i];
+    pilot.image.src = pilot.src;
+  }
 }
+
 export function setupPilotsImages(canvas) {
   setupPilotsImageSources();
   loreTablet.image.src = "images/tablet.png";

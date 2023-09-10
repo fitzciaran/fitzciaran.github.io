@@ -1,7 +1,8 @@
 import { getTopScores } from "./db.js";
 import { drawRoundedRectangle, loreTablet } from "./drawingUtils.js";
+import { drawFilledGauge } from "./drawGameUI.js";
 
-import { pilot1, pilot2 } from "./gameLogic.js";
+import { pilots } from "./gameLogic.js";
 
 let cursorBlink = true;
 let cursorBlinkInterval = setInterval(() => (cursorBlink = !cursorBlink), 450);
@@ -75,7 +76,7 @@ export function drawGameOverMessage(ctx, canvas, message) {
   playButtonHeight = buttonHeight;
 
   buttonY = buttonY + buttonHeight + gap;
-  drawButton(ctx, buttonX, buttonY, buttonWidth, buttonHeight, radius, "Menu", "blue","darkblue");
+  drawButton(ctx, buttonX, buttonY, buttonWidth, buttonHeight, radius, "Menu", "blue", "darkblue");
   menuButtonX = buttonX;
   menuButtonY = buttonY;
   menuButtonWidth = buttonWidth;
@@ -162,22 +163,20 @@ export function drawPreGameOverlay(canvas, ctx) {
   ctx.strokeStyle = "white";
   ctx.strokeRect(loreTablet.x, loreTablet.y, loreTablet.width, loreTablet.height);
 
-  // Draw pilot options
-  ctx.drawImage(pilot1.image, pilot1.x, pilot1.y, pilot1.width, pilot1.height);
-  ctx.drawImage(pilot2.image, pilot2.x, pilot2.y, pilot2.width, pilot2.height);
-  ctx.lineWidth = 7;
-  // Highlight selected pilot
-  if (pilot1.selected) {
-    ctx.strokeStyle = "yellow";
-    ctx.strokeRect(pilot1.x, pilot1.y, pilot1.width, pilot1.height);
-  }
-  if (pilot2.selected) {
-    ctx.strokeStyle = "yellow";
-    ctx.strokeRect(pilot2.x, pilot2.y, pilot2.width, pilot2.height);
+  // Draw pilot options and highlight selected pilot
+  for (let i = 0; i < pilots.length; i++) {
+    let pilot = pilots[i];
+    ctx.drawImage(pilot.image, pilot.x, pilot.y, pilot.width, pilot.height);
+
+    if (pilot.selected) {
+      ctx.lineWidth = 7;
+      ctx.strokeStyle = "yellow";
+      ctx.strokeRect(pilot.x, pilot.y, pilot.width, pilot.height);
+    }
   }
 
-  // Reset lore index and line count
-  if (!pilot1.selected && !pilot2.selected) {
+  // Reset lore index and line count if no pilot is selected
+  if (pilots.every((pilot) => !pilot.selected)) {
     loreIndex = 0;
     lineCount = 0;
   }
@@ -185,18 +184,17 @@ export function drawPreGameOverlay(canvas, ctx) {
   let x = loreTablet.x + 60;
   let y = loreTablet.y + 65; // Initial y value
 
-  // Animate lore text
-  if (pilot1.selected) {
-    // animateLoreText(ctx, pilot1.lore, loreIndex, lineCount);
-    renderLoreText(ctx, pilot1.lore, x, y, 330);
-  }
-  if (pilot2.selected) {
-    // animateLoreText(ctx, pilot2.lore, loreIndex, lineCount);
-    renderLoreText(ctx, pilot2.lore, x, y, 330);
+  // Animate lore text for the selected pilot
+  for (let i = 0; i < pilots.length; i++) {
+    let pilot = pilots[i];
+    if (pilot.selected) {
+      renderInfoText(ctx, pilot.lore, x, y, 330);
+      break; // Exit the loop once a selected pilot is found
+    }
   }
 }
 
-function renderLoreText(ctx, lore, x, y, maxWidth) {
+function renderInfoText(ctx, lore, x, y, maxWidth) {
   // Set font and color
   ctx.textAlign = "start";
   let sections = lore.split(",");
@@ -224,6 +222,25 @@ function renderLoreText(ctx, lore, x, y, maxWidth) {
 
     ctx.font = fontSize + "px Gothic";
     ctx.fillStyle = "coral";
+
+    if (i === 1 && section.startsWith("Speed:")) {
+      // Check if it's the "Speed:" section
+      const speedValue = parseInt(section.split(":")[1].trim());
+      if (!isNaN(speedValue)) {
+        // Draw the "Speed:" label
+        ctx.fillText("Speed:", x, currentY);
+
+        // Draw the gauge next to it
+        const centerX = x + ctx.measureText("Speed:").width + 50; // Adjust the offset as needed
+        const gaugeWidth = 100; // Adjust the gauge width as needed
+        const gaugeHeight = fontSize; // Match the height with the font size
+        const filled = speedValue; // Use the speed value
+        const total = 5; // Assuming the total is always 5
+        drawFilledGauge(ctx, centerX, currentY + 15, gaugeWidth, gaugeHeight, 7, filled, total);
+        currentY += lineHeight; // Move to the next line
+        continue; // Skip the rest of the loop for this section
+      }
+    }
 
     let words = section.split(" ");
     let line = "";

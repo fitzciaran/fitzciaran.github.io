@@ -20,6 +20,14 @@ let maxMines = 15;
 export let spawnProtectionTime = 100;
 export let endGameMessage = "";
 export let gameWon = false;
+
+export const PilotName = {
+  PILOT_1: "pilot1",
+  PILOT_2: "pilot2",
+  PILOT_3: "pilot3",
+  PILOT_4: "pilot4",
+};
+
 export const pilot1 = {
   image: new Image(),
   x: 0,
@@ -28,6 +36,8 @@ export const pilot1 = {
   height: 100,
   selected: false,
   lore: "Orion, Speed: 4, Special: Gravity Attract, Agressive - likes to get powered up and use Gravity Attract to get kills",
+  name: PilotName.PILOT_1,
+  src: "images/wolf.webp",
 };
 
 export const pilot2 = {
@@ -37,8 +47,36 @@ export const pilot2 = {
   width: 100,
   height: 100,
   selected: false,
-  lore: "Bumble, Speed: 3, Special: Gravity Repel, Defensive - not so fast but can use Gravity Repel to keep attackers away ",
+  lore: "Bumble, Speed: 2, Special: Gravity Repel, Defensive - not so fast but can use Gravity Repel to keep attackers away ",
+  name: PilotName.PILOT_2,
+  src: "images/slippy.webp",
 };
+
+export const pilot3 = {
+  image: new Image(),
+  x: 100,
+  y: 0,
+  width: 100,
+  height: 100,
+  selected: false,
+  lore: "Zippy, Speed: 5, Special: Speed Boost, Speedy - tricky to control. Not for scrubs! ",
+  name: PilotName.PILOT_3,
+  src: "images/mouse.webp",
+};
+
+export const pilot4 = {
+  image: new Image(),
+  x: 100,
+  y: 0,
+  width: 100,
+  height: 100,
+  selected: false,
+  lore: "lorum ipsum, Speed: 3, Special: Doesn't have one yet, Wip... so kinda sucks ",
+  name: PilotName.PILOT_4,
+  src: "images/bore612.webp",
+};
+
+export let pilots = [pilot1, pilot2, pilot3, pilot4];
 
 export const max_player_name = 15;
 let chancePowerUpIsStar = 0.2;

@@ -122,10 +122,9 @@ consider better options for right click.
      -mines
      -warp? why? escape?
 
-isMastervariable outside of player object?
 another, closer, "inRangeticks variable for botstate?
 r2d2 sound for bumble boost?
-seems to random to get hit, no prolonged engagement either get hit or don't and not engaged anymore...
+seems too random to get hit, no prolonged engagement either get hit or don't and not engaged anymore...
 2nd (3rd, 4th) state for after something.. is collectively achieved, opens worm hole etc, opens part of the edge .. boss?
 
 as masterpeer need to process otherplayers' movement based on prev velocity and mouse position and space press might improve detection of collisions 
@@ -152,8 +151,6 @@ safe starting/respawning area? forcefielded off?
 separate p2p connection and db connection
 
 name? space.io? 
-
-maybe have an "enemy object" that is a forcefield that will pull in / push out to implement those.
 
 bot could consider bouncing off the wall as means to quickly boost towards the center - should be a late implementation since walls may go and would be a very specific implementation
     -maybe not too tricky, check if close to a wall and if target is perpendiulatly far from the wall and momentum perpendicual component of velocity is towards the wall and would be a good candiate to head to wall.
@@ -200,10 +197,6 @@ a control style switch? (follow mouse?)
 circles you have to stop in / stay in for x seconds for ... something? power up? charging in there?
 mines need to spawn away from ships and ships need to spawn away from mines
 
-if non master maybe try doing everything except the sending?
-I think master might need to send state of otherplayers, so if master registers they've picked a powerup and gain invincibility for e.g. they should recieve that info about their state
-    hmm inlcude otherplayers in sendEntitiesState?.... but what about non-master inputs... they need to send something.... maybe only update some values (powerup / maxInvincibilityTime) 
-        and leave others (angle, velocity...but even velocity can be effected by pull/push which master would need to determine... maybe just don't update angle and mousex,y, space/shift)
 
 still the issue where a collision is clearly detect (e.g. go over mine and mine disappears) but the hit doesn't register for non-master peer.
 
@@ -222,7 +215,7 @@ could put a collectedby property on powerups then schedule removal for a few fra
 invicibletime goes down when hits
 gauage appears above player
 
-if implement full hitboxes could have the front bit be invicible.
+if implement full hitboxes could have the front bit be invincible.
 
 maybe master should send "isHit" "has collected" etc to update slave peers, might solve a lot of the p2p issues.
 

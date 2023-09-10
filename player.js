@@ -4,7 +4,6 @@ import {
   player,
   worldDimensions,
   colors,
-  PilotName,
   acceleration,
   setCam,
   camX,
@@ -14,19 +13,10 @@ import {
   GameState,
   globalPowerUps,
 } from "./astroids.js";
-import { drawKillInfo } from "./gameDrawing.js";
-import {
-  attemptConnections,
-  timeSinceAnyMessageRecieved,
-  setTimeSinceAnyMessageRecieved,
-  ticksSinceLastConnectionAttempt,
-  setTicksSinceLastConnectionAttempt,
-  wrappedResolveConflicts,
-  isPlayerMasterPeer,
-} from "./connectionHandlers.js";
+import { isPlayerMasterPeer } from "./connectionHandlers.js";
 import { forces, ForceArea } from "./entities.js";
+import { setEndGameMessage, maxInvincibilityTime, spawnProtectionTime, maxSpecialMeter, PilotName } from "./gameLogic.js";
 import { sendPlayerStates } from "./handleData.js";
-import { shuffleArray, setEndGameMessage, maxInvincibilityTime, spawnProtectionTime, maxSpecialMeter } from "./gameLogic.js";
 
 const bounceFactor = 1.5;
 const offset = 1;
@@ -105,7 +95,6 @@ export class Player {
       this.color = colors[Math.floor(Math.random() * colors.length)];
     }
     this.angle = 0;
-    //this.pilot = "";
     if (!keepName) {
       this.name = "";
     }
@@ -174,7 +163,14 @@ export class Player {
     this.pilot = newPilot;
     if (this.pilot == PilotName.PILOT_1) {
       this.special = Special.FORCE_PULL;
-    } else if (this.pilot == PilotName.PILOT_2) {
+    }
+    if (this.pilot == PilotName.PILOT_2) {
+      this.special = Special.FORCE_PUSH;
+    }
+    if (this.pilot == PilotName.PILOT_3) {
+      this.special = Special.BOOST;
+    }
+    if (this.pilot == PilotName.PILOT_4) {
       this.special = Special.FORCE_PUSH;
     }
   }
@@ -286,20 +282,11 @@ export class Player {
     if (this.pilot == PilotName.PILOT_1) {
       pilotBoostFactor = 1.1;
     } else if (this.pilot == PilotName.PILOT_2) {
-      pilotBoostFactor = 0.6;
+      pilotBoostFactor = 0.7;
+    } else if (this.pilot == PilotName.PILOT_3) {
+      pilotBoostFactor = 1.3;
     }
-    if (this.shift && this.invincibleTimer > 0) {
-      if (this.special == Special.BOOST) {
-        if (this.invincibleTimer > 0) {
-          this.setInvincibleTimer(this.invincibleTimer - 5);
-        }
-        if (this.pilot == PilotName.PILOT_1) {
-          pilotBoostFactor = 3;
-        } else if (this.pilot == PilotName.PILOT_2) {
-          pilotBoostFactor = 6;
-        }
-      }
-    }
+    let boosting = false;
     if (this.shift && (this.specialMeter > 50 || (this.usingSpecial && this.specialMeter > 1))) {
       if (this.usingSpecial < 1) {
         //initial cost more than keeping it going
@@ -307,7 +294,7 @@ export class Player {
       }
       this.usingSpecial = 3;
       //todo specials other than boost shouldn't be triggered here
-      if (this.special == Special.FORCE_PULL || this.special == Special.FORCE_PUSH) {
+      if (this.special == Special.FORCE_PULL || this.special == Special.FORCE_PUSH || this.special == Special.BOOST) {
         // if (this.forceCoolDown < 1) {
         //try a gradual effect
         //this.forceCoolDown = 200;
@@ -316,19 +303,37 @@ export class Player {
         if (this.specialMeter == 0) {
           this.usingSpecial = 0;
         }
-        let attractive = true;
-        if (this.special == Special.FORCE_PUSH) {
-          attractive = false;
+
+        if (this.special == Special.FORCE_PULL || this.special == Special.FORCE_PUSH) {
+          let attractive = true;
+          if (this.special == Special.FORCE_PUSH) {
+            attractive = false;
+          }
+          let force = new ForceArea(null, this.x, this.y, 0.5, 5, 200, attractive, "red", this);
+          forces.push(force);
+        } else if (this.special == Special.BOOST) {
+          //give a bit of meter back for the boost so it works out cheaper than force.
+          this.specialMeter += 1;
+          boosting = true;
+          if (this.specialMeter > 0) {
+            this.specialMeter = Math.max(this.specialMeter - 5, 0);
+          }
+          if (this.pilot == PilotName.PILOT_1) {
+            pilotBoostFactor = 3;
+          }
+          if (this.pilot == PilotName.PILOT_2) {
+            pilotBoostFactor = 5;
+          }
+          if (this.pilot == PilotName.PILOT_3) {
+            pilotBoostFactor = 7;
+          }
         }
-        let force = new ForceArea(null, this.x, this.y, 0.5, 5, 200, attractive, "red", this);
-        forces.push(force);
       }
-      //  }
     }
     this.vel.x *= newFriction;
     this.vel.y *= newFriction;
 
-    if (this.space) {
+    if (this.space || boosting) {
       let mouseToCenter = { x: dx / distance, y: dy / distance };
       if (distance == 0 || isNaN(distance)) {
         mouseToCenter = { x: 0, y: 0 };

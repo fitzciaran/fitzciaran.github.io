@@ -45,17 +45,22 @@ export function renderDebugInfo(ctx, player, bots) {
   });
 }
 
-export function drawInvincibilityGauge(ctx, player, centerX, bottomY, gaugeWidth = 200, gaugeHeight = 50,borderWidth = 7) {
+export function drawFilledGauge(ctx, centerX, bottomY, gaugeWidth = 200, gaugeHeight = 50, borderWidth = 7, filled, total) {
+  const fillPercent = filled / total;
+  drawGauge(ctx, centerX, bottomY, fillPercent, "#ff9900", gaugeWidth, gaugeHeight, borderWidth);
+}
+
+export function drawInvincibilityGauge(ctx, player, centerX, bottomY, gaugeWidth = 200, gaugeHeight = 50, borderWidth = 7) {
   const fillPercent = player.invincibleTimer / maxInvincibilityTime;
-  drawGauge(ctx, centerX, bottomY, fillPercent, "#ff9900", gaugeWidth, gaugeHeight,borderWidth);
+  drawGauge(ctx, centerX, bottomY, fillPercent, "#ff9900", gaugeWidth, gaugeHeight, borderWidth);
 }
 
-export function drawSpecialGauge(ctx, player, centerX, bottomY, gaugeWidth = 200, gaugeHeight = 50,borderWidth = 7) {
+export function drawSpecialGauge(ctx, player, centerX, bottomY, gaugeWidth = 200, gaugeHeight = 50, borderWidth = 7) {
   const fillPercent = player.specialMeter / maxSpecialMeter;
-  drawGauge(ctx, centerX, bottomY, fillPercent, "#00FF00", gaugeWidth, gaugeHeight,borderWidth);
+  drawGauge(ctx, centerX, bottomY, fillPercent, "#00FF00", gaugeWidth, gaugeHeight, borderWidth);
 }
 
-function drawGauge(ctx, centerX, bottomY, fillPercent, color, gaugeWidth = 200, gaugeHeight = 50,borderWidth = 7) {
+function drawGauge(ctx, centerX, bottomY, fillPercent, color, gaugeWidth = 200, gaugeHeight = 50, borderWidth = 7) {
   const gaugeColor = color; // Fill color of the gauge
   const borderColor = "#333"; // Border color
 

@@ -28,8 +28,7 @@ import {
   endGameMessage,
   setGameWon,
   resetPowerLevels,
-  pilot1,
-  pilot2,
+  pilots,
   updateEnemies,
   updatePowerups,
   detectCollisions,
@@ -82,11 +81,6 @@ export const GameState = {
   FINISHED: "finished",
   GAME: "game",
   UNSET: "",
-};
-
-export const PilotName = {
-  PILOT_1: "pilot1",
-  PILOT_2: "pilot2",
 };
 
 let gameState = GameState.UNSET;
@@ -254,8 +248,14 @@ function setupPilots(canvas, ctx) {
   setupPilotsImageSources();
   addPilotEventListners(canvas, ctx);
   //todo will need to update this if multiple pilots
-  if (!pilot2.selected) {
-    pilot1.selected = true;
+  let anySelected = false;
+  for (let pilot of pilots) {
+    if (pilot.selected) {
+      anySelected = true;
+    }
+    if (!anySelected) {
+      pilots[0].selected = true;
+    }
   }
 }
 
@@ -329,8 +329,6 @@ export function setGameState(newState) {
   if (newState !== GameState.FINISHED && prevGameState === GameState.FINISHED) {
     resetPowerLevels(player, otherPlayers, globalPowerUps);
     setGameWon(false);
-    // pilot2.selected = false;
-    // pilot1.selected = true;
     removeWinStateEventListeners(window, canvas);
   }
 

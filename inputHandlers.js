@@ -1,6 +1,16 @@
-import { camX, camY, getGameState, setGameState, getCanvas, GameState, PilotName, player } from "./astroids.js";
-import { drawNameEntry, playButtonX, playButtonY, playButtonWidth, playButtonHeight , menuButtonX, menuButtonY, menuButtonWidth, menuButtonHeight } from "./canvasDrawingFunctions.js";
-import { pilot1, pilot2, calculateAngle, getRandomName, max_player_name } from "./gameLogic.js";
+import { camX, camY, getGameState, setGameState, getCanvas, GameState, player } from "./astroids.js";
+import {
+  drawNameEntry,
+  playButtonX,
+  playButtonY,
+  playButtonWidth,
+  playButtonHeight,
+  menuButtonX,
+  menuButtonY,
+  menuButtonWidth,
+  menuButtonHeight,
+} from "./canvasDrawingFunctions.js";
+import { pilots, calculateAngle, getRandomName, max_player_name } from "./gameLogic.js";
 
 let pilotMouseMoveListener;
 let pilotClickListener;
@@ -123,28 +133,21 @@ function getMousePos(canvas, evt) {
 export function addPilotEventListners(canvas, ctx) {
   pilotMouseMoveListener = function (event) {
     if (getGameState() === GameState.PILOT_SELECT || getGameState() === GameState.INTRO) {
-      // Check if mouse is over a pilot
-      if (
-        event.clientX > pilot1.x &&
-        event.clientX < pilot1.x + pilot1.width &&
-        event.clientY > pilot1.y &&
-        event.clientY < pilot1.y + pilot1.height
-      ) {
-        pilot1.selected = true;
-        pilot2.selected = false;
-      } else {
-        //pilot1.selected = false;
-      }
-      if (
-        event.clientX > pilot2.x &&
-        event.clientX < pilot2.x + pilot2.width &&
-        event.clientY > pilot2.y &&
-        event.clientY < pilot2.y + pilot2.height
-      ) {
-        pilot2.selected = true;
-        pilot1.selected = false;
-      } else {
-        //pilot2.selected = false;
+      let pilotSelected = false; // Track if any pilot has been selected
+
+      // Iterate over pilots
+      for (let i = 0; i < pilots.length; i++) {
+        let pilot = pilots[i];
+
+        if (event.clientX > pilot.x && event.clientX < pilot.x + pilot.width && event.clientY > pilot.y && event.clientY < pilot.y + pilot.height) {
+          pilot.selected = true;
+          for (let i = 0; i < pilots.length; i++) {
+            let otherPilot = pilots[i];
+            if (pilot != otherPilot) {
+              otherPilot.selected = false;
+            }
+          }
+        }
       }
     }
   };
@@ -176,13 +179,18 @@ export function addPilotEventListners(canvas, ctx) {
 function selectPilot() {
   if (getGameState() === GameState.PILOT_SELECT || getGameState() === GameState.INTRO) {
     // Check if a pilot was clicked
-    if (pilot1.selected) {
-      pilotSelected = PilotName.PILOT_1;
+    let pilotSelected = null; // Initialize pilotSelected to null
+
+    for (let i = 0; i < pilots.length; i++) {
+      let pilot = pilots[i];
+
+      if (pilot.selected) {
+        pilotSelected = pilot.name;
+        break; // Exit the loop once a pilot is selected
+      }
     }
-    if (pilot2.selected) {
-      pilotSelected = PilotName.PILOT_2;
-    }
-    if (pilot1.selected || pilot2.selected) {
+
+    if (pilotSelected) {
       // If a pilot was selected, update the player object and change the game state to 'game'
       player.setPilot(pilotSelected);
     }

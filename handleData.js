@@ -85,7 +85,7 @@ export function sendGameState(globalPowerUps) {
       sendCounter++;
       // Log the data every 1000 calls
       if (sendCounter === 5000) {
-        console.log("sending game state data:", data);
+        //console.log("sending game state data:", data);
         sendCounter = 0; // reset the counter
       }
     }
@@ -111,7 +111,7 @@ export function sendEntitiesState(bots) {
       sendCounter++;
       // Log the data every 1000 calls
       if (sendCounter === 5000) {
-        console.log("sending bots state data:", data);
+        //console.log("sending entities state data:", data);
         sendCounter = 0; // reset the counter
       }
     }
@@ -134,7 +134,7 @@ export function sendConnectedPeers() {
       sendCounter++;
       // Log the data every 1000 calls
       if (sendCounter === 5000) {
-        console.log("sending bots state data:", data);
+        //console.log("sending bots state data:", data);
         sendCounter = 0; // reset the counter
       }
     }
