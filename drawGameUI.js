@@ -34,6 +34,10 @@ export function renderDebugInfo(ctx, player, bots) {
   ctx.fillStyle = player.color;
   ctx.fillText(timeSinceMessageFromMasterText, 558, topGap + gap * 6 - textHeight);
 
+  const velocityText = `player velocity = ${player.vel.x.toFixed(1)}, ${player.vel.y.toFixed(1)}`;
+  ctx.fillStyle = player.color;
+  ctx.fillText(velocityText, 558, topGap + gap * 7 - textHeight);
+
   bots.forEach((bot, index) => {
     let botInfo;
     if (bot.botState == BotState.FOLLOW_PLAYER) {

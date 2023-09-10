@@ -22,8 +22,8 @@ const bounceFactor = 1.5;
 const offset = 1;
 const minBounceSpeed = 5;
 const maxBotsThatCanTargetAtOnce = 1;
-const maxVel = 1000000;
-const minVel = -1000000;
+const maxVel = 70;
+const minVel = -70;
 
 export const BotState = {
   FOLLOW_PLAYER: "followPlayer",
@@ -353,8 +353,9 @@ export class Player {
       if (this.vel.x == null || isNaN(this.vel.x) || this.vel.y == null || isNaN(this.vel.y)) {
         console.log("Invalid velocity values: x =", this.vel.x, "y =", this.vel.y);
       }
-      this.boundVelocity();
+    
     }
+    this.boundVelocity();
     this.currentSpeed = Math.sqrt(this.vel.x * this.vel.x + this.vel.y * this.vel.y);
   }
 
