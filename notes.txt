@@ -241,3 +241,9 @@ mine could have an attractive force (or repellent? )
 deal with stack of messages (like when have been paused in debgger) better
 
 deal with non-master drawing of forces (interpolate like with players should do it)
+
+Be more selective about what data send? currently sending everything for bots/forces and not using everything, could speed up data transfer.
+
+Don't convert all bot (and forces/mines etc) to proper class since we don't them in most cases anyway. - optimise
+
+spawn warning for mines for example

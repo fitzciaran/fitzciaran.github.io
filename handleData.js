@@ -18,40 +18,40 @@ import { createBotFromObject, Player, createPlayerFromObject } from "./player.js
 let handleCounter = 0;
 let sendCounter = 0;
 
-export function sendPlayerStates(player, globalPowerUps) {
+export function sendPlayerStates(playerToSend, globalPowerUps) {
   // Check if connection is open before sending data
   // Send player state to other players
   let data = {
-    id: player.id,
-    x: player.x,
-    y: player.y,
-    powerUps: player.powerUps,
-    color: player.color,
-    angle: player.angle,
-    pilot: player.pilot,
-    isBot: player.isBot,
-    special: player.special,
-    name: player.name,
-    lives: player.lives,
-    isMaster: player.isMaster,
-    isDead: player.isDead,
-    isPlaying: player.isPlaying,
-    invincibleTimer: player.invincibleTimer,
-    forceCoolDown: player.forceCoolDown,
-    comboScaler: player.comboScaler,
-    kills: player.kills,
-    playerAngleData: player.playerAngleData,
-    mousePosX: player.mousePosX,
-    mousePosY: player.mousePosY,
-    currentSpeed: player.currentSpeed,
-    vel: player.vel,
-    distanceFactor: player.distanceFactor,
-    space: player.space,
-    shift: player.shift,
-    ticksSincePowerUpCollection: player.ticksSincePowerUpCollection,
-    targetedBy: player.targetedBy,
-    timeOfLastActive: player.timeOfLastActive,
-    hitBy: player.hitBy,
+    id: playerToSend.id,
+    x: playerToSend.x,
+    y: playerToSend.y,
+    powerUps: playerToSend.powerUps,
+    color: playerToSend.color,
+    angle: playerToSend.angle,
+    pilot: playerToSend.pilot,
+    isBot: playerToSend.isBot,
+    special: playerToSend.special,
+    name: playerToSend.name,
+    lives: playerToSend.lives,
+    isMaster: playerToSend.isMaster,
+    isDead: playerToSend.isDead,
+    isPlaying: playerToSend.isPlaying,
+    invincibleTimer: playerToSend.invincibleTimer,
+    forceCoolDown: playerToSend.forceCoolDown,
+    comboScaler: playerToSend.comboScaler,
+    kills: playerToSend.kills,
+    playerAngleData: playerToSend.playerAngleData,
+    mousePosX: playerToSend.mousePosX,
+    mousePosY: playerToSend.mousePosY,
+    currentSpeed: playerToSend.currentSpeed,
+    vel: playerToSend.vel,
+    distanceFactor: playerToSend.distanceFactor,
+    space: playerToSend.space,
+    shift: playerToSend.shift,
+    ticksSincePowerUpCollection: playerToSend.ticksSincePowerUpCollection,
+    targetedBy: playerToSend.targetedBy,
+    timeOfLastActive: playerToSend.timeOfLastActive,
+    hitBy: playerToSend.hitBy,
   };
   connections.forEach((conn) => {
     if (conn && conn.open) {
@@ -146,7 +146,9 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
   //console.log("handling data:");
   // Find the otherPlayer in the array
   let otherPlayer = otherPlayers.find((player) => player.id === data.id);
-
+  if (!otherPlayer) {
+    otherPlayer = findBotById(data.id);
+  }
   // If the player is found, update their data
   if (otherPlayer) {
     otherPlayer.timeSinceSentMessageThatWasRecieved = 0;
@@ -180,7 +182,7 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
     otherPlayer.timeOfLastActive = data.timeOfLastActive;
     otherPlayer.hitBy = data.hitBy;
 
-    if (isPlayerMasterPeer(player) && otherPlayer.isMaster) {
+    if (isPlayerMasterPeer(player) && otherPlayer.isMaster  && !otherPlayer.isBot) {
       wrappedResolveConflicts(player, otherPlayers, globalPowerUps);
     }
   }
@@ -202,9 +204,9 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
     player.powerUps = data.powerUps;
     player.comboScaler = data.comboScaler;
     player.setIsDead(data.isDead);
-    if(data.isDead){
-        player.vel.x = 0;
-        player.vel.y = 0;
+    if (data.isDead) {
+      player.vel.x = 0;
+      player.vel.y = 0;
     }
     player.lives = data.lives;
     player.hitBy = data.hitBy;
@@ -223,21 +225,6 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
     setTimeSinceMessageFromMaster(0);
     const botInstances = data.bots.map(createBotFromObject);
     // setBots(botInstances);
-
-    //we will just replace select properties of otherplayers from the master
-    // for (let bot of bots) {
-    //   const foundDataOtherBot = data.otherPlayers.find((dataOtherBot) => dataOtherBot.id === bot.id);
-    //   if (foundDataOtherBot != null) {
-    //     bot.kills = foundDataOtherBot.kills;
-    //     bot.isDead = foundDataOtherBot.isDead;
-    //     bot.lives = foundDataOtherBot.lives;
-    //     bot.powerUps = foundDataOtherBot.powerUps;
-    //     bot.ticksSincePowerUpCollection = foundDataOtherBot.ticksSincePowerUpCollection;
-    //     bot.setInvincibleTimer(foundDataOtherBot.invincibleTimer);
-    //     bot.x = foundDataOtherBot.x;
-    //     bot.y = foundDataOtherBot.y;
-    //   }
-    // }
 
     // Iterate through botInstances received from the master peer
     for (const receivedBot of botInstances) {
@@ -263,12 +250,29 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
 
         //don't interpolate the angle because that can natually change very sharply
         localBot.angle = receivedBot.angle;
+        localBot.currentSpeed = receivedBot.currentSpeed;
+        localBot.timeOfLastActive = receivedBot.timeOfLastActive;
+        localBot.playerAngleData = receivedBot.playerAngleData;
+        localBot.mousePosX = receivedBot.mousePosX;
+        localBot.mousePosY = receivedBot.mousePosY;
+        localBot.isPlaying = receivedBot.isPlaying;
+        localBot.special = receivedBot.special;
+        localBot.distanceFactor = receivedBot.distanceFactor;
+        localBot.lives = receivedBot.lives;
+        localBot.space = receivedBot.space;
+        localBot.shift = receivedBot.shift;
+        localBot.u = receivedBot.u;
+        localBot.forceCoolDown = receivedBot.forceCoolDown;
+        localBot.comboScaler = receivedBot.comboScaler;
+        localBot.kills = receivedBot.kills;
+        localBot.ticksSincePowerUpCollection = receivedBot.ticksSincePowerUpCollection;
+        localBot.timeSinceSpawned = receivedBot.timeSinceSpawned;
         localBot.botState = receivedBot.botState;
         localBot.randomTarget = receivedBot.randomTarget;
         localBot.followingPlayerID = receivedBot.followingPlayerID;
         localBot.previousAngleDifference = receivedBot.previousAngleDifference;
         localBot.previousTurnDirection = receivedBot.previousTurnDirection;
-        localBot.invincibleTimer = receivedBot.invincibleTimer;
+        localBot.setInvincibleTimer(receivedBot.invincibleTimer);
         localBot.forceCoolDown = receivedBot.forceCoolDown;
         localBot.playerAngleData = receivedBot.playerAngleData;
         localBot.mousePosX = receivedBot.mousePosX;

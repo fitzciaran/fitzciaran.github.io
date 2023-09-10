@@ -32,6 +32,9 @@ const bounceFactor = 1.5;
 const offset = 1;
 const minBounceSpeed = 5;
 const maxBotsThatCanTargetAtOnce = 1;
+const maxVel = 1000000; 
+const minVel = -1000000; 
+
 export const BotState = {
   FOLLOW_PLAYER: "followPlayer",
   RANDOM: "random",
@@ -237,8 +240,6 @@ export class Player {
       this.comboScaler += 1;
     }
     this.setInvincibleTimer(this.invincibleTimer - 150);
-
-    // drawKillInfo(ctx, this, score, camX, camY);
   }
 
   setInvincibleTimer(newTime) {
@@ -258,6 +259,7 @@ export class Player {
       this.y = this.y < 0 ? offset : worldDimensions.height - offset;
       this.vel.y = (this.vel.y < 0 ? -1 : 1) * Math.max(Math.abs(this.vel.y), minBounceSpeed);
     }
+    this.boundVelocity();
   }
 
   updatePlayerAngle() {
@@ -345,10 +347,23 @@ export class Player {
       if (this.vel.x == null || isNaN(this.vel.x) || this.vel.y == null || isNaN(this.vel.y)) {
         console.log("Invalid velocity values: x =", this.vel.x, "y =", this.vel.y);
       }
+      this.boundVelocity();
     }
     this.currentSpeed = Math.sqrt(this.vel.x * this.vel.x + this.vel.y * this.vel.y);
   }
 
+  boundVelocity() {
+    if (this.vel.x > maxVel) {
+      this.vel.x = maxVel;
+    } else if (this.vel.x < minVel) {
+      this.vel.x = minVel;
+    }
+    if (this.vel.y > maxVel) {
+      this.vel.y = maxVel;
+    } else if (this.vel.y < minVel) {
+      this.vel.y = minVel;
+    }
+  }
   updatePlayerPosition(deltaTime) {
     if (this.vel.x !== null && !isNaN(this.vel.x) && this.vel.y !== null && !isNaN(this.vel.y)) {
       this.x += this.vel.x * deltaTime;
@@ -364,6 +379,7 @@ export class Player {
       if (isNaN(this.vel.y)) {
         this.vel.y = 0;
       }
+      this.boundVelocity();
     }
   }
 
@@ -470,11 +486,19 @@ export function createBotFromObject(obj) {
   bot.mousePosY = obj.mousePosY;
   bot.currentSpeed = obj.currentSpeed;
   bot.vel = obj.vel;
+  bot.isPlaying = obj.isPlaying;
+  bot.special = obj.special;
   bot.distanceFactor = obj.distanceFactor;
+  bot.lives = obj.lives;
   bot.space = obj.space;
   bot.shift = obj.shift;
   bot.u = obj.u;
+  bot.forceCoolDown = obj.forceCoolDown;
+  bot.comboScaler = obj.comboScaler;
+  bot.kills = obj.kills;
+  bot.ticksSincePowerUpCollection = obj.ticksSincePowerUpCollection;
   bot.timeSinceSpawned = obj.timeSinceSpawned;
+  bot.setInvincibleTimer(obj.invincibleTimer);
   bot.setIsDead(obj.isDead);
   return bot;
 }
@@ -725,7 +749,7 @@ export class Bot extends Player {
       this.mousePosX = mousePos.X;
       this.mousePosY = mousePos.Y;
     } else {
-      console.log("mousePos NaN");
+      console.log("mousePos NaN in aimAtTarget");
     }
     this.space = true;
   }
