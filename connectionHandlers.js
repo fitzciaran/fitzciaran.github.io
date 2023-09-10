@@ -1,21 +1,19 @@
-import {  otherPlayers } from "./astroids.js";
+import { otherPlayers } from "./astroids.js";
 
-import {
-  shuffleArray,
-} from "./gameLogic.js";
+import { shuffleArray } from "./gameLogic.js";
 
-import { sendPlayerStates, handleData} from "./handleData.js";
+import { sendPlayerStates, handleData } from "./handleData.js";
 import { Player } from "./player.js";
 export let everConnected = false;
 export let connections = [];
 export let peerIds = [
-  "a7ef962d-14a8-40e4-8a1e-226a438a3456",
-  "b7ef962d-14a8-40e4-8a1e-226a438a3456",
-  "c7ef962d-14a8-40e4-8a1e-226a438a3456",
-  "d7ef962d-14a8-40e4-8a1e-226a438a3456",
-  "e7ef962d-14a8-40e4-8a1e-226a438a3456",
-  "a6ef962d-14a8-40e4-8a1e-226a438a3456",
-  "b6ef962d-14a8-40e4-8a1e-226a438a3456",
+  "a7ef962d-14a8-40e4-8a1e-226a438a3454",
+  "b7ef962d-14a8-40e4-8a1e-226a438a3454",
+  "c7ef962d-14a8-40e4-8a1e-226a438a3454",
+  "d7ef962d-14a8-40e4-8a1e-226a438a3454",
+  "e7ef962d-14a8-40e4-8a1e-226a438a3454",
+  "a6ef962d-14a8-40e4-8a1e-226a438a3454",
+  "b6ef962d-14a8-40e4-8a1e-226a438a3454",
 ];
 shuffleArray(peerIds);
 export let ticksSinceLastConnectionAttempt = 0;
@@ -23,6 +21,9 @@ export function setTicksSinceLastConnectionAttempt(newTime) {
   ticksSinceLastConnectionAttempt = newTime;
 }
 let masterPeerId = peerIds[0]; // start off with the first peer as the master
+export function setMasterPeerId(newID) {
+  masterPeerId = newID;
+}
 export let timeSinceMessageFromMaster = 0;
 export function setTimeSinceMessageFromMaster(newTime) {
   timeSinceMessageFromMaster = newTime;
@@ -37,7 +38,7 @@ let index = 0;
 
 let peer;
 export let connectedPeers = [];
-export function setConnectedPeers(newConnectedPeers){
+export function setConnectedPeers(newConnectedPeers) {
   connectToPeers = newConnectedPeers;
 }
 let connectionBackOffTime = 0;
@@ -88,7 +89,7 @@ export function attemptConnections(player, otherPlayers, globalPowerUps) {
 }
 
 export function isPlayerMasterPeer(player) {
-  if(player.id == null){
+  if (player.id == null) {
     return true;
   }
   return player.id === masterPeerId;
@@ -110,13 +111,13 @@ export function connectToPeers(player, otherPlayers, globalPowerUps) {
           }
         }
         if (conn != null && conn != undefined) {
-          //connections.push(conn); // Add the connection to the array
+          connections.push(conn); // Add the connection to the array
           everConnected = true;
-         //todo carefully assess result of removing this
+          //todo carefully assess result of removing this
           addConnectionHandlers(player, otherPlayers, conn, globalPowerUps);
         }
       } else {
-        console.log("existing connection with: " + id);
+        // console.log("existing connection with: " + id);
       }
     }
   });
@@ -137,7 +138,7 @@ export function tryNextId(player) {
     player.id = id;
     //when we connect initially we set ourselves as master
     masterPeerId = id;
-    // Add the local player's ID to the connectedPeers array
+    // Add the local player's ID to the connectedPeers array //why is our id in this list?
     connectedPeers.push(id);
     console.log("My peer ID is: " + id);
   });
@@ -163,8 +164,26 @@ function addConnectionHandlers(player, otherPlayers, conn, globalPowerUps) {
   // console.log("adding connection handlers");
   conn.on("open", function () {
     console.log("Connection opened with peer:", conn.peer);
+    // Check if a connection with the same peer already exists
+    const existingConnection = connections.find((existingConn) => existingConn.peer === conn.peer);
+
+    if (existingConnection) {
+      // // Close the existing connection
+      // existingConnection.close();
+      // // Remove the existing connection from the connections array
+      // const index = connections.indexOf(existingConnection);
+      // if (index !== -1) {
+      //   connections.splice(index, 1);
+      // }
+    } else {
+      // Push the new connection
+      // connections.push(conn);
+    }
+    //not sure why this seems to be needed even if there is existing connection
     connections.push(conn);
     let existingOtherPlayer = otherPlayers.some((player) => player.id === conn.peer);
+
+    //todo check consequennces of removing below - I don't think we should be adding player to list based on connect
     if (!existingOtherPlayer) {
       let otherPlayerData = new Player(conn.peer, -200, -200, 0, "blue", 0, "", "", player.worldDimensions, player.colors);
       otherPlayers.push(otherPlayerData);
@@ -190,6 +209,7 @@ function addConnectionHandlers(player, otherPlayers, conn, globalPowerUps) {
     console.log("Connection closed with peer:", conn.peer);
     // Remove player from otherPlayers array
     otherPlayers = otherPlayers.filter((player) => player.id !== conn.peer);
+    //todo should remove from connnections too?
   });
 
   conn.on("data", function (data) {
@@ -213,33 +233,40 @@ function setPeer(newPeer) {
   peer = newPeer;
 }
 
-//todo this is now also updating game if master peer, need to separate this
-export function updateConnections(player, otherPlayers, globalPowerUps) {
+export function updateConnections(player, globalPowerUps) {
   if (everConnected || true) {
-    sendPlayerStates(player,globalPowerUps);
+    sendPlayerStates(player, globalPowerUps);
     if (!isPlayerMasterPeer(player)) {
       setTimeSinceMessageFromMaster(timeSinceMessageFromMaster + 1);
     }
-  } else {
-    connections.forEach((conn, index) => {
-      if (conn && conn.closed) {
-        console.log("Connection closed with peer:", conn.peer);
-        otherPlayers = otherPlayers.filter((player) => player.id !== conn.peer);
-        connections.splice(index, 1); // Remove the connection from the connections array
-      } else if (!conn) {
-        console.log("Connection null, removing from otherplayers list and from connections", conn.peer);
-        otherPlayers = otherPlayers.filter((player) => player.id !== conn.peer);
-        connections = connections.filter((player) => player.id !== conn.peer);
-      }
-    });
   }
+}
+
+export function removeClosedConnections(otherPlayers) {
+  connections.forEach((conn, index) => {
+    if (conn && conn.closed) {
+      console.log("Connection closed with peer:", conn.peer);
+      otherPlayers = otherPlayers.filter((player) => player.id !== conn.peer);
+      connections.splice(index, 1); // Remove the connection from the connections array
+    } else if (!conn) {
+      console.log("Connection null, removing from otherplayers list and from connections", conn.peer);
+      otherPlayers = otherPlayers.filter((player) => player.id !== conn.peer);
+      connections = connections.filter((player) => player.id !== conn.peer);
+    }
+  });
 }
 
 export function getPlayerId() {
   return id;
 }
 
-function chooseNewMasterPeer(player, otherPlayers) {
+export function chooseNewMasterPeer(player, otherPlayers) {
+  //ok so we remove inactive player from connectedPeers list... but how can that player reconnect? do we want / need to remove from otherplayers too? do we just set it to dead?
+  otherPlayers.forEach((otherPlayer) => {
+    if (otherPlayer.timeSinceSentMessageThatWasRecieved > 60) {
+      connectedPeers = connectedPeers.filter((peer) => peer !== otherPlayer.id);
+    }
+  });
   if (connectedPeers.length > 0) {
     masterPeerId = connectedPeers[0];
 
@@ -260,16 +287,17 @@ function chooseNewMasterPeer(player, otherPlayers) {
         otherPlayer.setPlayerIsMaster(false);
       }
     } else {
-     // console.error("otherPlayer is not an instance of Player:", otherPlayer);
+      // console.error("otherPlayer is not an instance of Player:", otherPlayer);
     }
   });
 
   return masterPeerId;
 }
+
 export function createResolveConflictsWrapper() {
   let isScheduled = false;
 
-  return function(player, otherPlayers, globalPowerUps) {
+  return function (player, otherPlayers, globalPowerUps) {
     if (!isScheduled) {
       // If not scheduled, call the function and set the flag
       resolveConflicts(player, otherPlayers, globalPowerUps);
@@ -294,13 +322,13 @@ function resolveConflicts(player, otherPlayers, globalPowerUps) {
 
 function resolveConnectionConflicts(player, otherPlayers, globalPowerUps) {
   // If there is a conflict between the local game state and the received game state,
-  
+
   //not sure about the below might need to keep it in mind but I think it was causing major issues.
   // setTicksSinceLastConnectionAttempt(0);
   // otherPlayers = otherPlayers.filter((player) => player.id !== connectedPeers[0]);
   // connections = connections.filter((connection) => connection.peer !== connectedPeers[0]);
   // connectedPeers.splice(0, 1);
   //might not be able to attempt connections again without issues
- // setTimeout(() => attemptConnections(player, otherPlayers, globalPowerUps), 50);
+  // setTimeout(() => attemptConnections(player, otherPlayers, globalPowerUps), 50);
   masterPeerId = chooseNewMasterPeer(player, otherPlayers);
 }

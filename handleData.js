@@ -1,3 +1,4 @@
+import { setGlobalPowerUps, player, otherPlayers, bots, mines, setBots, setMines, setOtherPlayers } from "./astroids.js";
 import {
   connections,
   connectedPeers,
@@ -7,10 +8,12 @@ import {
   setTimeSinceAnyMessageRecieved,
   isPlayerMasterPeer,
   wrappedResolveConflicts,
+  chooseNewMasterPeer,
+  setMasterPeerId,
 } from "./connectionHandlers.js";
-import { setGlobalPowerUps, player, otherPlayers, bots, mines, setBots, setMines } from "./astroids.js";
-import { forces, setForces,createMineFromObject,createForceFromObject,createPowerUpFromObject } from "./entities.js";
-import { createBotFromObject,Player } from "./player.js";
+import { setEndGameMessage } from "./gameLogic.js";
+import { forces, setForces, createMineFromObject, createForceFromObject, createPowerUpFromObject } from "./entities.js";
+import { createBotFromObject, Player, createPlayerFromObject } from "./player.js";
 
 let handleCounter = 0;
 let sendCounter = 0;
@@ -26,13 +29,13 @@ export function sendPlayerStates(player, globalPowerUps) {
     color: player.color,
     angle: player.angle,
     pilot: player.pilot,
+    isBot: player.isBot,
     special: player.special,
     name: player.name,
     lives: player.lives,
     isMaster: player.isMaster,
     isDead: player.isDead,
     isPlaying: player.isPlaying,
-    isStar: player.isStar,
     invincibleTimer: player.invincibleTimer,
     forceCoolDown: player.forceCoolDown,
     comboScaler: player.comboScaler,
@@ -48,32 +51,23 @@ export function sendPlayerStates(player, globalPowerUps) {
     ticksSincePowerUpCollection: player.ticksSincePowerUpCollection,
     targetedBy: player.targetedBy,
     timeOfLastActive: player.timeOfLastActive,
+    hitBy: player.hitBy,
   };
-  //console.log("Sending data:", data); // Log any data sent
   connections.forEach((conn) => {
     if (conn && conn.open) {
-      conn.send(data);
-      sendCounter++;
-      // Log the data every 1000 calls
-      if (sendCounter === 5000) {
-        console.log("sending data:", data);
-        sendCounter = 0; // reset the counter
+      try {
+        conn.send(data);
+        sendCounter++;
+        // Log the data every 1000 calls
+        if (sendCounter === 5000) {
+          // console.log("sending data:", data);
+          sendCounter = 0; // reset the counter
+        }
+      } catch (error) {
+        console.error("Error sending data:", error);
       }
     }
   });
-  if (timeSinceMessageFromMaster > 60 * 15 && !isPlayerMasterPeer(player)) {
-    setTimeSinceMessageFromMaster(0);
-    //try removing the current master
-    //issue could be that peer doesn't think it is the master because it is connected to others.. need to sync connected lists I think.
-    // Remove player from otherPlayers array, connections array and connectedPeers (array of id's of the connected peers)
-    // otherPlayers = otherPlayers.filter((player) => player.id !== connectedPeers[0]);
-    // connections = connections.filter((connection) => connection.peer !== connectedPeers[0]);
-    // connectedPeers.splice(0, 1);
-    // setTimeout(() => attemptConnections(player, otherPlayers, globalPowerUps), 50);
-    // //what about "connections" how is connections and connectedPeers synced?
-    // masterPeerId = chooseNewMasterPeer(player, otherPlayers);
-    wrappedResolveConflicts(player, otherPlayers, globalPowerUps);
-  }
 }
 
 export function sendGameState(globalPowerUps) {
@@ -104,8 +98,9 @@ export function sendEntitiesState(bots) {
     gameState: true,
     bots: bots,
     mines: mines,
+    // otherPlayers: otherPlayers,
     forces: forces,
-    connectedPeers: connectedPeers,
+    // connectedPeers: connectedPeers,
     //enemies and stuff here
   };
 
@@ -161,13 +156,14 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
     otherPlayer.color = data.color;
     otherPlayer.angle = data.angle;
     otherPlayer.pilot = data.pilot;
+    otherPlayer.isBot = data.isBot;
     otherPlayer.special = data.special;
     otherPlayer.name = data.name;
     otherPlayer.lives = data.lives;
     otherPlayer.isMaster = data.isMaster;
-    otherPlayer.isDead = data.isDead;
+    otherPlayer.setIsDead(data.isDead);
     otherPlayer.isPlaying = data.isPlaying;
-    otherPlayer.invincibleTimer = data.invincibleTimer;
+    otherPlayer.setInvincibleTimer(data.invincibleTimer);
     otherPlayer.forceCoolDown = data.forceCoolDown;
     otherPlayer.comboScaler = data.comboScaler;
     otherPlayer.kills = data.kills;
@@ -182,25 +178,41 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
     otherPlayer.ticksSincePowerUpCollection = data.ticksSincePowerUpCollection;
     otherPlayer.targetedBy = data.targetedBy;
     otherPlayer.timeOfLastActive = data.timeOfLastActive;
-    otherPlayer.isStar = data.isStar;
+    otherPlayer.hitBy = data.hitBy;
 
     if (isPlayerMasterPeer(player) && otherPlayer.isMaster) {
       wrappedResolveConflicts(player, otherPlayers, globalPowerUps);
     }
   }
   // If the player is not found, add them to the array
-  else if (data.id) {
-    let newPlayer = new Player(data.id, data.x, data.y, data.powerUps, data.color, data.angle, data.pilot, data.name,data.isPlaying,true);
+  else if (data.id && data.id != player.id && !data.isBot) {
+    let newPlayer = new Player(data.id, data.x, data.y, data.powerUps, data.color, data.angle, data.pilot, data.name, data.isPlaying, true);
     otherPlayers.push(newPlayer);
     if (!connectedPeers.includes(data.id)) {
       connectedPeers.push(data.id);
     }
     connectedPeers.sort();
 
-    masterPeerId = chooseNewMasterPeer(player, otherPlayers);
-    if (data.powerUps > pointsToWin) {
-      checkWinner(otherPlayer, otherPlayers);
+    setMasterPeerId(chooseNewMasterPeer(player, otherPlayers));
+    // if (data.powerUps > pointsToWin) {
+    //   checkWinner(otherPlayer, otherPlayers);
+    // }
+  } else if (data.id && data.id == player.id) {
+    //if this is our own data we only update key properties from the master, not position, velocity etc
+    player.powerUps = data.powerUps;
+    player.comboScaler = data.comboScaler;
+    player.setIsDead(data.isDead);
+    if(data.isDead){
+        player.vel.x = 0;
+        player.vel.y = 0;
     }
+    player.lives = data.lives;
+    player.hitBy = data.hitBy;
+    player.kills = data.kills;
+    player.setInvincibleTimer(data.invincibleTimer);
+    player.ticksSincePowerUpCollection = data.ticksSincePowerUpCollection;
+    player.powerUps = data.powerUps;
+    setEndGameMessage("Killed by: " + player.hitBy + "\nScore: " + player.powerUps * 100);
   }
   // Only update the powerups if the received data contains different powerups
   if (data.globalPowerUps && JSON.stringify(globalPowerUps) !== JSON.stringify(data.globalPowerUps)) {
@@ -210,7 +222,68 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
   if (data.bots) {
     setTimeSinceMessageFromMaster(0);
     const botInstances = data.bots.map(createBotFromObject);
-    setBots(botInstances);
+    // setBots(botInstances);
+
+    //we will just replace select properties of otherplayers from the master
+    // for (let bot of bots) {
+    //   const foundDataOtherBot = data.otherPlayers.find((dataOtherBot) => dataOtherBot.id === bot.id);
+    //   if (foundDataOtherBot != null) {
+    //     bot.kills = foundDataOtherBot.kills;
+    //     bot.isDead = foundDataOtherBot.isDead;
+    //     bot.lives = foundDataOtherBot.lives;
+    //     bot.powerUps = foundDataOtherBot.powerUps;
+    //     bot.ticksSincePowerUpCollection = foundDataOtherBot.ticksSincePowerUpCollection;
+    //     bot.setInvincibleTimer(foundDataOtherBot.invincibleTimer);
+    //     bot.x = foundDataOtherBot.x;
+    //     bot.y = foundDataOtherBot.y;
+    //   }
+    // }
+
+    // Iterate through botInstances received from the master peer
+    for (const receivedBot of botInstances) {
+      // Find the corresponding local bot by ID
+      const localBot = findBotById(receivedBot.id);
+      const interpFactor = 0.2;
+      if (localBot) {
+        // If the local bot exists, interpolate its position
+        if (localBot.isDead && !receivedBot.isDead) {
+          //if we are getting respawn info just set the new coordinates
+          localBot.x = receivedBot.x;
+          localBot.y = receivedBot.y;
+          localBot.vel.x = receivedBot.vel.x;
+          localBot.vel.y = receivedBot.vel.y;
+        } else {
+          // else inerpolate to smooth the update
+          localBot.x = localBot.x + (receivedBot.x - localBot.x) * interpFactor;
+          localBot.y = localBot.y + (receivedBot.y - localBot.y) * interpFactor;
+          localBot.vel.x = localBot.vel.x + (receivedBot.vel.x - localBot.vel.x) * interpFactor;
+          localBot.vel.y = localBot.vel.y + (receivedBot.vel.y - localBot.vel.y) * interpFactor;
+        }
+        localBot.setIsDead(receivedBot.isDead);
+
+        //don't interpolate the angle because that can natually change very sharply
+        localBot.angle = receivedBot.angle;
+        localBot.botState = receivedBot.botState;
+        localBot.randomTarget = receivedBot.randomTarget;
+        localBot.followingPlayerID = receivedBot.followingPlayerID;
+        localBot.previousAngleDifference = receivedBot.previousAngleDifference;
+        localBot.previousTurnDirection = receivedBot.previousTurnDirection;
+        localBot.invincibleTimer = receivedBot.invincibleTimer;
+        localBot.forceCoolDown = receivedBot.forceCoolDown;
+        localBot.playerAngleData = receivedBot.playerAngleData;
+        localBot.mousePosX = receivedBot.mousePosX;
+        localBot.mousePosY = receivedBot.mousePosY;
+        localBot.name = receivedBot.name;
+      } else {
+        // If the local bot doesn't exist, add it to the bots array
+        bots.push(receivedBot);
+      }
+    }
+
+    // Optionally, you may want to remove bots from the local array that are not in botInstances
+    // This ensures that local bots that have been removed on the master peer are also removed locally
+    //bots = bots.filter((localBot) => botInstances.some((receivedBot) => receivedBot.id === localBot.id));
+    setBots(bots.filter((localBot) => botInstances.some((receivedBot) => receivedBot.id === localBot.id)));
   }
   if (data.mines) {
     setTimeSinceMessageFromMaster(0);
@@ -220,7 +293,59 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
   if (data.forces) {
     setTimeSinceMessageFromMaster(0);
     const forceInstances = data.forces.map(createForceFromObject);
-    setForces(forceInstances);
+    // setForces(forceInstances);
+    // Iterate through forceInstances received from the master peer
+    for (const receivedForce of forceInstances) {
+      // Find the corresponding local bot by ID
+      const localForce = findForceById(receivedForce.id);
+      const interpFactor = 0.2;
+      if (localForce) {
+        // If the local force exists, interpolate its position
+        // This assumes you have a variable for interpolation factor (e.g., interpFactor)
+        localForce.x = localForce.x + (receivedForce.x - localForce.x) * interpFactor;
+        localForce.y = localForce.y + (receivedForce.y - localForce.y) * interpFactor;
+        localForce.force = receivedForce.force;
+        localForce.duration = receivedForce.duration;
+        localForce.radius = receivedForce.radius;
+        localForce.isAttractive = receivedForce.isAttractive;
+        localForce.color = receivedForce.color;
+        localForce.tracks = receivedForce.tracks;
+      } else {
+        // If the local bot doesn't exist, add it to the bots array
+        forces.push(receivedForce);
+      }
+    }
+  }
+  if (data.otherPlayers) {
+    setTimeSinceMessageFromMaster(0);
+    // const otherPlayersInstances = data.otherPlayers.map(createPlayerFromObject);
+    //setOtherPlayers(otherPlayersInstances);
+    const dataPlayer = data.otherPlayers.find((otherPlayer) => otherPlayer.id === player.id);
+
+    if (dataPlayer != null) {
+      player.kills = dataPlayer.kills;
+      player.setIsDead(dataPlayer.isDead);
+      player.lives = dataPlayer.lives;
+      player.powerUps = dataPlayer.powerUps;
+      player.ticksSincePowerUpCollection = dataPlayer.ticksSincePowerUpCollection;
+      player.setInvincibleTimer(dataPlayer.invincibleTimer);
+      if (dataPlayer.hitBy != null && dataPlayer.hitBy != "" && player.isDead) {
+        player.hitBy = dataPlayer.hitBy;
+        setEndGameMessage("Killed by: " + player.hitBy + "\nScore: " + player.powerUps * 100);
+      }
+    }
+    //we will just replace select properties of otherplayers from the master
+    for (let otherPlayer of otherPlayers) {
+      const foundDataOtherPlayer = data.otherPlayers.find((dataOtherPlayer) => dataOtherPlayer.id === otherPlayer.id);
+      if (foundDataOtherPlayer != null) {
+        otherPlayer.kills = foundDataOtherPlayer.kills;
+        otherPlayer.setIsDead(foundDataOtherPlayer.isDead);
+        otherPlayer.lives = foundDataOtherPlayer.lives;
+        otherPlayer.powerUps = foundDataOtherPlayer.powerUps;
+        otherPlayer.ticksSincePowerUpCollection = foundDataOtherPlayer.ticksSincePowerUpCollection;
+        otherPlayer.setInvincibleTimer(foundDataOtherPlayer.invincibleTimer);
+      }
+    }
   }
 
   if (data.connectedPeers) {
@@ -245,12 +370,22 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
       sendConnectedPeers();
     }
   }
-//   handleCounter++;
-//   // Log the data every 1000 calls
-//   if (handleCounter === 1000) {
-//     console.log("handling data:", data);
-//     handleCounter = 0; // reset the counter
-//   }
+  //   handleCounter++;
+  //   // Log the data every 1000 calls
+  //   if (handleCounter === 1000) {
+  //     console.log("handling data:", data);
+  //     handleCounter = 0; // reset the counter
+  //   }
+}
+
+// Function to find a bot by ID in the bots array
+function findBotById(id) {
+  return bots.find((bot) => bot.id === id);
+}
+
+// Function to find a bot by ID in the bots array
+function findForceById(id) {
+  return forces.find((force) => force.id === id);
 }
 
 function differsFrom(firstArray, secondArray) {

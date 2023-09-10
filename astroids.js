@@ -2,7 +2,21 @@ import { drawNameEntry, drawGameOverMessage, drawNameCursor, updateTopScoresInfo
 import { setupPilotsImageSources, setupPilotsImages } from "./drawingUtils.js";
 import { forces } from "./entities.js";
 import { drawScene } from "./gameDrawing.js";
-import { tryNextId, attemptConnections, connectToPeers, updateConnections, isPlayerMasterPeer } from "./connectionHandlers.js";
+import {
+  tryNextId,
+  attemptConnections,
+  connectToPeers,
+  updateConnections,
+  isPlayerMasterPeer,
+  removeClosedConnections,
+  setTicksSinceLastConnectionAttempt,
+  ticksSinceLastConnectionAttempt,
+  setTimeSinceAnyMessageRecieved,
+  timeSinceAnyMessageRecieved,
+  wrappedResolveConflicts,
+  timeSinceMessageFromMaster,
+  setTimeSinceMessageFromMaster,
+} from "./connectionHandlers.js";
 import { sendPlayerStates } from "./handleData.js";
 import { setupCanvas, setupSpikeyBallPoints } from "./drawingUtils.js";
 import { addScore } from "./db.js";
@@ -83,6 +97,7 @@ let playerToSpectate = null;
 let prioritizeHumanSpectate = false;
 
 export const player = new Player(null, null, null, 0, null, 0, "", "", false, true);
+player.isMaster = true;
 // player.isPlaying = false;
 // player.isUserControlledCharacter = true;
 export let otherPlayers = [];
@@ -111,6 +126,12 @@ export function getCanvas() {
 
 export function setBots(newBots) {
   bots = newBots;
+}
+
+export function setOtherPlayers(newPlayers) {
+  otherPlayers = newPlayers;
+  // Remove player from otherPlayers array
+  otherPlayers = otherPlayers.filter((otherPlayer) => otherPlayer.id !== player.id);
 }
 
 function updateCamera(playerToFollow, deltaTime) {
@@ -161,11 +182,31 @@ function updateGame(deltaTime, playerActive) {
   // if (isPlayerMasterPeer(player)) {
   //   masterPeerUpdateGame(globalPowerUps,otherPlayers,bots,deltaTime);
   // }
-  updateConnections(player, otherPlayers, globalPowerUps);
-
+  updateConnections(player, globalPowerUps);
+  removeClosedConnections(otherPlayers);
   if (checkWinner(player, otherPlayers) || player.isDead) {
     setGameState(GameState.FINISHED);
     player.resetState(true, true);
+  }
+
+  setTicksSinceLastConnectionAttempt(ticksSinceLastConnectionAttempt + 1);
+  setTimeSinceAnyMessageRecieved(timeSinceAnyMessageRecieved + 1);
+  if (timeSinceAnyMessageRecieved > 100 && ticksSinceLastConnectionAttempt > 3000) {
+    wrappedResolveConflicts(player, otherPlayers, globalPowerUps);
+    //todo do we need to attemptConnections here?
+  }
+  if (timeSinceMessageFromMaster > 60 * 15 && !isPlayerMasterPeer(player)) {
+    setTimeSinceMessageFromMaster(0);
+    //try removing the current master
+    //issue could be that peer doesn't think it is the master because it is connected to others.. need to sync connected lists I think.
+    // Remove player from otherPlayers array, connections array and connectedPeers (array of id's of the connected peers)
+    // otherPlayers = otherPlayers.filter((player) => player.id !== connectedPeers[0]);
+    // connections = connections.filter((connection) => connection.peer !== connectedPeers[0]);
+    // connectedPeers.splice(0, 1);
+    // setTimeout(() => attemptConnections(player, otherPlayers, globalPowerUps), 50);
+    // //what about "connections" how is connections and connectedPeers synced?
+    // masterPeerId = chooseNewMasterPeer(player, otherPlayers);
+    wrappedResolveConflicts(player, otherPlayers, globalPowerUps);
   }
 }
 
@@ -212,7 +253,7 @@ function camFollowPlayer(deltaTime) {
 function setupPilots(canvas, ctx) {
   setupPilotsImageSources();
   addPilotEventListners(canvas, ctx);
-  //todo will need to update this if multiple pilots 
+  //todo will need to update this if multiple pilots
   if (!pilot2.selected) {
     pilot1.selected = true;
   }

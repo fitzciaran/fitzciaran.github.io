@@ -120,13 +120,18 @@ export function generateMines(worldWidth, worldHeight, colors) {
   }
   // Check if there are less than max powerups powerups
   while (mines.length < maxMines) {
+    let hasGravity = 0;
+    if (Math.random() > 0.4) {
+      hasGravity = 1;
+    }
     let powerUp = new Mine(
       Math.floor(Math.random() * 10000),
       (Math.random() * 0.8 + 0.1) * worldWidth,
       (Math.random() * 0.8 + 0.1) * worldHeight,
       100,
       10,
-      colors[Math.floor(Math.random() * colors.length)]
+      colors[Math.floor(Math.random() * colors.length)],
+      hasGravity
     );
     mines.push(powerUp);
   }
@@ -142,12 +147,14 @@ export function checkPowerupCollision(playerToCheck, globalPowerUps) {
       // assuming the radius of ship is 10 - todo update for better hitbox on ship
       if (playerToCheck.ticksSincePowerUpCollection == -1) {
         //may need to make this an array of "recently collected / iteracted stuff" to be more robust in the future rather than a simple power up timer
-        playerToCheck.powerUps += globalPowerUps[i].value;
+        // playerToCheck.powerUps += globalPowerUps[i].value;
+        let scoreToAdd = globalPowerUps[i].value;
         playerToCheck.ticksSincePowerUpCollection = 0;
         if (globalPowerUps[i].isStar) {
-          playerToCheck.invincibleTimer = initialInvincibleTime;
+          playerToCheck.setInvincibleTimer(initialInvincibleTime);
         }
         globalPowerUps.splice(i, 1);
+        playerToCheck.addScore(scoreToAdd);
       }
       // sendPowerups(globalPowerUps);
       setGlobalPowerUps(globalPowerUps);
@@ -173,7 +180,7 @@ export function checkMineCollision(playerToCheck, mines) {
         // mines.splice(i, 1);
       }
       if (playerToCheck.invincibleTimer > 0 && playerToCheck.timeSinceSpawned > spawnProtectionTime && mines[i].hitFrames < 1) {
-        playerToCheck.invincibleTimer = Math.max(playerToCheck.invincibleTimer - 100, 0);
+        playerToCheck.setInvincibleTimer(playerToCheck.invincibleTimer - 100);
         mines[i].hitFrames = 5;
         // mines.splice(i, 1);
       }
@@ -266,7 +273,13 @@ export function setGameWon(won) {
 }
 
 export function updateEnemies(deltaTime) {
-  // Update the positions, velocities, etc. of the enemies
+  // Update the positions, velocities, etc. of the enemies, create and track forces
+  //todo sync forces to deltaTime... could the level of force be linked?
+  //or could we get away with only creating new force if old one doesn't exist?
+  for (let mine of mines) {
+    mine.createForce();
+  }
+
   for (let force of forces) {
     if (force.duration > 0) {
       // for (let effectedPlayer of allPlayers){
@@ -309,7 +322,7 @@ export function checkForcesCollision(playerToCheck, forces) {
     } else if (distance > 50 && distance <= force.radius) {
       // Gradual decrease in force from max at 50 to 40% at force.radius
       const maxForce = force.force;
-      const minForce = 0.4 * maxForce;
+      const minForce = 0.6 * maxForce;
       const forceRange = maxForce - minForce;
       const distanceRange = force.radius - 50;
       const forceIncrement = forceRange / distanceRange;
@@ -470,6 +483,7 @@ export function getRandomName() {
     "Rocket",
     "Lunar",
     "Solar",
+    "Free",
     "Quasar",
     "Pulsar",
     "Meteor",
@@ -480,6 +494,7 @@ export function getRandomName() {
     "Mean",
     "Tree",
     "Dave",
+    "Chuck",
     "Fire",
     "Ice",
     "Mystic",
@@ -491,6 +506,8 @@ export function getRandomName() {
     "Crystal",
     "Golden",
     "Silver",
+    "Ein",
+    "Kevin",
   ];
   const suffixes = [
     "Rider",
@@ -508,6 +525,7 @@ export function getRandomName() {
     "Maverick",
     "Slinger",
     "Jester",
+    "Lover",
     "Ranger",
     "Champion",
     "Seeker",
@@ -516,7 +534,9 @@ export function getRandomName() {
     "Shifter",
     "Whisper",
     "Dreamer",
-    "Wanderer",
+    "Log",
+    "Stein",
+    "Freedom",
   ];
 
   // Generate random indexes for prefix and suffix

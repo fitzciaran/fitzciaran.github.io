@@ -22,8 +22,10 @@ import {
   ticksSinceLastConnectionAttempt,
   setTicksSinceLastConnectionAttempt,
   wrappedResolveConflicts,
+  isPlayerMasterPeer,
 } from "./connectionHandlers.js";
 import { forces, ForceArea } from "./entities.js";
+import { sendPlayerStates } from "./handleData.js";
 import { shuffleArray, setEndGameMessage, maxInvincibilityTime, spawnProtectionTime, maxSpecialMeter } from "./gameLogic.js";
 
 const bounceFactor = 1.5;
@@ -66,8 +68,8 @@ export class Player {
     this.isPlaying = isPlaying;
     this.isUserControlledCharacter = isUserControlledCharacter;
     this.lives = 1;
-    this.isMaster = true;
-    this.isDead = false;
+    this.isMaster = false;
+    this.setIsDead(false);
     this.invincibleTimer = 0;
     this.forceCoolDown = 0;
     this.comboScaler = 1;
@@ -110,7 +112,7 @@ export class Player {
     this.targetedBy = [];
     this.space = false;
     this.shift = false;
-    this.isDead = false;
+    this.setIsDead(false);
     this.invincibleTimer = 0;
     this.comboScaler = 1;
     this.kills = 0;
@@ -121,7 +123,12 @@ export class Player {
     this.vel = { x: 0, y: 0 };
     this.timeSinceSpawned = 0;
   }
-
+  isDead() {
+    return this.isDead;
+  }
+  setIsDead(newIsDead) {
+    this.isDead = newIsDead;
+  }
   delayReset(framesToDelay, keepName, keepColor) {
     if (framesToDelay > 0) {
       requestAnimationFrame(() => {
@@ -133,7 +140,8 @@ export class Player {
     }
   }
   gotHit(hitBy) {
-    this.isDead = true;
+    this.setIsDead(true);
+    this.hitBy = hitBy;
     if (this == player) {
       if (hitBy != null && hitBy != "") {
         setEndGameMessage("Killed by: " + hitBy + "\nScore: " + this.powerUps * 100);
@@ -141,12 +149,18 @@ export class Player {
         setEndGameMessage("Score: " + this.powerUps * 100);
       }
     }
+    if (isPlayerMasterPeer(player) && !isPlayerMasterPeer(this)) {
+      sendPlayerStates(this, globalPowerUps);
+    }
   }
   addScore(scoreToAdd) {
     this.powerUps += scoreToAdd;
     if (this.powerUps != Math.floor(this.powerUps)) {
       console.log("somehow not whole score added");
       this.powerUps = Math.floor(this.powerUps);
+    }
+    if (isPlayerMasterPeer(player) && !isPlayerMasterPeer(this)) {
+      sendPlayerStates(this, globalPowerUps);
     }
   }
   setPilot(newPilot) {
@@ -220,10 +234,14 @@ export class Player {
     if (this.comboScaler < 10) {
       this.comboScaler += 1;
     }
+    this.setInvincibleTimer(this.invincibleTimer - 150);
 
-    this.invincibleTimer -= 150;
-    this.invincibleTimer = Math.min(this.invincibleTimer, maxInvincibilityTime);
     // drawKillInfo(ctx, this, score, camX, camY);
+  }
+
+  setInvincibleTimer(newTime) {
+    this.invincibleTimer = Math.min(newTime, maxInvincibilityTime);
+    this.invincibleTimer = Math.max(this.invincibleTimer, 0);
   }
 
   bouncePlayer() {
@@ -268,8 +286,7 @@ export class Player {
     if (this.shift && this.invincibleTimer > 0) {
       if (this.special == Special.BOOST) {
         if (this.invincibleTimer > 0) {
-          this.invincibleTimer -= 5;
-          this.invincibleTimer = Math.max(this.invincibleTimer, 0);
+          this.setInvincibleTimer(this.invincibleTimer - 5);
         }
         if (this.pilot == PilotName.PILOT_1) {
           pilotBoostFactor = 3;
@@ -366,7 +383,7 @@ export class Player {
     setCam(camX, camY);
   }
   updateTick(deltaTime) {
-    if (this.isDead && this.isUserControlledCharacter) {
+    if (player.isDead) {
       setGameState(GameState.FINISHED);
       return;
     }
@@ -377,11 +394,11 @@ export class Player {
     this.updatePlayerPosition(deltaTime);
     if (this.u) {
       //this is a debug cheat
-      this.invincibleTimer += 10;
+      this.setInvincibleTimer(this.invincibleTimer + 10);
       this.specialMeter += 10;
     }
     if (this.invincibleTimer > 0) {
-      this.invincibleTimer -= 1;
+      this.setInvincibleTimer(this.invincibleTimer - 1);
       if (this.invincibleTimer == 0) {
         this.comboScaler = 1;
       }
@@ -398,12 +415,7 @@ export class Player {
       this.ticksSincePowerUpCollection = -1;
     }
     this.forceCoolDown = Math.max(this.forceCoolDown - 1, 0);
-    setTicksSinceLastConnectionAttempt(ticksSinceLastConnectionAttempt + 1);
-    setTimeSinceAnyMessageRecieved(timeSinceAnyMessageRecieved + 1);
-    if (timeSinceAnyMessageRecieved > 100 && ticksSinceLastConnectionAttempt > 3000) {
-      wrappedResolveConflicts(player, otherPlayers, globalPowerUps);
-      //todo do we need to attemptConnections here?
-    }
+
     otherPlayers.forEach((otherPlayer) => {
       otherPlayer.timeSinceSentMessageThatWasRecieved += 1;
     });
@@ -420,6 +432,34 @@ export class Player {
   }
 }
 
+export function createPlayerFromObject(obj, excludeCurrentPlayer = true) {
+  let newPlayer = new Player(
+    obj.id,
+    obj.x,
+    obj.y,
+    obj.powerUps,
+    obj.color,
+    obj.angle,
+    obj.pilot,
+    obj.name,
+    obj.isPlaying,
+    obj.isUserControlledCharacter
+  );
+  newPlayer.timeOfLastActive = obj.timeOfLastActive;
+  newPlayer.playerAngleData = obj.playerAngleData;
+  newPlayer.mousePosX = obj.mousePosX;
+  newPlayer.mousePosY = obj.mousePosY;
+  newPlayer.currentSpeed = obj.currentSpeed;
+  newPlayer.vel = obj.vel;
+  newPlayer.distanceFactor = obj.distanceFactor;
+  newPlayer.space = obj.space;
+  newPlayer.shift = obj.shift;
+  newPlayer.u = obj.u;
+  newPlayer.timeSinceSpawned = obj.timeSinceSpawned;
+  newPlayer.setIsDead(obj.isDead);
+  return newPlayer;
+}
+
 export function createBotFromObject(obj) {
   let bot = new Bot(obj.id, obj.x, obj.y, obj.powerUps, obj.color, obj.angle, obj.pilot, obj.name, obj.isPlaying, obj.isUserControlledCharacter);
   bot.timeOfLastActive = obj.timeOfLastActive;
@@ -433,7 +473,7 @@ export function createBotFromObject(obj) {
   bot.shift = obj.shift;
   bot.u = obj.u;
   bot.timeSinceSpawned = obj.timeSinceSpawned;
-  bot.isDead = bot.isDead;
+  bot.setIsDead(obj.isDead);
   return bot;
 }
 

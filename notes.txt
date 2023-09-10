@@ -221,3 +221,23 @@ could put a collectedby property on powerups then schedule removal for a few fra
 
 invicibletime goes down when hits
 gauage appears above player
+
+if implement full hitboxes could have the front bit be invicible.
+
+maybe master should send "isHit" "has collected" etc to update slave peers, might solve a lot of the p2p issues.
+
+give bots specials and make them use them on defense / offence
+
+as master could sent player updates only on hits/collections/interactions?
+
+getting multiple copies of bots for non master peers now? (one faded out .. very weird, the "copy" that carries on with old pos data seems to get the state for inv etc)
+
+can't start as non master now think isdead keeps getting reset to dead, master needs to be updated with the isDead = false(and full player reset) when non master rejoins
+
+draw the score for powerup collection
+
+mine could have an attractive force (or repellent? )
+
+deal with stack of messages (like when have been paused in debgger) better
+
+deal with non-master drawing of forces (interpolate like with players should do it)

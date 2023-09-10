@@ -331,6 +331,7 @@ export function drawEnemy(ctx, camX, camY, mine, points) {
     rotatedPoint = rotateAndScalePoint(points[i].x, points[i].y, angle, mineScale);
     ctx.lineTo(centerX - camX + rotatedPoint.x, centerY - camY + rotatedPoint.y);
   }
+  
 
   ctx.stroke();
   ctx.closePath();
