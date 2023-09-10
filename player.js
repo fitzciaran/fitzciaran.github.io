@@ -91,6 +91,7 @@ export class Player {
     this.special = Special.FORCE_PULL;
     this.specialMeter = 100;
     this.usingSpecial = 0;
+    this.hitBy = "";
   }
 
   resetState(keepName, keepColor) {
@@ -122,6 +123,7 @@ export class Player {
     this.currentSpeed = 0;
     this.vel = { x: 0, y: 0 };
     this.timeSinceSpawned = 0;
+    this.hitBy = "";
   }
   isDead() {
     return this.isDead;
