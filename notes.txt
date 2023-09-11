@@ -247,3 +247,5 @@ boost areas are just forces now... well current forces are point based maybe nee
 
   //gotHit and addScore are both doing an additional key function of sending the playerstates as master. 
   //Need to unpick this, maybe there should be events for gotHit and addscore and masterpeer responds to such events with sending player state for the given player
+  mines not being removed on slave peer - still kills?! is it an issue on master where it isn't rendered?
+  look into performance maybe only stroke/ closepath/open path at end/beginning of all force draws?

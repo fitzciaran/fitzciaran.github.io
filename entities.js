@@ -18,7 +18,7 @@ export class Entity {
 }
 
 export class ForceArea extends Entity {
-  constructor(id = null, x = null, y = null, force = 1, duration = 200, radius = 100, isAttractive, color = "red", tracks) {
+  constructor(id = null, x = null, y = null, force = 1, duration = 200, radius = 100, isAttractive, color = "red", tracks,coneAngle= Math.PI * 2,direction = 0) {
     super(id, x, y);
     this.force = force;
     this.duration = duration;
@@ -26,6 +26,8 @@ export class ForceArea extends Entity {
     this.isAttractive = isAttractive;
     this.color = color;
     this.tracks = tracks;
+    this.coneAngle = coneAngle;
+    this.direction = direction;
   }
   setDuration(newDuration) {
     this.duration = newDuration;
@@ -96,7 +98,7 @@ export function createForceFromObject(obj) {
     obj.tracks.isPlaying,
     obj.tracks.isUserControlledCharacter
   );
-  let force = new ForceArea(obj.id, obj.x, obj.y, obj.force, obj.duration, obj.radius, obj.isAttractive, obj.color, tracks);
+  let force = new ForceArea(obj.id, obj.x, obj.y, obj.force, obj.duration, obj.radius, obj.isAttractive, obj.color, tracks,coneAngle,direction);
   return force;
 }
 export function createMineFromObject(obj) {

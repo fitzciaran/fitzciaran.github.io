@@ -1,3 +1,4 @@
+import { chooseNewMasterPeer } from "./connectionHandlers.js";
 import { renderDebugInfo, drawPowerupLevels, drawInvincibilityGauge, drawSpecialGauge } from "./drawGameUI.js";
 import { rotateAndScalePoint, interpolate, spikeyBallPoints } from "./drawingUtils.js";
 import { forces } from "./entities.js";
@@ -295,6 +296,18 @@ function drawRotatedShip(ctx, camX, camY, player, points) {
   ctx.stroke();
   ctx.closePath();
 
+  //for debug draw angle
+  // Calculate the endpoint coordinates based on the angle
+  //   const lineLength = 50; // Adjust the length of the line as needed
+  //   let adjustedAngle = angle - Math.PI/2;
+  //   const lineEndpointX = centerX - camX + lineLength * Math.cos(adjustedAngle);
+  //   const lineEndpointY = centerY - camY + lineLength * Math.sin(adjustedAngle);
+
+  //   // Draw the line
+  //   ctx.moveTo(centerX - camX, centerY - camY);
+  //   ctx.lineTo(lineEndpointX, lineEndpointY);
+  //   ctx.stroke();
+
   ctx.globalAlpha = 1;
 
   const namePositionX = centerX - camX;
@@ -331,7 +344,6 @@ export function drawEnemy(ctx, camX, camY, mine, points) {
     rotatedPoint = rotateAndScalePoint(points[i].x, points[i].y, angle, mineScale);
     ctx.lineTo(centerX - camX + rotatedPoint.x, centerY - camY + rotatedPoint.y);
   }
-  
 
   ctx.stroke();
   ctx.closePath();
@@ -349,98 +361,128 @@ function drawForce(ctx, camX, camY, force, points) {
   let color = force.color;
   let radius = force.radius;
   let attractive = force.isAttractive;
+  let coneAngle = force.coneAngle;
+  let direction = force.direction;
 
   // Adjust the position based on the viewport
   let screenX = centerX;
   let screenY = centerY;
 
-  ctx.beginPath();
-  ctx.arc(screenX, screenY, radius, 0, Math.PI * 2);
-  ctx.strokeStyle = color;
-  ctx.stroke();
-  ctx.closePath();
+  // Calculate the angle range for the cone
+  let startAngle = direction - coneAngle / 2;
+  let endAngle = direction + coneAngle / 2;
 
-  // Draw arrows based on force type (attractive or repulsive)
+  // Normalize startAngle and endAngle to be within the range 0 to 2π
+  startAngle = ((startAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+  endAngle = ((endAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+
   ctx.beginPath();
+
+  if (coneAngle == 2 * Math.PI) {
+    ctx.arc(screenX, screenY, radius, 0, Math.PI * 2);
+    // ctx.arc(screenX, screenY, radius, direction, coneAngle);
+  } else {
+    ctx.moveTo(screenX, screenY); // Move to the center of the cone
+    ctx.lineTo(screenX + Math.cos(direction - coneAngle / 2) * radius, screenY + Math.sin(direction - coneAngle / 2) * radius); // Draw one edge of the cone
+    ctx.arc(screenX, screenY, radius, direction - coneAngle / 2, direction + coneAngle / 2); // Draw the arc representing the cone
+    ctx.lineTo(screenX, screenY); // Connect back to the center to close the shape
+  }
+  ctx.strokeStyle = color;
+  // ctx.stroke();
+  // ctx.closePath();
+  // // Draw arrows based on force type (attractive or repulsive)
+  // ctx.beginPath();
   ctx.moveTo(screenX, screenY);
 
-  //   for (let i = 0; i < 360; i += 45) {
-  //     let angle = (i * Math.PI) / 180;
+  let increment = 10;
+  if (coneAngle > 5) {
+    increment = 40;
+  }
+  if (startAngle > endAngle) {
+    // If startAngle is greater than endAngle, it means the cone crosses the 0/2π line.
+    // In this case, we need to check if the angle is less than endAngle or greater than startAngle.
+    for (let i = 0; i < 360; i += increment) {
+      let angle = (i * Math.PI) / 180;
+      angle = ((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
 
-  //     if (attractive) {
-  //       //draw inwards arrows
-  //       let arrowX = screenX + 0.8 * radius * Math.cos(angle);
-  //       let arrowY = screenY + 0.8 * radius * Math.sin(angle);
-  //       // Calculate the coordinates for the arrowhead
-  //       let arrowheadX = arrowX - 100 * Math.cos(angle); // Adjust arrowhead length as needed
-  //       let arrowheadY = arrowY - 100 * Math.sin(angle); // Adjust arrowhead length as needed
+      if (angle <= endAngle || angle >= startAngle) {
+        drawForceLines(ctx, attractive, radius, angle, screenX, screenY);
+      }
+    }
+  } else {
+    // If startAngle is less than endAngle, we can simply check if the angle is within this range.
+    for (let i = 0; i < 360; i += increment) {
+      let angle = (i * Math.PI) / 180;
+      angle = ((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
 
-  //       ctx.moveTo(arrowheadX, arrowheadY);
-  //       ctx.lineTo(arrowX, arrowY); // Draw the arrow line
-  //     //   Draw the arrowhead for arrows pointing away from the center
-  //       ctx.moveTo(arrowheadX, arrowheadY);
-  //       ctx.lineTo(
-  //         arrowheadX + 15 * Math.cos(angle + Math.PI / 8), // Adjust arrowhead size as needed
-  //         arrowheadY + 15 * Math.sin(angle + Math.PI / 8) // Adjust arrowhead size as needed
-  //       );
-  //       ctx.moveTo(arrowheadX, arrowheadY);
-  //       ctx.lineTo(
-  //         arrowheadX + 15 * Math.cos(angle - Math.PI / 8), // Adjust arrowhead size as needed
-  //         arrowheadY + 15 * Math.sin(angle - Math.PI / 8) // Adjust arrowhead size as needed
-  //       );
-  //     } else {
-  //         }
-  //   }
-  for (let i = 0; i < 360; i += 45) {
-    let angle = (i * Math.PI) / 180;
-
-    if (attractive) {
-      //draw inwards arrows
-      let arrowX = screenX + 0.8 * radius * Math.cos(angle);
-      let arrowY = screenY + 0.8 * radius * Math.sin(angle);
-      // Calculate the coordinates for the arrowhead
-      let arrowheadX = arrowX - 100 * Math.cos(angle); // Adjust arrowhead length as needed
-      let arrowheadY = arrowY - 100 * Math.sin(angle); // Adjust arrowhead length as needed
-
-      ctx.moveTo(arrowheadX, arrowheadY);
-      ctx.lineTo(arrowX, arrowY); // Draw the arrow line
-      //   Draw the arrowhead for arrows pointing away from the center
-      ctx.moveTo(arrowheadX, arrowheadY);
-      ctx.lineTo(
-        arrowheadX + 15 * Math.cos(angle + Math.PI / 8), // Adjust arrowhead size as needed
-        arrowheadY + 15 * Math.sin(angle + Math.PI / 8) // Adjust arrowhead size as needed
-      );
-      ctx.moveTo(arrowheadX, arrowheadY);
-      ctx.lineTo(
-        arrowheadX + 15 * Math.cos(angle - Math.PI / 8), // Adjust arrowhead size as needed
-        arrowheadY + 15 * Math.sin(angle - Math.PI / 8) // Adjust arrowhead size as needed
-      );
-    } else {
-      // Draw outwards arrows
-      let arrowX = screenX + 0.3 * radius * Math.cos(angle);
-      let arrowY = screenY + 0.3 * radius * Math.sin(angle);
-      // Calculate the coordinates for the arrowhead
-      let arrowheadX = arrowX + 100 * Math.cos(angle); // Adjust arrowhead length as needed
-      let arrowheadY = arrowY + 100 * Math.sin(angle); // Adjust arrowhead length as needed
-
-      ctx.moveTo(arrowheadX, arrowheadY);
-      ctx.lineTo(arrowX, arrowY); // Draw the arrow line
-      //   Draw the arrowhead for arrows pointing away from the center
-      ctx.moveTo(arrowheadX, arrowheadY);
-      ctx.lineTo(
-        arrowheadX - 15 * Math.cos(angle + Math.PI / 8), // Adjust arrowhead size as needed
-        arrowheadY - 15 * Math.sin(angle + Math.PI / 8) // Adjust arrowhead size as needed
-      );
-      ctx.moveTo(arrowheadX, arrowheadY);
-      ctx.lineTo(
-        arrowheadX - 15 * Math.cos(angle - Math.PI / 8), // Adjust arrowhead size as needed
-        arrowheadY - 15 * Math.sin(angle - Math.PI / 8) // Adjust arrowhead size as needed
-      );
+      if ((angle >= startAngle && angle <= endAngle) || coneAngle == 2 * Math.PI) {
+        drawForceLines(ctx, attractive, radius, angle, screenX, screenY);
+      }
     }
   }
-
   ctx.stroke();
   ctx.closePath();
+}
+
+function drawForceLines(ctx, attractive, radius, angle, screenX, screenY) {
+  if (attractive) {
+    //draw inwards arrows
+    let arrowX = screenX + 0.8 * radius * Math.cos(angle);
+    let arrowY = screenY + 0.8 * radius * Math.sin(angle);
+    // Calculate the coordinates for the arrowhead
+    let arrowheadX = arrowX - 100 * Math.cos(angle); // Adjust arrowhead length as needed
+    let arrowheadY = arrowY - 100 * Math.sin(angle); // Adjust arrowhead length as needed
+
+    ctx.moveTo(arrowheadX, arrowheadY);
+    ctx.lineTo(arrowX, arrowY); // Draw the arrow line
+    //   Draw the arrowhead for arrows pointing away from the center
+    ctx.moveTo(arrowheadX, arrowheadY);
+    ctx.lineTo(
+      arrowheadX + 15 * Math.cos(angle + Math.PI / 8), // Adjust arrowhead size as needed
+      arrowheadY + 15 * Math.sin(angle + Math.PI / 8) // Adjust arrowhead size as needed
+    );
+    ctx.moveTo(arrowheadX, arrowheadY);
+    ctx.lineTo(
+      arrowheadX + 15 * Math.cos(angle - Math.PI / 8), // Adjust arrowhead size as needed
+      arrowheadY + 15 * Math.sin(angle - Math.PI / 8) // Adjust arrowhead size as needed
+    );
+  } else {
+    // Draw outwards arrows
+    let arrowX = screenX + 0.3 * radius * Math.cos(angle);
+    let arrowY = screenY + 0.3 * radius * Math.sin(angle);
+    // Calculate the coordinates for the arrowhead
+    let arrowheadX = arrowX + 100 * Math.cos(angle); // Adjust arrowhead length as needed
+    let arrowheadY = arrowY + 100 * Math.sin(angle); // Adjust arrowhead length as needed
+
+    ctx.moveTo(arrowheadX, arrowheadY);
+    ctx.lineTo(arrowX, arrowY); // Draw the arrow line
+    //   Draw the arrowhead for arrows pointing away from the center
+    ctx.moveTo(arrowheadX, arrowheadY);
+    ctx.lineTo(
+      arrowheadX - 15 * Math.cos(angle + Math.PI / 8), // Adjust arrowhead size as needed
+      arrowheadY - 15 * Math.sin(angle + Math.PI / 8) // Adjust arrowhead size as needed
+    );
+    ctx.moveTo(arrowheadX, arrowheadY);
+    ctx.lineTo(
+      arrowheadX - 15 * Math.cos(angle - Math.PI / 8), // Adjust arrowhead size as needed
+      arrowheadY - 15 * Math.sin(angle - Math.PI / 8) // Adjust arrowhead size as needed
+    );
+  }
+}
+
+function normalizeAngle(angle) {
+  return ((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+}
+
+function isAngleInCone(angle, startAngle, endAngle) {
+  if (startAngle > endAngle) {
+    // If startAngle is greater than endAngle, it means the cone crosses the 0/2π line.
+    // In this case, we need to check if the angle is less than endAngle or greater than startAngle.
+    return angle <= endAngle || angle >= startAngle;
+  } else {
+    // If startAngle is less than endAngle, we can simply check if the angle is within this range.
+    return angle >= startAngle && angle <= endAngle;
+  }
 }
 
 export function drawPowerups(globalPowerUps, ctx, camX, camY) {

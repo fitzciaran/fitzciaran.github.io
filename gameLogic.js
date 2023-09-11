@@ -71,7 +71,7 @@ export const pilot4 = {
   width: 100,
   height: 100,
   selected: false,
-  lore: "lorum ipsum, Speed: 3, Special: Doesn't have one yet, Wip... so kinda sucks ",
+  lore: "lorum ipsum, Speed: 3, Special: Tractor Beam, Sneaky! Powerful long range narrow tractor beam can cause havok from afar!",
   name: PilotName.PILOT_4,
   src: "images/bore612.webp",
 };
@@ -289,6 +289,120 @@ export function checkPlayerCollision(playerToCheck, allPlayers) {
   }
 }
 
+export function checkForcesCollision(playerToCheck, forces) {
+  for (let force of forces) {
+    if (playerToCheck == force.tracks) {
+      continue;
+    }
+    if (playerToCheck != null && force.tracks != null && playerToCheck.id === force.tracks.id && playerToCheck.name === force.tracks.name) {
+      continue;
+    }
+
+    // Calculate the vector from the force to the player
+    const dx = playerToCheck.x - force.x;
+    const dy = playerToCheck.y - force.y;
+
+    // Calculate the distance between the player and the force
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    // Calculate the angle between the ship's direction and the vector to the player
+    const angleToPlayer = Math.atan2(dy, dx);
+    const angleDifference = Math.abs(force.direction - angleToPlayer);
+
+    // Check if the player is within the cone and distance range
+    if (distance > force.radius || angleDifference > force.coneAngle / 2) {
+      continue;
+    }
+
+    // Calculate the proportional force strength
+    let strength = 0;
+    const maxForce = force.force;
+     
+    if (distance > 0 && distance <= 50) {
+      // Calculate strength based on the inverse square of the distance
+      // strength = force.force / 2500 / (distance * distance);
+      strength = maxForce;
+    } else if (distance > 50 && distance <= force.radius) {
+      // Gradual decrease in force from max at 50 to 40% at force.radius
+      const minForce = 0.6 * maxForce;
+      const forceRange = maxForce - minForce;
+      const distanceRange = force.radius - 50;
+      const forceIncrement = forceRange / distanceRange;
+      strength = maxForce - forceIncrement * (distance - 50);
+    }
+
+    // Calculate the force components
+    let forceX = (dx / distance) * strength;
+    let forceY = (dy / distance) * strength;
+
+    if (force.isAttractive) {
+      forceX *= -1;
+      forceY *= -1;
+    }
+
+    // Apply the force to playerToCheck's velocity
+    playerToCheck.vel.x += forceX;
+    playerToCheck.vel.y += forceY;
+    playerToCheck.boundVelocity();
+  }
+}
+
+// export function checkForcesCollision(playerToCheck, forces) {
+//   for (let force of forces) {
+//     if (playerToCheck == force.tracks) {
+//       continue;
+//     }
+//     if (playerToCheck != null && force.tracks != null && playerToCheck.id === force.tracks.id && playerToCheck.name === force.tracks.name) {
+//       continue;
+//     }
+
+//     // Calculate the vector from the force to the player
+//     const dx = playerToCheck.x - force.x;
+//     const dy = playerToCheck.y - force.y;
+
+//     // Calculate the distance between the player and the force
+//     const distance = Math.sqrt(dx * dx + dy * dy);
+
+//     // Calculate the angle between the force direction and the vector to the player
+//     const angleToPlayer = Math.atan2(dy, dx);
+//     const angleDifference = Math.abs(force.direction - angleToPlayer);
+
+//     // Check if the player is within the cone and distance range
+//     if (distance > force.radius || angleDifference > force.coneAngle / 2) {
+//       continue;
+//     }
+
+//     // Calculate the proportional force strength
+//     let strength = 0;
+
+//     if (distance > 0 && distance <= 50) {
+//       // Calculate strength based on the inverse square of the distance
+//       strength = force.force / 2500 / (distance * distance);
+//     } else if (distance > 50 && distance <= force.radius) {
+//       // Gradual decrease in force from max at 50 to 40% at force.radius
+//       const maxForce = force.force;
+//       const minForce = 0.6 * maxForce;
+//       const forceRange = maxForce - minForce;
+//       const distanceRange = force.radius - 50;
+//       const forceIncrement = forceRange / distanceRange;
+//       strength = maxForce - forceIncrement * (distance - 50);
+//     }
+
+//     // Calculate the force components
+//     let forceX = Math.cos(force.direction) * strength;
+//     let forceY = Math.sin(force.direction) * strength;
+
+//     if (force.isAttractive) {
+//       forceX *= -1;
+//       forceY *= -1;
+//     }
+
+//     // Apply the force to playerToCheck's velocity
+//     playerToCheck.vel.x += forceX;
+//     playerToCheck.vel.y += forceY;
+//   }
+// }
+
 export function resetPowerLevels(player, otherPlayers, globalPowerUps) {
   // Reset my powerUps
   player.powerUps = 0;
@@ -332,53 +446,6 @@ export function updateEnemies(deltaTime) {
         console.log("force issue");
       }
     }
-  }
-}
-
-export function checkForcesCollision(playerToCheck, forces) {
-  for (let force of forces) {
-    if (playerToCheck == force.tracks) {
-      continue;
-    }
-    if (playerToCheck != null && force.tracks != null && playerToCheck.id === force.tracks.id && playerToCheck.name === force.tracks.name) {
-      //might not be matching above if force.tracks has been recreated after being serialised and sent.
-      continue;
-    }
-
-    // Calculate the distance between the player and the center of the circle
-    const dx = playerToCheck.x - force.x;
-    const dy = playerToCheck.y - force.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    if (distance > force.radius) {
-      continue;
-    }
-    // Calculate the proportional force strength
-    let strength = 0;
-    if (distance > 0 && distance <= 50) {
-      // Calculate strength based on the inverse square of the distance
-      strength = force.force / 2500 / (distance * distance);
-    } else if (distance > 50 && distance <= force.radius) {
-      // Gradual decrease in force from max at 50 to 40% at force.radius
-      const maxForce = force.force;
-      const minForce = 0.6 * maxForce;
-      const forceRange = maxForce - minForce;
-      const distanceRange = force.radius - 50;
-      const forceIncrement = forceRange / distanceRange;
-      strength = maxForce - forceIncrement * (distance - 50);
-    }
-
-    // Calculate the force components
-    let forceX = (dx / distance) * strength;
-    let forceY = (dy / distance) * strength;
-
-    if (force.isAttractive) {
-      forceX *= -1;
-      forceY *= -1;
-    }
-
-    // Apply the force to playerToCheck's velocity
-    playerToCheck.vel.x += forceX;
-    playerToCheck.vel.y += forceY;
   }
 }
 

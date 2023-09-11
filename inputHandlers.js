@@ -133,22 +133,6 @@ function getMousePos(canvas, evt) {
 export function addPilotEventListners(canvas, ctx) {
   pilotMouseMoveListener = function (event) {
     if (getGameState() === GameState.PILOT_SELECT || getGameState() === GameState.INTRO) {
-      let pilotSelected = false; // Track if any pilot has been selected
-
-      // Iterate over pilots
-      for (let i = 0; i < pilots.length; i++) {
-        let pilot = pilots[i];
-
-        if (event.clientX > pilot.x && event.clientX < pilot.x + pilot.width && event.clientY > pilot.y && event.clientY < pilot.y + pilot.height) {
-          pilot.selected = true;
-          for (let i = 0; i < pilots.length; i++) {
-            let otherPilot = pilots[i];
-            if (pilot != otherPilot) {
-              otherPilot.selected = false;
-            }
-          }
-        }
-      }
     }
   };
 
@@ -169,6 +153,20 @@ export function addPilotEventListners(canvas, ctx) {
       // selectPilot();
       // setGameState(GameState.GAME);
       startGame();
+    }
+    // Iterate over pilots
+    for (let i = 0; i < pilots.length; i++) {
+      let pilot = pilots[i];
+
+      if (event.clientX > pilot.x && event.clientX < pilot.x + pilot.width && event.clientY > pilot.y && event.clientY < pilot.y + pilot.height) {
+        pilot.selected = true;
+        for (let i = 0; i < pilots.length; i++) {
+          let otherPilot = pilots[i];
+          if (pilot != otherPilot) {
+            otherPilot.selected = false;
+          }
+        }
+      }
     }
   };
 

@@ -34,6 +34,7 @@ export const BotState = {
 export const Special = {
   BOOST: "boost",
   FORCE_PULL: "pull",
+  FORCE_PULL_FOCUS: "pullfocus",
   FORCE_PUSH: "push",
 };
 
@@ -171,7 +172,7 @@ export class Player {
       this.special = Special.BOOST;
     }
     if (this.pilot == PilotName.PILOT_4) {
-      this.special = Special.FORCE_PUSH;
+      this.special = Special.FORCE_PULL_FOCUS;
     }
   }
 
@@ -285,6 +286,8 @@ export class Player {
       pilotBoostFactor = 0.7;
     } else if (this.pilot == PilotName.PILOT_3) {
       pilotBoostFactor = 1.3;
+    } else if (this.pilot == PilotName.PILOT_4) {
+      pilotBoostFactor = 1.0;
     }
     let boosting = false;
     if (this.shift && (this.specialMeter > 50 || (this.usingSpecial && this.specialMeter > 1))) {
@@ -294,7 +297,12 @@ export class Player {
       }
       this.usingSpecial = 3;
       //todo specials other than boost shouldn't be triggered here
-      if (this.special == Special.FORCE_PULL || this.special == Special.FORCE_PUSH || this.special == Special.BOOST) {
+      if (
+        this.special == Special.FORCE_PULL ||
+        this.special == Special.FORCE_PULL_FOCUS ||
+        this.special == Special.FORCE_PUSH ||
+        this.special == Special.BOOST
+      ) {
         // if (this.forceCoolDown < 1) {
         //try a gradual effect
         //this.forceCoolDown = 200;
@@ -304,12 +312,25 @@ export class Player {
           this.usingSpecial = 0;
         }
 
-        if (this.special == Special.FORCE_PULL || this.special == Special.FORCE_PUSH) {
+        if (this.special == Special.FORCE_PULL || this.special == Special.FORCE_PULL_FOCUS || this.special == Special.FORCE_PUSH) {
           let attractive = true;
           if (this.special == Special.FORCE_PUSH) {
             attractive = false;
           }
-          let force = new ForceArea(null, this.x, this.y, 0.5, 5, 200, attractive, "red", this);
+          // Calculate the cone's direction based on the ship's angle is needed since everything is offset by this
+          const coneDirection = this.angle - Math.PI / 2;
+          // Specify the desired cone angle (in radians) for the force
+          let coneAngle = Math.PI * 2; // For example, a 45-degree cone
+          let forcePower = 0.5;
+          let radius = 200;
+
+          if (this.special == Special.FORCE_PULL_FOCUS) {
+            coneAngle = Math.PI / 4; // For example, a 45-degree cone
+            forcePower = 1.0;
+            radius = 400;
+          }
+          // Create the ForceArea with the cone properties
+          let force = new ForceArea(null, this.x, this.y, forcePower, 5, radius, attractive, "red", this, coneAngle, coneDirection);
           forces.push(force);
         } else if (this.special == Special.BOOST) {
           //give a bit of meter back for the boost so it works out cheaper than force.
@@ -353,7 +374,6 @@ export class Player {
       if (this.vel.x == null || isNaN(this.vel.x) || this.vel.y == null || isNaN(this.vel.y)) {
         console.log("Invalid velocity values: x =", this.vel.x, "y =", this.vel.y);
       }
-    
     }
     this.boundVelocity();
     this.currentSpeed = Math.sqrt(this.vel.x * this.vel.x + this.vel.y * this.vel.y);

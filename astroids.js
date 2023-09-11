@@ -253,9 +253,9 @@ function setupPilots(canvas, ctx) {
     if (pilot.selected) {
       anySelected = true;
     }
-    if (!anySelected) {
-      pilots[0].selected = true;
-    }
+  }
+  if (!anySelected) {
+    pilots[0].selected = true;
   }
 }
 

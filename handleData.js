@@ -336,6 +336,8 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
           localForce.isAttractive = receivedForce.isAttractive;
           localForce.color = receivedForce.color;
           localForce.tracks = receivedForce.tracks;
+          localForce.coneAngle = receivedForce.coneAngle;
+          localForce.direction = receivedForce.direction;
         } else {
           console.log("currentplayers force");
         }
