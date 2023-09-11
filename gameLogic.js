@@ -413,7 +413,7 @@ export function resetPowerLevels(player, otherPlayers, globalPowerUps) {
   });
 
   // Send updated powerUps to other players
-  sendPlayerStates(player, globalPowerUps);
+  sendPlayerStates(player,isPlayerMasterPeer(player));
 }
 
 function shipHitsBorder(x, y) {

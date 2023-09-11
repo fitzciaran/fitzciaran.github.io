@@ -244,7 +244,7 @@ function setPeer(newPeer) {
 
 export function updateConnections(player, globalPowerUps) {
   if (everConnected || true) {
-    sendPlayerStates(player, globalPowerUps);
+    sendPlayerStates(player,isPlayerMasterPeer(player));
     if (!isPlayerMasterPeer(player)) {
       setTimeSinceMessageFromMaster(timeSinceMessageFromMaster + 1);
     }

@@ -18,7 +18,7 @@ import { createBotFromObject, Player, createPlayerFromObject } from "./player.js
 let handleCounter = 0;
 let sendCounter = 0;
 
-export function sendPlayerStates(playerToSend, globalPowerUps) {
+export function sendPlayerStates(playerToSend,isMaster) {
   // Check if connection is open before sending data
   // Send player state to other players
   let data = {
@@ -34,7 +34,6 @@ export function sendPlayerStates(playerToSend, globalPowerUps) {
     name: playerToSend.name,
     lives: playerToSend.lives,
     isMaster: playerToSend.isMaster,
-    isDead: playerToSend.isDead,
     isPlaying: playerToSend.isPlaying,
     invincibleTimer: playerToSend.invincibleTimer,
     forceCoolDown: playerToSend.forceCoolDown,
@@ -53,6 +52,9 @@ export function sendPlayerStates(playerToSend, globalPowerUps) {
     timeOfLastActive: playerToSend.timeOfLastActive,
     hitBy: playerToSend.hitBy,
   };
+  if(isMaster){
+    data.isDead =  playerToSend.isDead;
+  }
   connections.forEach((conn) => {
     if (conn && conn.open) {
       try {
@@ -316,10 +318,11 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
   }
   if (data.forces) {
     setTimeSinceMessageFromMaster(0);
-    const forceInstances = data.forces.map(createForceFromObject);
+    //const forceInstances = data.forces.map(createForceFromObject);
     // setForces(forceInstances);
     // Iterate through forceInstances received from the master peer
-    for (const receivedForce of forceInstances) {
+    // for (const receivedForce of forceInstances) {
+    for (const receivedForce of data.forces) {
       // Find the corresponding local bot by ID
       const localForce = findForceById(receivedForce.id);
       const interpFactor = 0.2;
@@ -343,7 +346,8 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
         }
       } else if (receivedForce.tracks.id != player.id) {
         // If the local force doesn't exist, add it to the forces array
-        forces.push(receivedForce);
+        //forces.push(receivedForce);
+        forces.push(createForceFromObject(receivedForce));
       }
     }
   }

@@ -147,7 +147,7 @@ export class Player {
       }
     }
     if (isPlayerMasterPeer(player) && !isPlayerMasterPeer(this)) {
-      sendPlayerStates(this, globalPowerUps);
+      sendPlayerStates(this,true);
     }
   }
   addScore(scoreToAdd) {
@@ -157,7 +157,7 @@ export class Player {
       this.powerUps = Math.floor(this.powerUps);
     }
     if (isPlayerMasterPeer(player) && !isPlayerMasterPeer(this)) {
-      sendPlayerStates(this, globalPowerUps);
+      sendPlayerStates(this,true);
     }
   }
   setPilot(newPilot) {

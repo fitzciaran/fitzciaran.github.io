@@ -322,7 +322,7 @@ export function setGameState(newState) {
 
     setupWinStateEventListeners(window, canvas);
     if (isPlayerMasterPeer(player)) {
-      sendPlayerStates(player, globalPowerUps);
+      sendPlayerStates(player,true);
     }
   }
 
