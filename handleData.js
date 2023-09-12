@@ -18,7 +18,7 @@ import { createBotFromObject, Player, createPlayerFromObject } from "./player.js
 let handleCounter = 0;
 let sendCounter = 0;
 
-export function sendPlayerStates(playerToSend,isMaster) {
+export function sendPlayerStates(playerToSend, isMaster) {
   // Check if connection is open before sending data
   // Send player state to other players
   let data = {
@@ -52,8 +52,8 @@ export function sendPlayerStates(playerToSend,isMaster) {
     timeOfLastActive: playerToSend.timeOfLastActive,
     hitBy: playerToSend.hitBy,
   };
-  if(isMaster){
-    data.isDead =  playerToSend.isDead;
+  if (isMaster) {
+    data.isDead = playerToSend.isDead;
   }
   connections.forEach((conn) => {
     if (conn && conn.open) {
@@ -225,11 +225,11 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
   }
   if (data.bots) {
     setTimeSinceMessageFromMaster(0);
-    const botInstances = data.bots.map(createBotFromObject);
+    //const botInstances = data.bots.map(createBotFromObject);
     // setBots(botInstances);
 
     // Iterate through botInstances received from the master peer
-    for (const receivedBot of botInstances) {
+    for (const receivedBot of data.bots) {
       // Find the corresponding local bot by ID
       const localBot = findBotById(receivedBot.id);
       const interpFactor = 0.2;
@@ -282,14 +282,15 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
         localBot.name = receivedBot.name;
       } else {
         // If the local bot doesn't exist, add it to the bots array
-        bots.push(receivedBot);
+        // bots.push(receivedBot);
+        bots.push(createBotFromObject(receivedBot));
       }
     }
 
     // Optionally, you may want to remove bots from the local array that are not in botInstances
     // This ensures that local bots that have been removed on the master peer are also removed locally
     //bots = bots.filter((localBot) => botInstances.some((receivedBot) => receivedBot.id === localBot.id));
-    setBots(bots.filter((localBot) => botInstances.some((receivedBot) => receivedBot.id === localBot.id)));
+    setBots(bots.filter((localBot) => data.bots.some((receivedBot) => receivedBot.id === localBot.id)));
   }
   if (data.mines) {
     setTimeSinceMessageFromMaster(0);
@@ -341,6 +342,7 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
           localForce.tracks = receivedForce.tracks;
           localForce.coneAngle = receivedForce.coneAngle;
           localForce.direction = receivedForce.direction;
+          localForce.numberArrowsEachSide = receivedForce.numberArrowsEachSide;
         } else {
           console.log("currentplayers force");
         }

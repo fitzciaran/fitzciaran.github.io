@@ -17,8 +17,28 @@ export class Entity {
   }
 }
 
+export const ForceType = {
+  POINT: "point",
+  DIRECTIONAL: "directional",
+};
+
 export class ForceArea extends Entity {
-  constructor(id = null, x = null, y = null, force = 1, duration = 200, radius = 100, isAttractive, color = "red", tracks,coneAngle= Math.PI * 2,direction = 0) {
+  constructor(
+    id = null,
+    x = null,
+    y = null,
+    force = 1,
+    duration = 200,
+    radius = 100,
+    isAttractive,
+    color = "red",
+    tracks,
+    coneAngle = Math.PI * 2,
+    direction = 0,
+    type = ForceType.POINT,
+    width = 100,
+    length = 100
+  ) {
     super(id, x, y);
     this.force = force;
     this.duration = duration;
@@ -28,6 +48,9 @@ export class ForceArea extends Entity {
     this.tracks = tracks;
     this.coneAngle = coneAngle;
     this.direction = direction;
+    this.type = type;
+    this.width = width;
+    this.length = length;
   }
   setDuration(newDuration) {
     this.duration = newDuration;
@@ -65,11 +88,28 @@ export class Mine extends Enemy {
       // If no force with the same id exists, create a new one
       if (this.force !== 0) {
         let minesForce = new ForceArea("mine-" + this.id, this.x, this.y, 0.3, 10, 200, this.force == 1, "pink", this);
+        //todo put the above line back this is just testing the directional force
+        // let minesForce = new ForceArea(
+        //   "mine-" + this.id,
+        //   this.x,
+        //   this.y,
+        //   0.7,
+        //   10,
+        //   200,
+        //   this.force == 1,
+        //   "pink",
+        //   this,
+        //   0,
+        //   Math.random() * 2 * Math.PI,
+        //   ForceType.DIRECTIONAL,
+        //   120,
+        //   300
+        // );
         //currently mine doesn't keep a reference to it's force, is that fine?
         forces.push(minesForce);
       }
-    }else{
-        existingForce.duration = 10;
+    } else {
+      existingForce.duration = 10;
     }
   }
 }
@@ -85,7 +125,7 @@ export class PowerUp extends Entity {
 }
 
 export function createForceFromObject(obj) {
-    //why is tracks a new player not a found one?
+  //why is tracks a new player not a found one?
   let tracks = new Player(
     obj.tracks.id,
     obj.tracks.x,
@@ -98,7 +138,23 @@ export function createForceFromObject(obj) {
     obj.tracks.isPlaying,
     obj.tracks.isUserControlledCharacter
   );
-  let force = new ForceArea(obj.id, obj.x, obj.y, obj.force, obj.duration, obj.radius, obj.isAttractive, obj.color, tracks,coneAngle,direction);
+  let force = new ForceArea(
+    obj.id,
+    obj.x,
+    obj.y,
+    obj.force,
+    obj.duration,
+    obj.radius,
+    obj.isAttractive,
+    obj.color,
+    tracks,
+    obj.coneAngle,
+    obj.direction,
+    obj.type,
+    obj.width,
+    obj.length
+  );
+  force.numberArrowsEachSide = obj.numberArrowsEachSide;
   return force;
 }
 export function createMineFromObject(obj) {

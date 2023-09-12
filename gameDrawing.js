@@ -1,7 +1,7 @@
 import { chooseNewMasterPeer } from "./connectionHandlers.js";
 import { renderDebugInfo, drawPowerupLevels, drawInvincibilityGauge, drawSpecialGauge } from "./drawGameUI.js";
 import { rotateAndScalePoint, interpolate, spikeyBallPoints } from "./drawingUtils.js";
-import { forces } from "./entities.js";
+import { ForceType, forces } from "./entities.js";
 import { shipScale, mineScale } from "./gameLogic.js";
 
 let backLayer = new Image();
@@ -360,114 +360,208 @@ function drawForce(ctx, camX, camY, force, points) {
   let centerY = force.y - camY;
   let color = force.color;
   let radius = force.radius;
+  let width = force.width;
+  let length = force.length;
   let attractive = force.isAttractive;
   let coneAngle = force.coneAngle;
   let direction = force.direction;
+  ctx.strokeStyle = color;
 
   // Adjust the position based on the viewport
   let screenX = centerX;
   let screenY = centerY;
-
-  // Calculate the angle range for the cone
-  let startAngle = direction - coneAngle / 2;
-  let endAngle = direction + coneAngle / 2;
-
-  // Normalize startAngle and endAngle to be within the range 0 to 2π
-  startAngle = ((startAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
-  endAngle = ((endAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
-
   ctx.beginPath();
+  if (force.type == ForceType.POINT) {
+    // Calculate the angle range for the cone
+    let startAngle = direction - coneAngle / 2;
+    let endAngle = direction + coneAngle / 2;
 
-  if (coneAngle == 2 * Math.PI) {
-    ctx.arc(screenX, screenY, radius, 0, Math.PI * 2);
-    // ctx.arc(screenX, screenY, radius, direction, coneAngle);
-  } else {
-    ctx.moveTo(screenX, screenY); // Move to the center of the cone
-    ctx.lineTo(screenX + Math.cos(direction - coneAngle / 2) * radius, screenY + Math.sin(direction - coneAngle / 2) * radius); // Draw one edge of the cone
-    ctx.arc(screenX, screenY, radius, direction - coneAngle / 2, direction + coneAngle / 2); // Draw the arc representing the cone
-    ctx.lineTo(screenX, screenY); // Connect back to the center to close the shape
-  }
-  ctx.strokeStyle = color;
-  // ctx.stroke();
-  // ctx.closePath();
-  // // Draw arrows based on force type (attractive or repulsive)
-  // ctx.beginPath();
-  ctx.moveTo(screenX, screenY);
+    // Normalize startAngle and endAngle to be within the range 0 to 2π
+    startAngle = ((startAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+    endAngle = ((endAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
 
-  let increment = 10;
-  if (coneAngle > 5) {
-    increment = 40;
-  }
-  if (startAngle > endAngle) {
-    // If startAngle is greater than endAngle, it means the cone crosses the 0/2π line.
-    // In this case, we need to check if the angle is less than endAngle or greater than startAngle.
-    for (let i = 0; i < 360; i += increment) {
-      let angle = (i * Math.PI) / 180;
-      angle = ((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+    if (coneAngle == 2 * Math.PI) {
+      ctx.arc(screenX, screenY, radius, 0, Math.PI * 2);
+      // ctx.arc(screenX, screenY, radius, direction, coneAngle);
+    } else {
+      ctx.moveTo(screenX, screenY); // Move to the center of the cone
+      ctx.lineTo(screenX + Math.cos(direction - coneAngle / 2) * radius, screenY + Math.sin(direction - coneAngle / 2) * radius); // Draw one edge of the cone
+      ctx.arc(screenX, screenY, radius, direction - coneAngle / 2, direction + coneAngle / 2); // Draw the arc representing the cone
+      ctx.lineTo(screenX, screenY); // Connect back to the center to close the shape
+    }
+    // ctx.stroke();
+    // ctx.closePath();
+    // // Draw arrows based on force type (attractive or repulsive)
+    // ctx.beginPath();
+    ctx.moveTo(screenX, screenY);
 
-      if (angle <= endAngle || angle >= startAngle) {
-        drawForceLines(ctx, attractive, radius, angle, screenX, screenY);
+    let increment = 10;
+    if (coneAngle > 5) {
+      increment = 40;
+    }
+    if (startAngle > endAngle) {
+      // If startAngle is greater than endAngle, it means the cone crosses the 0/2π line.
+      // In this case, we need to check if the angle is less than endAngle or greater than startAngle.
+      for (let i = 0; i < 360; i += increment) {
+        let angle = (i * Math.PI) / 180;
+        angle = ((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+
+        if (angle <= endAngle || angle >= startAngle) {
+          drawForceLines(ctx, attractive, radius, angle, screenX, screenY);
+        }
+      }
+    } else {
+      // If startAngle is less than endAngle, we can simply check if the angle is within this range.
+      for (let i = 0; i < 360; i += increment) {
+        let angle = (i * Math.PI) / 180;
+        angle = ((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+
+        if ((angle >= startAngle && angle <= endAngle) || coneAngle == 2 * Math.PI) {
+          drawForceLines(ctx, attractive, radius, angle, screenX, screenY);
+        }
       }
     }
-  } else {
-    // If startAngle is less than endAngle, we can simply check if the angle is within this range.
-    for (let i = 0; i < 360; i += increment) {
-      let angle = (i * Math.PI) / 180;
-      angle = ((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+    ctx.stroke();
+    ctx.closePath();
+  }
+  if (force.type == ForceType.DIRECTIONAL) {
+    // Calculate the coordinates of the four corners of the rectangle
+    const halfWidth = width / 2;
+    const halfLength = length / 2;
+    let angle = direction;
 
-      if ((angle >= startAngle && angle <= endAngle) || coneAngle == 2 * Math.PI) {
-        drawForceLines(ctx, attractive, radius, angle, screenX, screenY);
+    const x1 = screenX + halfWidth * Math.cos(angle) - halfLength * Math.sin(angle);
+    const y1 = screenY + halfWidth * Math.sin(angle) + halfLength * Math.cos(angle);
+
+    const x2 = screenX - halfWidth * Math.cos(angle) - halfLength * Math.sin(angle);
+    const y2 = screenY - halfWidth * Math.sin(angle) + halfLength * Math.cos(angle);
+
+    const x3 = screenX - halfWidth * Math.cos(angle) + halfLength * Math.sin(angle);
+    const y3 = screenY - halfWidth * Math.sin(angle) - halfLength * Math.cos(angle);
+
+    const x4 = screenX + halfWidth * Math.cos(angle) + halfLength * Math.sin(angle);
+    const y4 = screenY + halfWidth * Math.sin(angle) - halfLength * Math.cos(angle);
+
+    const rectCenterX = (x1 + x3) / 2;
+    const rectCenterY = (y1 + y3) / 2;
+
+    // Draw the rectangle by connecting the four corners
+    ctx.moveTo(x1, y1);
+    ctx.lineWidth = 1;
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+    ctx.closePath();
+
+    // Start the second path with a thick line for the segment from (x2, y2) to (x3, y3)
+    ctx.beginPath();
+    ctx.moveTo(x2, y2);
+    ctx.lineWidth = 8;
+    ctx.lineTo(x3, y3);
+    ctx.stroke();
+    ctx.closePath();
+
+    // Continue with the first path with a thin line
+    ctx.beginPath();
+    ctx.moveTo(x3, y3);
+    ctx.lineWidth = 1;
+    ctx.lineTo(x4, y4);
+    ctx.stroke();
+    ctx.closePath();
+
+    // Calculate the coordinates for the arrowhead
+    const arrowLength = Math.min(width, length) * 0.2; // Adjust the arrow size as needed
+    const arrowBaseX = screenX + arrowLength * Math.cos(angle);
+    const arrowBaseY = screenY + arrowLength * Math.sin(angle);
+    const arrowTipX = screenX - arrowLength * Math.cos(angle);
+    const arrowTipY = screenY - arrowLength * Math.sin(angle);
+
+    // Calculate the coordinates for the two lines extending from the stem at 45-degree angles
+    const lineLength = arrowLength / Math.sqrt(2); // Length of lines at 45-degree angles
+    const lineAngle = angle + Math.PI / 4; // 45-degree angle from the stem
+
+    const line1StartX = arrowTipX + lineLength * Math.cos(lineAngle);
+    const line1StartY = arrowTipY + lineLength * Math.sin(lineAngle);
+
+    const line2StartX = arrowTipX + lineLength * Math.cos(-lineAngle);
+    const line2StartY = arrowTipY + lineLength * Math.sin(-lineAngle);
+
+    if (!force.attractive) {
+      angle = angle + Math.PI;
+    }
+
+    const centerX = (x1 + x2 + x3 + x4) / 4;
+    const centerY = (y1 + y2 + y3 + y4) / 4;
+
+    const halfRectWidth = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2) / 2;
+    const centerLeftToRightLowerTopToBottomX = centerX - Math.cos(angle) * halfRectWidth * (4 / 5);
+    const centerLeftToRightLowerTopToBottomY = centerY - Math.sin(angle) * halfRectWidth * (4 / 5);
+    const leftBottomLeaningX = (x1 + x2) / 2 - Math.cos(angle) * halfRectWidth * (4 / 5);
+    const leftBottomLeaningY = (y1 + y2) / 2 - Math.sin(angle) * halfRectWidth * (4 / 5);
+    const rightBottomLeaningX = (x3 + x4) / 2 - Math.cos(angle) * halfRectWidth * (4 / 5);
+    const rightBottomLeaningY = (y3 + y4) / 2 - Math.sin(angle) * halfRectWidth * (4 / 5);
+
+    // Calculate the number of points based on the halfRectWidth
+    let numPoints = force.numberArrowsEachSide;
+    if (numPoints == null || numPoints == 0) {
+      numPoints = Math.floor(halfRectWidth / 15); // Adjust the divisor as needed
+      force.numberArrowsEachSide = numPoints;
+    }
+    for (let i = 0; i < numPoints; i++) {
+      // for (let i = 0; i < 2; i++) {
+      let x, y;
+
+      x = ((numPoints - i) * centerLeftToRightLowerTopToBottomX + i * leftBottomLeaningX) / numPoints;
+      y = ((numPoints - i) * centerLeftToRightLowerTopToBottomY + i * leftBottomLeaningY) / numPoints;
+      drawArrow(ctx, { x, y }, angle, 50, 20);
+
+      if (i != 0) {
+        x = ((numPoints - i) * centerLeftToRightLowerTopToBottomX + i * rightBottomLeaningX) / numPoints;
+        y = ((numPoints - i) * centerLeftToRightLowerTopToBottomY + i * rightBottomLeaningY) / numPoints;
+        drawArrow(ctx, { x, y }, angle, 50, 20);
       }
     }
+
+    ctx.stroke();
   }
-  ctx.stroke();
-  ctx.closePath();
 }
 
 function drawForceLines(ctx, attractive, radius, angle, screenX, screenY) {
-  if (attractive) {
-    //draw inwards arrows
-    let arrowX = screenX + 0.8 * radius * Math.cos(angle);
-    let arrowY = screenY + 0.8 * radius * Math.sin(angle);
-    // Calculate the coordinates for the arrowhead
-    let arrowheadX = arrowX - 100 * Math.cos(angle); // Adjust arrowhead length as needed
-    let arrowheadY = arrowY - 100 * Math.sin(angle); // Adjust arrowhead length as needed
+  const arrowheadLength = 15;
+  const arrowheadAngle = Math.PI / 8;
 
-    ctx.moveTo(arrowheadX, arrowheadY);
-    ctx.lineTo(arrowX, arrowY); // Draw the arrow line
-    //   Draw the arrowhead for arrows pointing away from the center
-    ctx.moveTo(arrowheadX, arrowheadY);
-    ctx.lineTo(
-      arrowheadX + 15 * Math.cos(angle + Math.PI / 8), // Adjust arrowhead size as needed
-      arrowheadY + 15 * Math.sin(angle + Math.PI / 8) // Adjust arrowhead size as needed
-    );
-    ctx.moveTo(arrowheadX, arrowheadY);
-    ctx.lineTo(
-      arrowheadX + 15 * Math.cos(angle - Math.PI / 8), // Adjust arrowhead size as needed
-      arrowheadY + 15 * Math.sin(angle - Math.PI / 8) // Adjust arrowhead size as needed
-    );
+  if (attractive) {
+    // Draw inwards arrows
+    const arrowX = screenX + 0.8 * radius * Math.cos(angle);
+    const arrowY = screenY + 0.8 * radius * Math.sin(angle);
+
+    drawArrow(ctx, { x: arrowX, y: arrowY }, angle + Math.PI, 100, arrowheadLength, arrowheadAngle);
   } else {
     // Draw outwards arrows
-    let arrowX = screenX + 0.3 * radius * Math.cos(angle);
-    let arrowY = screenY + 0.3 * radius * Math.sin(angle);
-    // Calculate the coordinates for the arrowhead
-    let arrowheadX = arrowX + 100 * Math.cos(angle); // Adjust arrowhead length as needed
-    let arrowheadY = arrowY + 100 * Math.sin(angle); // Adjust arrowhead length as needed
+    const arrowX = screenX + 0.3 * radius * Math.cos(angle);
+    const arrowY = screenY + 0.3 * radius * Math.sin(angle);
 
-    ctx.moveTo(arrowheadX, arrowheadY);
-    ctx.lineTo(arrowX, arrowY); // Draw the arrow line
-    //   Draw the arrowhead for arrows pointing away from the center
-    ctx.moveTo(arrowheadX, arrowheadY);
-    ctx.lineTo(
-      arrowheadX - 15 * Math.cos(angle + Math.PI / 8), // Adjust arrowhead size as needed
-      arrowheadY - 15 * Math.sin(angle + Math.PI / 8) // Adjust arrowhead size as needed
-    );
-    ctx.moveTo(arrowheadX, arrowheadY);
-    ctx.lineTo(
-      arrowheadX - 15 * Math.cos(angle - Math.PI / 8), // Adjust arrowhead size as needed
-      arrowheadY - 15 * Math.sin(angle - Math.PI / 8) // Adjust arrowhead size as needed
-    );
+    drawArrow(ctx, { x: arrowX, y: arrowY }, angle, 100, arrowheadLength, arrowheadAngle);
   }
+}
+
+function drawArrow(ctx, tail, angle, length, arrowheadLength, arrowheadAngle = Math.PI / 8) {
+  let head = {};
+
+  head.x = tail.x + length * Math.cos(angle);
+  head.y = tail.y + length * Math.sin(angle);
+  ctx.moveTo(head.x, head.y);
+  ctx.lineTo(tail.x, tail.y);
+
+  //const angle = Math.atan2(head.y - tail.y, head.x - tail.x);
+  const arrowhead1X = head.x - arrowheadLength * Math.cos(angle + arrowheadAngle);
+  const arrowhead1Y = head.y - arrowheadLength * Math.sin(angle + arrowheadAngle);
+  const arrowhead2X = head.x - arrowheadLength * Math.cos(angle - arrowheadAngle);
+  const arrowhead2Y = head.y - arrowheadLength * Math.sin(angle - arrowheadAngle);
+
+  ctx.moveTo(head.x, head.y);
+  ctx.lineTo(arrowhead1X, arrowhead1Y);
+  ctx.moveTo(head.x, head.y);
+  ctx.lineTo(arrowhead2X, arrowhead2Y);
 }
 
 function normalizeAngle(angle) {

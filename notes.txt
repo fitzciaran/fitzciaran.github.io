@@ -251,3 +251,6 @@ boost areas are just forces now... well current forces are point based maybe nee
   look into performance maybe only stroke/ closepath/open path at end/beginning of all force draws?
 
   animate the force arrows?
+  only need to draw if drawing would be onscreen! How is this optimised by default?
+
+  if make directional forces bigger after creation need to reeset numberArrowsEachSide so it's recalculated

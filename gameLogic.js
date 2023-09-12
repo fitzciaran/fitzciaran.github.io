@@ -2,7 +2,7 @@ import { setGameState, GameState, player, setGlobalPowerUps, setMines, bots, oth
 import { isPlayerMasterPeer } from "./connectionHandlers.js";
 import { sendPlayerStates, sendGameState, sendEntitiesState } from "./handleData.js";
 import { addScore } from "./db.js";
-import { forces, Mine, PowerUp } from "./entities.js";
+import { forces, Mine, PowerUp, ForceType } from "./entities.js";
 import { Player, Bot } from "./player.js";
 // import { Bot } from "./bot.js";
 
@@ -162,7 +162,7 @@ export function generateMines(worldWidth, worldHeight, colors) {
     if (Math.random() > 0.4) {
       hasGravity = 1;
     }
-    let powerUp = new Mine(
+    let mine = new Mine(
       Math.floor(Math.random() * 10000),
       (Math.random() * 0.8 + 0.1) * worldWidth,
       (Math.random() * 0.8 + 0.1) * worldHeight,
@@ -171,7 +171,7 @@ export function generateMines(worldWidth, worldHeight, colors) {
       colors[Math.floor(Math.random() * colors.length)],
       hasGravity
     );
-    mines.push(powerUp);
+    mines.push(mine);
   }
 }
 
@@ -309,99 +309,89 @@ export function checkForcesCollision(playerToCheck, forces) {
     const angleToPlayer = Math.atan2(dy, dx);
     const angleDifference = Math.abs(force.direction - angleToPlayer);
 
-    // Check if the player is within the cone and distance range
-    if (distance > force.radius || angleDifference > force.coneAngle / 2) {
-      continue;
+    if (force.type == ForceType.POINT) {
+      // Check if the player is within the cone and distance range
+      if (distance > force.radius || angleDifference > force.coneAngle / 2) {
+        continue;
+      }
+
+      // Calculate the proportional force strength
+      let strength = 0;
+      const maxForce = force.force;
+
+      if (distance > 0 && distance <= 50) {
+        // Calculate strength based on the inverse square of the distance
+        // strength = force.force / 2500 / (distance * distance);
+        strength = maxForce;
+      } else if (distance > 50 && distance <= force.radius) {
+        // Gradual decrease in force from max at 50 to 40% at force.radius
+        const minForce = 0.6 * maxForce;
+        const forceRange = maxForce - minForce;
+        const distanceRange = force.radius - 50;
+        const forceIncrement = forceRange / distanceRange;
+        strength = maxForce - forceIncrement * (distance - 50);
+      }
+
+      // Calculate the force components
+      let forceX = (dx / distance) * strength;
+      let forceY = (dy / distance) * strength;
+
+      if (force.isAttractive) {
+        forceX *= -1;
+        forceY *= -1;
+      }
+
+      // Apply the force to playerToCheck's velocity
+      playerToCheck.vel.x += forceX;
+      playerToCheck.vel.y += forceY;
+      playerToCheck.boundVelocity();
+    } else if (force.type == ForceType.DIRECTIONAL) {
+      // Calculate the vector from the force to the player
+      const dx = playerToCheck.x - force.x;
+      const dy = playerToCheck.y - force.y;
+
+      // Rotate the player's position relative to the force direction
+      const rotatedX = dx * Math.cos(-force.direction) - dy * Math.sin(-force.direction);
+      const rotatedY = dx * Math.sin(-force.direction) + dy * Math.cos(-force.direction);
+
+      // Calculate half of the width and length of the rectangle
+      const halfWidth = force.width / 2;
+      const halfLength = force.length / 2;
+
+      // Check if the player is within the rotated rectangle and distance range
+      if (Math.abs(rotatedX) <= halfWidth && Math.abs(rotatedY) <= halfLength) {
+        // Calculate the proportional force strength
+        let strength = 0;
+        const maxForce = force.force;
+
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance > 0 && distance <= halfLength) {
+          // Gradual decrease in force from max at 0 to 40% at halfLength
+          const minForce = 0.6 * maxForce;
+          const forceRange = maxForce - minForce;
+          strength = maxForce - (distance / halfLength) * forceRange;
+        }
+
+        // Calculate the force components based on the force's direction
+        const forceX = Math.cos(force.direction) * strength;
+        const forceY = Math.sin(force.direction) * strength;
+
+        if (force.isAttractive) {
+          // If the force is attractive, apply it in the opposite direction
+          playerToCheck.vel.x += -forceX;
+          playerToCheck.vel.y += -forceY;
+        } else {
+          // If the force is repulsive, apply it in the specified direction
+          playerToCheck.vel.x += forceX;
+          playerToCheck.vel.y += forceY;
+        }
+
+        playerToCheck.boundVelocity();
+      }
     }
-
-    // Calculate the proportional force strength
-    let strength = 0;
-    const maxForce = force.force;
-     
-    if (distance > 0 && distance <= 50) {
-      // Calculate strength based on the inverse square of the distance
-      // strength = force.force / 2500 / (distance * distance);
-      strength = maxForce;
-    } else if (distance > 50 && distance <= force.radius) {
-      // Gradual decrease in force from max at 50 to 40% at force.radius
-      const minForce = 0.6 * maxForce;
-      const forceRange = maxForce - minForce;
-      const distanceRange = force.radius - 50;
-      const forceIncrement = forceRange / distanceRange;
-      strength = maxForce - forceIncrement * (distance - 50);
-    }
-
-    // Calculate the force components
-    let forceX = (dx / distance) * strength;
-    let forceY = (dy / distance) * strength;
-
-    if (force.isAttractive) {
-      forceX *= -1;
-      forceY *= -1;
-    }
-
-    // Apply the force to playerToCheck's velocity
-    playerToCheck.vel.x += forceX;
-    playerToCheck.vel.y += forceY;
-    playerToCheck.boundVelocity();
   }
 }
-
-// export function checkForcesCollision(playerToCheck, forces) {
-//   for (let force of forces) {
-//     if (playerToCheck == force.tracks) {
-//       continue;
-//     }
-//     if (playerToCheck != null && force.tracks != null && playerToCheck.id === force.tracks.id && playerToCheck.name === force.tracks.name) {
-//       continue;
-//     }
-
-//     // Calculate the vector from the force to the player
-//     const dx = playerToCheck.x - force.x;
-//     const dy = playerToCheck.y - force.y;
-
-//     // Calculate the distance between the player and the force
-//     const distance = Math.sqrt(dx * dx + dy * dy);
-
-//     // Calculate the angle between the force direction and the vector to the player
-//     const angleToPlayer = Math.atan2(dy, dx);
-//     const angleDifference = Math.abs(force.direction - angleToPlayer);
-
-//     // Check if the player is within the cone and distance range
-//     if (distance > force.radius || angleDifference > force.coneAngle / 2) {
-//       continue;
-//     }
-
-//     // Calculate the proportional force strength
-//     let strength = 0;
-
-//     if (distance > 0 && distance <= 50) {
-//       // Calculate strength based on the inverse square of the distance
-//       strength = force.force / 2500 / (distance * distance);
-//     } else if (distance > 50 && distance <= force.radius) {
-//       // Gradual decrease in force from max at 50 to 40% at force.radius
-//       const maxForce = force.force;
-//       const minForce = 0.6 * maxForce;
-//       const forceRange = maxForce - minForce;
-//       const distanceRange = force.radius - 50;
-//       const forceIncrement = forceRange / distanceRange;
-//       strength = maxForce - forceIncrement * (distance - 50);
-//     }
-
-//     // Calculate the force components
-//     let forceX = Math.cos(force.direction) * strength;
-//     let forceY = Math.sin(force.direction) * strength;
-
-//     if (force.isAttractive) {
-//       forceX *= -1;
-//       forceY *= -1;
-//     }
-
-//     // Apply the force to playerToCheck's velocity
-//     playerToCheck.vel.x += forceX;
-//     playerToCheck.vel.y += forceY;
-//   }
-// }
 
 export function resetPowerLevels(player, otherPlayers, globalPowerUps) {
   // Reset my powerUps
@@ -413,7 +403,7 @@ export function resetPowerLevels(player, otherPlayers, globalPowerUps) {
   });
 
   // Send updated powerUps to other players
-  sendPlayerStates(player,isPlayerMasterPeer(player));
+  sendPlayerStates(player, isPlayerMasterPeer(player));
 }
 
 function shipHitsBorder(x, y) {
