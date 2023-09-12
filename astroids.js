@@ -24,6 +24,7 @@ import {
   checkWinner,
   generatePowerups,
   generateMines,
+  generateDirectionalForces,
   checkPowerupCollision,
   endGameMessage,
   setGameWon,
@@ -85,7 +86,7 @@ export const GameState = {
 
 let gameState = GameState.UNSET;
 let accumulator = 0;
-let fixedDeltaTime = 1 / 60; // 60 updates per second
+export let fixedDeltaTime = 1 / 60; // 60 updates per second
 let playerToSpectate = null;
 //if below is true if there are any connected humans they will first be used to spectate if possible
 let prioritizeHumanSpectate = false;
@@ -229,8 +230,7 @@ function camFollowPlayer(deltaTime) {
   if (playerToSpectate != null) {
     recentlyActive = playerToSpectate.howLongSinceActive() < 1000;
   }
-  if (playerToSpectate != null && inPlayersList && (recentlyActive || playerToSpectate.isBot)) {
-    //  if (playerToSpectate != null && !playerToSpectate.isDead && allPlayers.includes(playerToSpectate) && (playerToSpectate.howLongSinceActive() < 5000)) {
+  if (playerToSpectate != null && inPlayersList && (recentlyActive || playerToSpectate.isBot) && !playerToSpectate.isDead) {
     updateCamera(playerToSpectate, deltaTime);
   } else {
     for (let candidate of allPlayers) {
@@ -322,7 +322,7 @@ export function setGameState(newState) {
 
     setupWinStateEventListeners(window, canvas);
     if (isPlayerMasterPeer(player)) {
-      sendPlayerStates(player,true);
+      sendPlayerStates(player, true);
     }
   }
 
@@ -399,9 +399,11 @@ window.addEventListener("load", function () {
 
   setTimeout(() => generatePowerups(globalPowerUps, worldDimensions.width, worldDimensions.height, colors), 300);
   setTimeout(() => generateMines(worldDimensions.width, worldDimensions.height, colors), 310);
+  setTimeout(() => generateDirectionalForces(worldDimensions.width, worldDimensions.height, colors), 320);
 
   setInterval(() => generatePowerups(globalPowerUps, worldDimensions.width, worldDimensions.height, colors), 3000);
   setInterval(() => generateMines(worldDimensions.width, worldDimensions.height, colors), 3100);
+  setInterval(() => generateDirectionalForces(worldDimensions.width, worldDimensions.height, colors), 3120);
 
   setInterval(() => connectToPeers(player, otherPlayers, globalPowerUps), 35000);
 

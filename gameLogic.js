@@ -1,8 +1,8 @@
-import { setGameState, GameState, player, setGlobalPowerUps, setMines, bots, otherPlayers, mines } from "./astroids.js";
+import { setGameState, GameState, player, setMines, bots, otherPlayers, mines } from "./astroids.js";
 import { isPlayerMasterPeer } from "./connectionHandlers.js";
-import { sendPlayerStates, sendGameState, sendEntitiesState } from "./handleData.js";
+import { sendPlayerStates, sendEntitiesState } from "./handleData.js";
 import { addScore } from "./db.js";
-import { forces, Mine, PowerUp, ForceType } from "./entities.js";
+import { forces, Mine, PowerUp, ForceType, ForceArea } from "./entities.js";
 import { Player, Bot } from "./player.js";
 // import { Bot } from "./bot.js";
 
@@ -12,11 +12,13 @@ export const mineScale = 0.7;
 
 //finish game after 5 for easier testing the finish
 export let pointsToWin = 5;
-let initialInvincibleTime = 60 * 10;
+export let initialInvincibleTime = 60 * 10;
 export let maxInvincibilityTime = initialInvincibleTime;
 export let maxSpecialMeter = 200;
 let maxPowerups = 10;
-let maxMines = 15;
+let maxMines = 14;
+let maxDirectionalForces = 2;
+let directionalForces = [];
 export let spawnProtectionTime = 100;
 export let endGameMessage = "";
 export let gameWon = false;
@@ -159,7 +161,7 @@ export function generateMines(worldWidth, worldHeight, colors) {
   // Check if there are less than max powerups powerups
   while (mines.length < maxMines) {
     let hasGravity = 0;
-    if (Math.random() > 0.4) {
+    if (Math.random() > 0.8) {
       hasGravity = 1;
     }
     let mine = new Mine(
@@ -175,6 +177,41 @@ export function generateMines(worldWidth, worldHeight, colors) {
   }
 }
 
+export function generateDirectionalForces(worldWidth, worldHeight, colors) {
+  if (!isPlayerMasterPeer(player)) {
+    return;
+  }
+  // let directionalForcesToGenerate = 4;
+  // let directionalForcesGenerated = 0;
+  // Check if there are less than max powerups powerups
+  while (directionalForces.length < maxDirectionalForces) {
+    let hasGravity = 0;
+    if (Math.random() > 0.4) {
+      hasGravity = 1;
+    }
+    let force = new ForceArea(
+      "force-" + Math.floor(Math.random() * 10000),
+      (Math.random() * 0.8 + 0.1) * worldWidth,
+      (Math.random() * 0.8 + 0.1) * worldHeight,
+      0.7,
+      10,
+      200,
+      true,
+      "green",
+      null,
+      0,
+      Math.random() * 2 * Math.PI,
+      ForceType.DIRECTIONAL,
+      420,
+      600
+    );
+
+    forces.push(force);
+    directionalForces.push(force);
+    // directionalForcesGenerated++;
+  }
+}
+
 export function checkPowerupCollision(playerToCheck, globalPowerUps) {
   for (let i = 0; i < globalPowerUps.length; i++) {
     let dx = playerToCheck.x - globalPowerUps[i].x;
@@ -187,15 +224,13 @@ export function checkPowerupCollision(playerToCheck, globalPowerUps) {
         //may need to make this an array of "recently collected / iteracted stuff" to be more robust in the future rather than a simple power up timer
         // playerToCheck.powerUps += globalPowerUps[i].value;
         let scoreToAdd = globalPowerUps[i].value;
-        playerToCheck.ticksSincePowerUpCollection = 0;
-        if (globalPowerUps[i].isStar) {
-          playerToCheck.setInvincibleTimer(initialInvincibleTime);
-        }
-        globalPowerUps.splice(i, 1);
-        playerToCheck.addScore(scoreToAdd);
+
+        playerToCheck.gotPowerUp(globalPowerUps[i].isStar,scoreToAdd,i);
+        
+       
       }
       // sendPowerups(globalPowerUps);
-      setGlobalPowerUps(globalPowerUps);
+
       //cf test do we need this looks like yes
       //sendGameState(globalPowerUps);
       break; // exit the loop to avoid possible index errors - does that mean we can only register 1 collection per tick? if so we could simply schedule the removal of collected until after this loop
@@ -291,6 +326,10 @@ export function checkPlayerCollision(playerToCheck, allPlayers) {
 
 export function checkForcesCollision(playerToCheck, forces) {
   for (let force of forces) {
+    if (force.type == ForceType.DIRECTIONAL) {
+      //for now we make directional forces not expire naturally
+      force.duration = 10;
+    }
     if (playerToCheck == force.tracks) {
       continue;
     }
@@ -314,7 +353,7 @@ export function checkForcesCollision(playerToCheck, forces) {
       if (distance > force.radius || angleDifference > force.coneAngle / 2) {
         continue;
       }
-
+      playerToCheck.inForce += 2;
       // Calculate the proportional force strength
       let strength = 0;
       const maxForce = force.force;
@@ -360,6 +399,7 @@ export function checkForcesCollision(playerToCheck, forces) {
 
       // Check if the player is within the rotated rectangle and distance range
       if (Math.abs(rotatedX) <= halfWidth && Math.abs(rotatedY) <= halfLength) {
+        playerToCheck.inForce += 5;
         // Calculate the proportional force strength
         let strength = 0;
         const maxForce = force.force;
@@ -550,8 +590,7 @@ export function masterPeerUpdateGame(player, globalPowerUps, otherPlayers, bots,
   //...not sending game state of otherplayers...hmm?
   //todo might need to undo condition
   if (isPlayerMasterPeer(player)) {
-    sendGameState(globalPowerUps);
-    sendEntitiesState(bots);
+    sendEntitiesState();
   }
 }
 
@@ -603,6 +642,8 @@ export function getRandomName() {
     "Silver",
     "Ein",
     "Kevin",
+    "Jiggly",
+    "Pork",
   ];
   const suffixes = [
     "Rider",
@@ -630,8 +671,9 @@ export function getRandomName() {
     "Whisper",
     "Dreamer",
     "Log",
-    "Stein",
+    "stein",
     "Freedom",
+    "Pup",
   ];
 
   // Generate random indexes for prefix and suffix

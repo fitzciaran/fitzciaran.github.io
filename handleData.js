@@ -1,4 +1,4 @@
-import { setGlobalPowerUps, player, otherPlayers, bots, mines, setBots, setMines, setOtherPlayers } from "./astroids.js";
+import { setGlobalPowerUps, player, otherPlayers, bots, mines, setBots, setMines, setOtherPlayers, fixedDeltaTime, globalPowerUps } from "./astroids.js";
 import {
   connections,
   connectedPeers,
@@ -12,8 +12,8 @@ import {
   setMasterPeerId,
 } from "./connectionHandlers.js";
 import { setEndGameMessage } from "./gameLogic.js";
-import { forces, setForces, createMineFromObject, createForceFromObject, createPowerUpFromObject } from "./entities.js";
-import { createBotFromObject, Player, createPlayerFromObject } from "./player.js";
+import { forces, setForces, createMineFromObject, createForceFromObject, createPowerUpFromObject,serializeForces,serializeMines,serializeGlobalPowerUps } from "./entities.js";
+import { createBotFromObject, Player, createPlayerFromObject,serializeBots } from "./player.js";
 
 let handleCounter = 0;
 let sendCounter = 0;
@@ -22,6 +22,8 @@ export function sendPlayerStates(playerToSend, isMaster) {
   // Check if connection is open before sending data
   // Send player state to other players
   let data = {
+    timestamp: Date.now(),
+    priority: 3,
     id: playerToSend.id,
     x: playerToSend.x,
     y: playerToSend.y,
@@ -51,6 +53,9 @@ export function sendPlayerStates(playerToSend, isMaster) {
     targetedBy: playerToSend.targetedBy,
     timeOfLastActive: playerToSend.timeOfLastActive,
     hitBy: playerToSend.hitBy,
+    recentScoreTicks: playerToSend.recentScoreTicks,
+    recentScoreText: playerToSend.recentScoreText,
+    
   };
   if (isMaster) {
     data.isDead = playerToSend.isDead;
@@ -72,9 +77,11 @@ export function sendPlayerStates(playerToSend, isMaster) {
   });
 }
 
-export function sendGameState(globalPowerUps) {
+function sendGameState(globalPowerUps) {
   // Send game state to other player
   let data = {
+    timestamp: Date.now(),
+    priority: 2,
     gameState: true,
     globalPowerUps: globalPowerUps,
     //enemies and stuff here
@@ -94,14 +101,17 @@ export function sendGameState(globalPowerUps) {
   });
 }
 
-export function sendEntitiesState(bots) {
+export function sendEntitiesState() {
   // Send game state to other player
   let data = {
+    timestamp: Date.now(),
+    priority: 2,
     gameState: true,
-    bots: bots,
-    mines: mines,
+    globalPowerUps: serializeGlobalPowerUps(globalPowerUps),
+    bots: serializeBots(bots),
+    mines: serializeMines(mines),
     // otherPlayers: otherPlayers,
-    forces: forces,
+    forces: serializeForces(forces), 
     // connectedPeers: connectedPeers,
     //enemies and stuff here
   };
@@ -123,6 +133,8 @@ export function sendEntitiesState(bots) {
 export function sendConnectedPeers() {
   // Send game state to other player
   let data = {
+    timestamp: Date.now(),
+    priority: 2,
     gameState: true,
     //todo this could be the issue
     //connectedPeers: connectedPeers,
@@ -144,6 +156,21 @@ export function sendConnectedPeers() {
 }
 
 export function handleData(player, otherPlayers, globalPowerUps, data) {
+  const currentTimestamp = Date.now();
+  const messageTimestamp = data.timestamp;
+  // let timeThreshold = 2 * fixedDeltaTime;
+  let timeThreshold = 20;
+  if (data.priority < 3) {
+    timeThreshold = 30;
+  }
+  if (data.priority < 2) {
+    timeThreshold = 60;
+  }
+  let timeDifference = currentTimestamp - messageTimestamp;
+  if (timeDifference > timeThreshold) {
+    //lets try ignoring old messages
+    return;
+  }
   setTimeSinceAnyMessageRecieved(0);
   //console.log("handling data:");
   // Find the otherPlayer in the array
@@ -183,6 +210,8 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
     otherPlayer.targetedBy = data.targetedBy;
     otherPlayer.timeOfLastActive = data.timeOfLastActive;
     otherPlayer.hitBy = data.hitBy;
+    otherPlayer.recentScoreTicks = data.recentScoreTicks;
+    otherPlayer.recentScoreText = data.recentScoreText;
 
     if (isPlayerMasterPeer(player) && otherPlayer.isMaster && !otherPlayer.isBot) {
       wrappedResolveConflicts(player, otherPlayers, globalPowerUps);
@@ -216,6 +245,8 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
     player.setInvincibleTimer(data.invincibleTimer);
     player.ticksSincePowerUpCollection = data.ticksSincePowerUpCollection;
     player.powerUps = data.powerUps;
+    player.recentScoreTicks = data.recentScoreTicks;
+    player.recentScoreText = data.recentScoreText;
     setEndGameMessage("Killed by: " + player.hitBy + "\nScore: " + player.powerUps * 100);
   }
   // Only update the powerups if the received data contains different powerups
@@ -225,8 +256,6 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
   }
   if (data.bots) {
     setTimeSinceMessageFromMaster(0);
-    //const botInstances = data.bots.map(createBotFromObject);
-    // setBots(botInstances);
 
     // Iterate through botInstances received from the master peer
     for (const receivedBot of data.bots) {
@@ -280,6 +309,7 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
         localBot.mousePosX = receivedBot.mousePosX;
         localBot.mousePosY = receivedBot.mousePosY;
         localBot.name = receivedBot.name;
+        localBot.inForce = receivedBot.inForce;
       } else {
         // If the local bot doesn't exist, add it to the bots array
         // bots.push(receivedBot);
@@ -287,23 +317,17 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
       }
     }
 
-    // Optionally, you may want to remove bots from the local array that are not in botInstances
     // This ensures that local bots that have been removed on the master peer are also removed locally
-    //bots = bots.filter((localBot) => botInstances.some((receivedBot) => receivedBot.id === localBot.id));
     setBots(bots.filter((localBot) => data.bots.some((receivedBot) => receivedBot.id === localBot.id)));
   }
   if (data.mines) {
     setTimeSinceMessageFromMaster(0);
-    //const mineInstances = data.mines.map(createMineFromObject);
-    //setMines(mineInstances);
+    
     for (const receivedMine of data.mines) {
       // Find the corresponding local bot by ID
       const localMine = findMineById(receivedMine.id);
       const interpFactor = 0.2;
       if (localMine) {
-        //if the local force is the current local players force don't need to update it
-        // If the local force exists, interpolate its position
-        // This assumes you have a variable for interpolation factor (e.g., interpFactor)
         localMine.x = localMine.x + (receivedMine.x - localMine.x) * interpFactor;
         localMine.y = localMine.y + (receivedMine.y - localMine.y) * interpFactor;
         localMine.force = receivedMine.force;
@@ -314,6 +338,15 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
       } else {
         // If the local mine doesn't exist, add it to the mines array
         mines.push(createMineFromObject(receivedMine));
+      }
+    }
+    //if there is a mine in our list that isn't in the master list remove it
+    for (let mineToCheck of mines) {
+      if (mineToCheck.id != null) {
+        let matchingMine = data.mines.find((dataMine) => dataMine.id === mineToCheck.id);
+        if (matchingMine == null) {
+          setMines(mines.filter((mine) => mine.id !== mineToCheck.id));
+        }
       }
     }
   }
@@ -328,7 +361,7 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
       const localForce = findForceById(receivedForce.id);
       const interpFactor = 0.2;
       if (localForce) {
-        if (localForce.tracks.id != player.id) {
+        if (localForce.tracks == null || localForce.tracks.id != player.id) {
           //if the local force is the current local players force don't need to update it
           // If the local force exists, interpolate its position
           // This assumes you have a variable for interpolation factor (e.g., interpFactor)
@@ -342,14 +375,27 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
           localForce.tracks = receivedForce.tracks;
           localForce.coneAngle = receivedForce.coneAngle;
           localForce.direction = receivedForce.direction;
+          localForce.type = receivedForce.type;
+          localForce.width = receivedForce.width;
+          localForce.length = receivedForce.length;
           localForce.numberArrowsEachSide = receivedForce.numberArrowsEachSide;
+          localForce.numberArrowsDeep = receivedForce.numberArrowsDeep;
         } else {
-          console.log("currentplayers force");
+          // console.log("currentplayers force");
         }
-      } else if (receivedForce.tracks.id != player.id) {
+      } else if (receivedForce.tracks == null || receivedForce.tracks.id != player.id) {
         // If the local force doesn't exist, add it to the forces array
         //forces.push(receivedForce);
         forces.push(createForceFromObject(receivedForce));
+      }
+    }
+    //if there is a force in our list that isn't in the master list remove it
+    for (let forceToCheck of forces) {
+      if (forceToCheck.id != null) {
+        let matchingForce = data.forces.find((dataForce) => dataForce.id === forceToCheck.id);
+        if (matchingForce == null) {
+          setForces(forces.filter((force) => force.id !== forceToCheck.id));
+        }
       }
     }
   }

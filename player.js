@@ -12,10 +12,11 @@ import {
   setGameState,
   GameState,
   globalPowerUps,
+  setGlobalPowerUps,
 } from "./astroids.js";
 import { isPlayerMasterPeer } from "./connectionHandlers.js";
-import { forces, ForceArea } from "./entities.js";
-import { setEndGameMessage, maxInvincibilityTime, spawnProtectionTime, maxSpecialMeter, PilotName } from "./gameLogic.js";
+import { forces, ForceArea, ForceType } from "./entities.js";
+import { setEndGameMessage, maxInvincibilityTime, spawnProtectionTime, maxSpecialMeter, PilotName, initialInvincibleTime } from "./gameLogic.js";
 import { sendPlayerStates } from "./handleData.js";
 
 const bounceFactor = 1.5;
@@ -86,6 +87,7 @@ export class Player {
     this.specialMeter = 100;
     this.usingSpecial = 0;
     this.hitBy = "";
+    this.recentScoreTicks = 0;
   }
 
   resetState(keepName, keepColor) {
@@ -117,6 +119,8 @@ export class Player {
     this.vel = { x: 0, y: 0 };
     this.timeSinceSpawned = 0;
     this.hitBy = "";
+    this.recentScoreTicks = 0;
+    this.recentScoreText = 0;
   }
   isDead() {
     return this.isDead;
@@ -147,18 +151,89 @@ export class Player {
       }
     }
     if (isPlayerMasterPeer(player) && !isPlayerMasterPeer(this)) {
-      sendPlayerStates(this,true);
+      sendPlayerStates(this, true);
     }
   }
   addScore(scoreToAdd) {
     this.powerUps += scoreToAdd;
     if (this.powerUps != Math.floor(this.powerUps)) {
-      console.log("somehow not whole score added");
+      //I'm trying out not whole number combo scaling so not unexpected now
+      // console.log("somehow not whole score added");
       this.powerUps = Math.floor(this.powerUps);
     }
     if (isPlayerMasterPeer(player) && !isPlayerMasterPeer(this)) {
-      sendPlayerStates(this,true);
+      sendPlayerStates(this, true);
     }
+  }
+
+  gotPowerUp(isStar, scoreToAdd, powerUpIndex) {
+    this.ticksSincePowerUpCollection = 0;
+    if (isStar) {
+      this.setInvincibleTimer(initialInvincibleTime);
+    }
+
+    scoreToAdd *= this.comboScaler;
+
+    this.recentScoreTicks = 150;
+    let textScore = scoreToAdd * 100;
+    this.setRecentScoreText(textScore);
+    if (this.comboScaler < 10) {
+      this.comboScaler += 0.5;
+    }
+    globalPowerUps.splice(powerUpIndex, 1);
+    if (isPlayerMasterPeer(player)) {
+      setGlobalPowerUps(globalPowerUps);
+    }
+    this.addScore(scoreToAdd);
+  }
+
+  setRecentScoreText(textScore) {
+    if (this.comboScaler >= 0 && this.comboScaler < 1.5) {
+      this.recentScoreText = this.getComboText("", textScore);
+    } else if (this.comboScaler >= 1.5 && this.comboScaler < 2) {
+      this.recentScoreText = this.getComboText("Double ", textScore);
+    } else if (this.comboScaler >= 2 && this.comboScaler < 2.5) {
+      this.recentScoreText = this.getComboText("Triple ", textScore);
+    } else if (this.comboScaler >= 2.5 && this.comboScaler < 3) {
+      this.recentScoreText = this.getComboText("Quad ", textScore);
+    } else if (this.comboScaler >= 3 && this.comboScaler < 3.5) {
+      this.recentScoreText = this.getComboText("Penta ", textScore);
+    } else if (this.comboScaler >= 3.5 && this.comboScaler < 4) {
+      this.recentScoreText = this.getComboText("Hexa ", textScore);
+    } else if (this.comboScaler >= 4 && this.comboScaler < 4.5) {
+      this.recentScoreText = this.getComboText("Septa ", textScore);
+    } else if (this.comboScaler >= 4.5 && this.comboScaler < 5) {
+      this.recentScoreText = this.getComboText("Octa ", textScore);
+    } else if (this.comboScaler >= 5 && this.comboScaler < 5.5) {
+      this.recentScoreText = this.getComboText("Niner ", textScore);
+    } else {
+      this.recentScoreText = this.getComboText("Monster ", textScore);
+    }
+  }
+
+  getComboText(comboName, textScore) {
+    return comboName + " " + textScore;
+  }
+
+  hitOtherPlayer(playerThatGotHit) {
+    this.kills += 1;
+
+    let score = 2 * this.comboScaler;
+    score += Math.round(playerThatGotHit.powerUps / 3);
+    this.recentScoreTicks = 250;
+    let textScore = score * 100;
+
+    this.setRecentScoreText(textScore);
+    this.setInvincibleTimer(this.invincibleTimer - 150);
+    this.addScore(score);
+    if (this.comboScaler < 10) {
+      this.comboScaler += 1;
+    }
+  }
+
+  setInvincibleTimer(newTime) {
+    this.invincibleTimer = Math.min(newTime, maxInvincibilityTime);
+    this.invincibleTimer = Math.max(this.invincibleTimer, 0);
   }
   setPilot(newPilot) {
     this.pilot = newPilot;
@@ -187,64 +262,10 @@ export class Player {
   isInSpawnProtectionTime() {
     return this.timeSinceSpawned <= spawnProtectionTime;
   }
-  //   getPlayerIsMaster() {
-  //     return this.isMaster;
-  //   }
 
   setPlayerIsMaster(isMaster) {
     this.isMaster = isMaster;
   }
-
-  hitOtherPlayer(playerThatGotHit) {
-    this.kills += 1;
-    let score = 2 * this.comboScaler;
-    score += Math.round(playerThatGotHit.powerUps / 3);
-    this.recentKillTicks = 60;
-    let textScore = score * 100;
-    switch (this.comboScaler) {
-      case 1:
-        this.recentKillText = "KILL " + textScore;
-        break;
-      case 2:
-        this.recentKillText = "Double KILL " + textScore;
-        break;
-      case 3:
-        this.recentKillText = "Triple KILL " + textScore;
-        break;
-      case 4:
-        this.recentKillText = "QUAD KILL " + textScore;
-        break;
-      case 5:
-        this.recentKillText = "PENTA KILL " + textScore;
-        break;
-      case 6:
-        this.recentKillText = "HEXAKILL " + textScore;
-        break;
-      case 7:
-        this.recentKillText = "SEPTAKILL " + textScore;
-        break;
-      case 8:
-        this.recentKillText = "OCTAKILL " + textScore;
-        break;
-      case 9:
-        this.recentKillText = "NINELIFE KILL " + textScore;
-        break;
-      default:
-        this.recentKillText = "MONSTER KILL " + textScore;
-        break;
-    }
-    if (this.comboScaler < 10) {
-      this.comboScaler += 1;
-    }
-    this.setInvincibleTimer(this.invincibleTimer - 150);
-    this.addScore(score);
-  }
-
-  setInvincibleTimer(newTime) {
-    this.invincibleTimer = Math.min(newTime, maxInvincibilityTime);
-    this.invincibleTimer = Math.max(this.invincibleTimer, 0);
-  }
-
   bouncePlayer() {
     if (this.x < 0 || this.x > worldDimensions.width) {
       this.vel.x = -this.vel.x * bounceFactor;
@@ -321,17 +342,19 @@ export class Player {
           const coneDirection = this.angle - Math.PI / 2;
           // Specify the desired cone angle (in radians) for the force
           let coneAngle = Math.PI * 2; // For example, a 45-degree cone
-          let forcePower = 0.5;
+          let forcePower = 1.5;
           let radius = 200;
 
           if (this.special == Special.FORCE_PULL_FOCUS) {
             coneAngle = Math.PI / 4; // For example, a 45-degree cone
-            forcePower = 1.0;
-            radius = 400;
+            forcePower = 3.0;
+            radius = 500;
           }
+          let forceType = ForceType.POINT;
           // Create the ForceArea with the cone properties
-          let force = new ForceArea(null, this.x, this.y, forcePower, 5, radius, attractive, "red", this, coneAngle, coneDirection);
-          forces.push(force);
+          // let force = new ForceArea(null, this.x, this.y, forcePower, 5, radius, attractive, "red", this, coneAngle, coneDirection);
+          // forces.push(force);
+          this.createForce(this.x, this.y, forcePower, 5, radius, attractive, this.color, this, coneAngle, coneDirection, forceType);
         } else if (this.special == Special.BOOST) {
           //give a bit of meter back for the boost so it works out cheaper than force.
           this.specialMeter += 1;
@@ -378,7 +401,65 @@ export class Player {
     this.boundVelocity();
     this.currentSpeed = Math.sqrt(this.vel.x * this.vel.x + this.vel.y * this.vel.y);
   }
+  createForce(
+    x,
+    y,
+    force = 1,
+    duration = 10,
+    radius = 200,
+    isAttractive = true,
+    color = "red",
+    tracks = null,
+    coneAngle = 0,
+    direction = 0,
+    type = ForceType.POINT,
+    width = 100,
+    length = 200
+  ) {
+    //note this assumes a given player will always use the same force. If that ever changes we just need to remove the old force from forces. If the play can have multiple forces then we'll have to revist this.
+    // Check if there is already a force with the same id
+    const existingForce = forces.find((force) => force.id === "player-" + this.id);
+    // const existingForce = null;
 
+    if (!existingForce) {
+      // If no force with the same id exists, create a new one
+      let playerForce = new ForceArea(
+        "player-" + this.id,
+        x,
+        y,
+        force,
+        duration,
+        radius,
+        isAttractive,
+        color,
+        tracks,
+        coneAngle,
+        direction,
+        type,
+        width,
+        length
+      );
+      // let playerForce = new ForceArea(null, x, y, force, duration, radius, isAttractive, color, tracks, coneAngle, direction, type, width, length);
+      // let minesForce = new ForceArea("player-" + this.id, this.x, this.y, 0.3, 10, 200, this.force == 1, "pink", this);
+
+      //currently  doesn't keep a reference to it's force, is that fine?
+      forces.push(playerForce);
+    } else {
+      existingForce.duration = 10;
+      existingForce.x = x;
+      existingForce.y = y;
+      existingForce.force = force;
+      existingForce.radius = radius;
+      existingForce.isAttractive = isAttractive;
+      existingForce.color = color;
+      existingForce.tracks = tracks;
+      existingForce.coneAngle = coneAngle;
+      existingForce.direction = direction;
+      existingForce.type = type;
+      existingForce.width = width;
+      existingForce.length = length;
+    }
+  }
   boundVelocity() {
     if (this.vel.x > maxVel) {
       this.vel.x = maxVel;
@@ -445,7 +526,8 @@ export class Player {
     if (this.invincibleTimer > 0) {
       this.setInvincibleTimer(this.invincibleTimer - 1);
       if (this.invincibleTimer == 0) {
-        this.comboScaler = 1;
+        //trying out different comboScaler end
+        // this.comboScaler = 1;
       }
     }
     if (this.specialMeter < maxSpecialMeter) {
@@ -460,7 +542,12 @@ export class Player {
       this.ticksSincePowerUpCollection = -1;
     }
     this.forceCoolDown = Math.max(this.forceCoolDown - 1, 0);
-
+    if (this.recentScoreTicks > 0) {
+      this.recentScoreTicks = Math.max(this.recentScoreTicks - 1, 0);
+      if (this.recentScoreTicks == 0) {
+        this.comboScaler = 1;
+      }
+    }
     otherPlayers.forEach((otherPlayer) => {
       otherPlayer.timeSinceSentMessageThatWasRecieved += 1;
     });
@@ -553,15 +640,17 @@ export class Bot extends Player {
     this.randomTarget = { x: 0, y: 0, id: "" };
     this.inRangeTicks = 0;
     this.isBot = true;
+    this.inForce = 0;
   }
 
   updateTick(deltaTime) {
     if (this.isDead) {
       //todo delay this?
-      this.resetState(true, true);
-      // delayReset(5,true,true);
+      //this.resetState(true, true);
+      this.delayReset(5, true, true);
       return;
     }
+    this.inForce = Math.max(this.inForce - 1, 0);
     super.updateTick(deltaTime);
   }
 
@@ -573,6 +662,10 @@ export class Bot extends Player {
         this.setRandomTarget(0, 0, "random point");
         this.setBotState(BotState.FOLLOW_PLAYER);
       }
+    }
+    if (this.inForce > 50) {
+      this.setRandomTarget(0, 0, "random point");
+      this.inForce = 0;
     }
 
     if (this.botState == BotState.FOLLOW_PLAYER) {
@@ -843,4 +936,40 @@ export class Bot extends Player {
       this.botState = BotState.COLLECT;
     }
   }
+}
+
+export function serializeBots(bots) {
+  return bots.map((bot) => ({
+    id: bot.id,
+    x: bot.x,
+    y: bot.y,
+    vel: bot.vel,
+    isDead: bot.isDead,
+    angle: bot.angle,
+    currentSpeed: bot.currentSpeed,
+    timeOfLastActive: bot.timeOfLastActive,
+    playerAngleData: bot.playerAngleData,
+    mousePosX: bot.mousePosX,
+    mousePosY: bot.mousePosY,
+    isPlaying: bot.isPlaying,
+    special: bot.special,
+    distanceFactor: bot.distanceFactor,
+    lives: bot.lives,
+    space: bot.space,
+    shift: bot.shift,
+    u: bot.u,
+    forceCoolDown: bot.forceCoolDown,
+    comboScaler: bot.comboScaler,
+    kills: bot.kills,
+    ticksSincePowerUpCollection: bot.ticksSincePowerUpCollection,
+    timeSinceSpawned: bot.timeSinceSpawned,
+    botState: bot.botState,
+    randomTarget: bot.randomTarget,
+    followingPlayerID: bot.followingPlayerID,
+    previousAngleDifference: bot.previousAngleDifference,
+    previousTurnDirection: bot.previousTurnDirection,
+    invincibleTimer: bot.invincibleTimer,
+    name: bot.name,
+    inForce: bot.inForce,
+  }));
 }

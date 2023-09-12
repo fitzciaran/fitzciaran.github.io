@@ -1,3 +1,4 @@
+// import { globalPowerUps } from "./astroids.js";
 import { Player } from "./player.js";
 
 export let forces = [];
@@ -88,28 +89,14 @@ export class Mine extends Enemy {
       // If no force with the same id exists, create a new one
       if (this.force !== 0) {
         let minesForce = new ForceArea("mine-" + this.id, this.x, this.y, 0.3, 10, 200, this.force == 1, "pink", this);
-        //todo put the above line back this is just testing the directional force
-        // let minesForce = new ForceArea(
-        //   "mine-" + this.id,
-        //   this.x,
-        //   this.y,
-        //   0.7,
-        //   10,
-        //   200,
-        //   this.force == 1,
-        //   "pink",
-        //   this,
-        //   0,
-        //   Math.random() * 2 * Math.PI,
-        //   ForceType.DIRECTIONAL,
-        //   120,
-        //   300
-        // );
         //currently mine doesn't keep a reference to it's force, is that fine?
         forces.push(minesForce);
       }
     } else {
       existingForce.duration = 10;
+      existingForce.x = this.x;
+      existingForce.y = this.y;
+      //may need to update other properties in future if mine/ mine force behaviour change
     }
   }
 }
@@ -126,18 +113,21 @@ export class PowerUp extends Entity {
 
 export function createForceFromObject(obj) {
   //why is tracks a new player not a found one?
-  let tracks = new Player(
-    obj.tracks.id,
-    obj.tracks.x,
-    obj.tracks.y,
-    obj.tracks.powerUps,
-    obj.tracks.color,
-    obj.tracks.angle,
-    obj.tracks.pilot,
-    obj.tracks.name,
-    obj.tracks.isPlaying,
-    obj.tracks.isUserControlledCharacter
-  );
+  let tracks = null;
+  if (obj.tracks != null) {
+    tracks = new Player(
+      obj.tracks.id,
+      obj.tracks.x,
+      obj.tracks.y,
+      obj.tracks.powerUps,
+      obj.tracks.color,
+      obj.tracks.angle,
+      obj.tracks.pilot,
+      obj.tracks.name,
+      obj.tracks.isPlaying,
+      obj.tracks.isUserControlledCharacter
+    );
+  }
   let force = new ForceArea(
     obj.id,
     obj.x,
@@ -155,6 +145,7 @@ export function createForceFromObject(obj) {
     obj.length
   );
   force.numberArrowsEachSide = obj.numberArrowsEachSide;
+  force.numberArrowsDeep = obj.numberArrowsDeep;
   return force;
 }
 export function createMineFromObject(obj) {
@@ -164,4 +155,49 @@ export function createMineFromObject(obj) {
 export function createPowerUpFromObject(obj) {
   let powerUp = new PowerUp(obj.id, obj.x, obj.y, obj.color, obj.isStar, obj.radius, obj.value);
   return powerUp;
+}
+
+export function serializeForces(forces) {
+  return forces.map((force) => ({
+    id: force.id,
+    x: force.x,
+    y: force.y,
+    force: force.force,
+    duration: force.duration,
+    radius: force.radius,
+    isAttractive: force.isAttractive,
+    color: force.color,
+    tracks: force.tracks,
+    coneAngle: force.coneAngle,
+    direction: force.direction,
+    type: force.type,
+    numberArrowsEachSide: force.numberArrowsEachSide,
+    numberArrowsDeep: force.numberArrowsDeep,
+    width: force.width,
+    length: force.length,
+  }));
+}
+
+export function serializeMines(mines) {
+  return mines.map((mine) => ({
+    id: mine.id,
+    x: mine.x,
+    y: mine.y,
+    force: mine.force,
+    duration: mine.duration,
+    radius: mine.radius,
+    hitFrames: mine.hitFrames,
+    color: mine.color,
+  }));
+}
+export function serializeGlobalPowerUps(globalPowerUps) {
+  return globalPowerUps.map((globalPowerUp) => ({
+    id: globalPowerUp.id,
+    x: globalPowerUp.x,
+    y: globalPowerUp.y,
+    color: globalPowerUp.color,
+    isStar: globalPowerUp.isStar,
+    radius: globalPowerUp.radius,
+    value: globalPowerUp.value,
+  }));
 }

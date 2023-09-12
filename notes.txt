@@ -212,22 +212,9 @@ could put a collectedby property on powerups then schedule removal for a few fra
     more hacks to combat the big issue of p2p tho isnt it?
 
 
-invicibletime goes down when hits
-gauage appears above player
-
 if implement full hitboxes could have the front bit be invincible.
 
-maybe master should send "isHit" "has collected" etc to update slave peers, might solve a lot of the p2p issues.
-
 give bots specials and make them use them on defense / offence
-
-as master could sent player updates only on hits/collections/interactions?
-
-getting multiple copies of bots for non master peers now? (one faded out .. very weird, the "copy" that carries on with old pos data seems to get the state for inv etc)
-
-can't start as non master now think isdead keeps getting reset to dead, master needs to be updated with the isDead = false(and full player reset) when non master rejoins
-
-draw the score for powerup collection
 
 mine could have an attractive force (or repellent? )
 
@@ -245,12 +232,32 @@ still issue with the interpoloation of position of crafts/forces
 
 boost areas are just forces now... well current forces are point based maybe need direction based variant 
 
-  //gotHit and addScore are both doing an additional key function of sending the playerstates as master. 
-  //Need to unpick this, maybe there should be events for gotHit and addscore and masterpeer responds to such events with sending player state for the given player
-  mines not being removed on slave peer - still kills?! is it an issue on master where it isn't rendered?
-  look into performance maybe only stroke/ closepath/open path at end/beginning of all force draws?
+//gotHit and addScore are both doing an additional key function of sending the playerstates as master. 
+//Need to unpick this, maybe there should be events for gotHit and addscore and masterpeer responds to such events with sending player state for the given player
 
-  animate the force arrows?
-  only need to draw if drawing would be onscreen! How is this optimised by default?
+look into performance maybe only stroke/ closepath/open path at end/beginning of all force draws?
 
-  if make directional forces bigger after creation need to reeset numberArrowsEachSide so it's recalculated
+animate the force arrows?
+only need to draw if drawing would be onscreen! How is this optimised by default?
+
+if make directional forces bigger after creation need to reset numberArrowsEachSide so it's recalculated
+
+  bots detect if stuck on forces? 
+    advanced: use predicted forces to determine where should aim
+
+points on screen when powerup collection
+
+direction forcepads should not spawn too close to a wall if facing that wall
+
+general collision visual effect (sound later)
+
+should remove/move boost / forcepads after a time... maybe just give them an actual expiry?
+
+speicals should pull / push mines/powerups?
+
+should "combo score" shown be the total score throughout the combo?
+    differnt sound effect for extent of score in combo.. probably not.
+
+invicible could keep combo going even outside of normal tick time?
+
+random effects - stuck with special on for a period of time.

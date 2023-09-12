@@ -230,7 +230,7 @@ function drawMinimap(player, otherPlayers, bots, worldWidth, worldHeight) {
 }
 
 function drawRotatedShip(ctx, camX, camY, player, points) {
-  if (!player.isPlaying) {
+  if (!player.isPlaying || player.isDead) {
     return;
   }
 
@@ -317,17 +317,20 @@ function drawRotatedShip(ctx, camX, camY, player, points) {
   ctx.font = "14px Arial";
   ctx.textAlign = "center";
   ctx.fillText(name, namePositionX, namePositionY);
-
-  if (player.recentKillTicks > 0) {
-    player.recentKillTicks -= 1;
-    drawKillInfo(ctx, player, player.recentKillText, camX, camY);
-  }
   const invincibleGuagePositionX = centerX - camX;
   const invincibleGuagePositionY = centerY - camY - 25;
   if (player.invincibleTimer > 0) {
     drawInvincibilityGauge(ctx, player, invincibleGuagePositionX, invincibleGuagePositionY, 70, 15, 2);
   }
+
   ctx.shadowBlur = 0;
+  if (player.recentScoreTicks > 0) {
+    let scoreInfoYAdjust = 0;
+    if (player.invincibleTimer > 0) {
+      scoreInfoYAdjust = 20;
+    }
+    drawScoreInfo(ctx, player, player.recentScoreText, camX, camY + scoreInfoYAdjust);
+  }
 }
 
 export function drawEnemy(ctx, camX, camY, mine, points) {
@@ -468,23 +471,6 @@ function drawForce(ctx, camX, camY, force, points) {
     ctx.stroke();
     ctx.closePath();
 
-    // Calculate the coordinates for the arrowhead
-    const arrowLength = Math.min(width, length) * 0.2; // Adjust the arrow size as needed
-    const arrowBaseX = screenX + arrowLength * Math.cos(angle);
-    const arrowBaseY = screenY + arrowLength * Math.sin(angle);
-    const arrowTipX = screenX - arrowLength * Math.cos(angle);
-    const arrowTipY = screenY - arrowLength * Math.sin(angle);
-
-    // Calculate the coordinates for the two lines extending from the stem at 45-degree angles
-    const lineLength = arrowLength / Math.sqrt(2); // Length of lines at 45-degree angles
-    const lineAngle = angle + Math.PI / 4; // 45-degree angle from the stem
-
-    const line1StartX = arrowTipX + lineLength * Math.cos(lineAngle);
-    const line1StartY = arrowTipY + lineLength * Math.sin(lineAngle);
-
-    const line2StartX = arrowTipX + lineLength * Math.cos(-lineAngle);
-    const line2StartY = arrowTipY + lineLength * Math.sin(-lineAngle);
-
     if (!force.attractive) {
       angle = angle + Math.PI;
     }
@@ -492,35 +478,40 @@ function drawForce(ctx, camX, camY, force, points) {
     const centerX = (x1 + x2 + x3 + x4) / 4;
     const centerY = (y1 + y2 + y3 + y4) / 4;
 
-    const halfRectWidth = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2) / 2;
-    const centerLeftToRightLowerTopToBottomX = centerX - Math.cos(angle) * halfRectWidth * (4 / 5);
-    const centerLeftToRightLowerTopToBottomY = centerY - Math.sin(angle) * halfRectWidth * (4 / 5);
-    const leftBottomLeaningX = (x1 + x2) / 2 - Math.cos(angle) * halfRectWidth * (4 / 5);
-    const leftBottomLeaningY = (y1 + y2) / 2 - Math.sin(angle) * halfRectWidth * (4 / 5);
-    const rightBottomLeaningX = (x3 + x4) / 2 - Math.cos(angle) * halfRectWidth * (4 / 5);
-    const rightBottomLeaningY = (y3 + y4) / 2 - Math.sin(angle) * halfRectWidth * (4 / 5);
+    const distX21 = x2 - x1;
+    const distY21 = y2 - y1;
+    const halfRectHeight = Math.sqrt(distX21 ** 2 + distY21 ** 2) / 2;
 
-    // Calculate the number of points based on the halfRectWidth
-    let numPoints = force.numberArrowsEachSide;
-    if (numPoints == null || numPoints == 0) {
-      numPoints = Math.floor(halfRectWidth / 15); // Adjust the divisor as needed
-      force.numberArrowsEachSide = numPoints;
+    const distX32 = x3 - x2;
+    const distY32 = y3 - y2;
+    const halfRectWidth = Math.sqrt(distX32 ** 2 + distY32 ** 2) / 2;
+
+    let numPointsWide = force.numberArrowsEachSide;
+    if (numPointsWide == null || numPointsWide == 0) {
+      numPointsWide = Math.floor(halfRectWidth / 20);
+      force.numberArrowsEachSide = numPointsWide;
     }
-    for (let i = 0; i < numPoints; i++) {
-      // for (let i = 0; i < 2; i++) {
-      let x, y;
+    let numPointsDeep = force.numberArrowsDeep;
+    if (numPointsDeep == null || numPointsDeep == 0) {
+      numPointsDeep = Math.floor(halfRectHeight / 40);
+      force.numberArrowsDeep = numPointsDeep;
+    }
 
-      x = ((numPoints - i) * centerLeftToRightLowerTopToBottomX + i * leftBottomLeaningX) / numPoints;
-      y = ((numPoints - i) * centerLeftToRightLowerTopToBottomY + i * leftBottomLeaningY) / numPoints;
-      drawArrow(ctx, { x, y }, angle, 50, 20);
+    let offset = 0.05; // adjust the offset to create more or less space around the arrows
+    let start = offset;
+    let end = 1 - offset;
 
-      if (i != 0) {
-        x = ((numPoints - i) * centerLeftToRightLowerTopToBottomX + i * rightBottomLeaningX) / numPoints;
-        y = ((numPoints - i) * centerLeftToRightLowerTopToBottomY + i * rightBottomLeaningY) / numPoints;
+    for (let i = start * (numPointsDeep - 1); i <= end * (numPointsDeep - 1); i++) {
+      for (let j = start * numPointsWide; j <= end * numPointsWide; j++) {
+        let t = j / numPointsWide; // Parameter value along the direction of the arrows.
+        let s = i / numPointsDeep; // Parameter value along the direction perpendicular to arrows.
+
+        // Calculate a point in the rectangle using (1 - t)(1 - s)P1 + (1 - t)sP2 + t(1 - s)P3 + tsP4.
+        let x = (1 - t) * ((1 - s) * x1 + s * x2) + t * ((1 - s) * x4 + s * x3);
+        let y = (1 - t) * ((1 - s) * y1 + s * y2) + t * ((1 - s) * y4 + s * y3);
         drawArrow(ctx, { x, y }, angle, 50, 20);
       }
     }
-
     ctx.stroke();
   }
 }
@@ -630,7 +621,7 @@ export function drawMinimapPowerups(globalPowerUps, worldWidth, worldHeight) {
   });
 }
 
-export function drawKillInfo(ctx, player, score, camX, camY) {
+function drawScoreInfo(ctx, player, score, camX, camY) {
   let centerX = player.x;
   let centerY = player.y;
   // Calculate position for the score (above the unrotated center of the ship)
