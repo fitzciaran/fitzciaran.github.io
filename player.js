@@ -188,26 +188,28 @@ export class Player {
   }
 
   setRecentScoreText(textScore) {
-    if (this.comboScaler >= 0 && this.comboScaler < 1.5) {
-      this.recentScoreText = this.getComboText("", textScore);
-    } else if (this.comboScaler >= 1.5 && this.comboScaler < 2) {
-      this.recentScoreText = this.getComboText("Double ", textScore);
-    } else if (this.comboScaler >= 2 && this.comboScaler < 2.5) {
-      this.recentScoreText = this.getComboText("Triple ", textScore);
-    } else if (this.comboScaler >= 2.5 && this.comboScaler < 3) {
-      this.recentScoreText = this.getComboText("Quad ", textScore);
-    } else if (this.comboScaler >= 3 && this.comboScaler < 3.5) {
-      this.recentScoreText = this.getComboText("Penta ", textScore);
-    } else if (this.comboScaler >= 3.5 && this.comboScaler < 4) {
-      this.recentScoreText = this.getComboText("Hexa ", textScore);
-    } else if (this.comboScaler >= 4 && this.comboScaler < 4.5) {
-      this.recentScoreText = this.getComboText("Septa ", textScore);
-    } else if (this.comboScaler >= 4.5 && this.comboScaler < 5) {
-      this.recentScoreText = this.getComboText("Octa ", textScore);
-    } else if (this.comboScaler >= 5 && this.comboScaler < 5.5) {
-      this.recentScoreText = this.getComboText("Niner ", textScore);
+    if (this.comboScaler >= 5.5) {
+      this.recentScoreText = this.getComboText("Monster!", textScore);
+    } else if (this.comboScaler >= 5) {
+      this.recentScoreText = this.getComboText("Epic!", textScore);
+    } else if (this.comboScaler >= 4.5) {
+      this.recentScoreText = this.getComboText("Awesome!", textScore);
+    } else if (this.comboScaler >= 4) {
+      this.recentScoreText = this.getComboText("Insane!", textScore);
+    } else if (this.comboScaler >= 3.5) {
+      this.recentScoreText = this.getComboText("Unreal!", textScore);
+    } else if (this.comboScaler >= 3) {
+      this.recentScoreText = this.getComboText("Fierce!", textScore);
+    } else if (this.comboScaler >= 2.5) {
+      this.recentScoreText = this.getComboText("Sick!", textScore);
+    } else if (this.comboScaler >= 2.1) {
+      this.recentScoreText = this.getComboText("Wild!", textScore);
+    } else if (this.comboScaler >= 1.8) {
+      this.recentScoreText = this.getComboText("Cool!", textScore);
+    } else if (this.comboScaler >= 1.5) {
+      this.recentScoreText = this.getComboText("Combo!", textScore);
     } else {
-      this.recentScoreText = this.getComboText("Monster ", textScore);
+      this.recentScoreText = this.getComboText("", textScore);
     }
   }
 
@@ -227,7 +229,7 @@ export class Player {
     this.setInvincibleTimer(this.invincibleTimer - 150);
     this.addScore(score);
     if (this.comboScaler < 10) {
-      this.comboScaler += 1;
+      this.comboScaler += 0.5;
     }
   }
 

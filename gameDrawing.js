@@ -389,11 +389,12 @@ function drawForce(ctx, camX, camY, force) {
     let animationPosition2 = 0;
     if (attractive) {
       animationPosition = 1 - ((basicAnimationTimer * speed) % 85) / 100;
+      animationPosition2 = 1 - ((basicAnimationTimer * speed + 42.5) % 85) / 100;
     } else {
       animationPosition = ((basicAnimationTimer * speed) % 85) / 100 + 0.15;
+      animationPosition2 = ((basicAnimationTimer * speed + 42.5) % 85) / 100 + 0.15;
     }
-    animationPosition2 = (animationPosition + 0.5) % 1;
-
+    
     if (coneAngle == 2 * Math.PI) {
       ctx.beginPath();
       ctx.arc(screenX, screenY, radius, 0, Math.PI * 2);
@@ -409,7 +410,6 @@ function drawForce(ctx, camX, camY, force) {
       ctx.arc(screenX, screenY, radius * animationPosition2, 0, Math.PI * 2);
       ctx.closePath();
       ctx.stroke();
-      //  ctx.arc(screenX, screenY, radius, direction, coneAngle);
     } else {
       ctx.moveTo(screenX, screenY); // Move to the center of the cone
       ctx.lineTo(screenX + Math.cos(direction - coneAngle / 2) * radius, screenY + Math.sin(direction - coneAngle / 2) * radius); // Draw one edge of the cone
@@ -438,10 +438,7 @@ function drawForce(ctx, camX, camY, force) {
       ctx.closePath();
       ctx.stroke();
     }
-    // ctx.stroke();
-    // ctx.closePath();
-    // // Draw arrows based on force type (attractive or repulsive)
-    // ctx.beginPath();
+   
     ctx.moveTo(screenX, screenY);
 
     let increment = 10;
@@ -544,19 +541,14 @@ function drawForce(ctx, camX, camY, force) {
       numPointsDeep = Math.floor(halfRectHeight / 40);
       force.numberArrowsDeep = numPointsDeep;
     }
-    let speed = 6;
-    // let animationSpeed = 0.01;
-    // let animationPosition = (basicAnimationTimer % 50) / 100;
-    // let animationPosition = (basicAnimationTimer % (numPointsDeep * 10)) / 100;
+    let speed = 1 + (width/150) ;
     let animationPosition = ((basicAnimationTimer * speed) % 100) / 100 / numPointsDeep;
 
     let offsetWidthLeft = 0.05; // adjust the offset to create more or less space around the arrows
     let offsetWidthRight = 0.05; // adjust the offset to create more or less space around the arrows
     let startWidth = offsetWidthLeft;
     let endWidth = 1 - offsetWidthRight;
-    // let offsetHeightBottom = -0.20 + animationPosition; // adjust the offset to create more or less space around the arrows
-    // let offsetHeightTop = -0.05 - animationPosition; // adjust the offset to create more or less space around the arrows
-
+   
     let offsetHeightBottom = -0.5 + animationPosition; // adjust the offset to create more or less space around the arrows
     let offsetHeightTop = -0.2 - animationPosition; // adjust the offset to create more or less space around the arrows
 
