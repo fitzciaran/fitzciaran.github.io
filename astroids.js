@@ -21,7 +21,6 @@ import { sendPlayerStates } from "./handleData.js";
 import { setupCanvas, setupSpikeyBallPoints } from "./drawingUtils.js";
 import { addScore } from "./db.js";
 import {
-  checkWinner,
   generatePowerups,
   generateMines,
   generateDirectionalForces,
@@ -33,7 +32,7 @@ import {
   updateEnemies,
   updatePowerups,
   detectCollisions,
-  masterPeerUpdateGame,
+  masterUpdateGame,
   shuffleArray,
   setEndGameMessage,
 } from "./gameLogic.js";
@@ -164,7 +163,7 @@ function updateGame(deltaTime, playerActive) {
     //todo might have to uncomment the condition
     // if (isPlayerMasterPeer(player)) {
     // This peer is the master, so it runs the game logic for shared objects
-    masterPeerUpdateGame(player, globalPowerUps, otherPlayers, bots, deltaTime);
+    masterUpdateGame(player, globalPowerUps, otherPlayers, bots, deltaTime);
     // }
   }
 
@@ -175,11 +174,11 @@ function updateGame(deltaTime, playerActive) {
     drawScene(null, otherPlayers, bots, mines, ctx, camX, camY, worldDimensions, canvas, globalPowerUps);
   }
   // if (isPlayerMasterPeer(player)) {
-  //   masterPeerUpdateGame(globalPowerUps,otherPlayers,bots,deltaTime);
+  //   masterUpdateGame(globalPowerUps,otherPlayers,bots,deltaTime);
   // }
   updateConnections(player, globalPowerUps);
   removeClosedConnections(otherPlayers);
-  if (checkWinner(player, otherPlayers) || player.isDead) {
+  if (player.isDead) {
     setGameState(GameState.FINISHED);
     player.resetState(true, true);
   }

@@ -2,7 +2,7 @@ import { chooseNewMasterPeer } from "./connectionHandlers.js";
 import { renderDebugInfo, drawPowerupLevels, drawInvincibilityGauge, drawSpecialGauge } from "./drawGameUI.js";
 import { rotateAndScalePoint, interpolate, spikeyBallPoints } from "./drawingUtils.js";
 import { ForceType, forces } from "./entities.js";
-import { shipScale, mineScale } from "./gameLogic.js";
+import { shipScale, mineScale, basicAnimationTimer } from "./gameLogic.js";
 
 let backLayer = new Image();
 let midBackLayer = new Image();
@@ -31,7 +31,7 @@ export function drawScene(player, otherPlayers, bots, mines, ctx, camX, camY, wo
   bots.forEach((bot) => drawRotatedShip(ctx, camX, camY, bot, shipPoints));
   drawPowerups(globalPowerUps, ctx, camX, camY);
   mines.forEach((mine) => drawEnemy(ctx, camX, camY, mine, spikeyBallPoints));
-  forces.forEach((force) => drawForce(ctx, camX, camY, force, spikeyBallPoints));
+  forces.forEach((force) => drawForce(ctx, camX, camY, force));
   drawMinimap(player, otherPlayers, bots, worldDimensions.width, worldDimensions.height);
   drawMinimapPowerups(globalPowerUps, worldDimensions.width, worldDimensions.height);
   if (player != null) {
@@ -355,7 +355,7 @@ export function drawEnemy(ctx, camX, camY, mine, points) {
   ctx.closePath();
 }
 
-function drawForce(ctx, camX, camY, force, points) {
+function drawForce(ctx, camX, camY, force) {
   if (force.duration <= 0) {
     return;
   }
@@ -382,15 +382,61 @@ function drawForce(ctx, camX, camY, force, points) {
     // Normalize startAngle and endAngle to be within the range 0 to 2π
     startAngle = ((startAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
     endAngle = ((endAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+    let speed = 1;
+
+    //this will be 0.2-1
+    let animationPosition = 0;
+    let animationPosition2 = 0;
+    if (attractive) {
+      animationPosition = 1 - ((basicAnimationTimer * speed) % 85) / 100;
+    } else {
+      animationPosition = ((basicAnimationTimer * speed) % 85) / 100 + 0.15;
+    }
+    animationPosition2 = (animationPosition + 0.5) % 1;
 
     if (coneAngle == 2 * Math.PI) {
+      ctx.beginPath();
       ctx.arc(screenX, screenY, radius, 0, Math.PI * 2);
-      // ctx.arc(screenX, screenY, radius, direction, coneAngle);
+      ctx.closePath();
+      ctx.stroke();
+      // Animated Circles
+      ctx.beginPath();
+      ctx.arc(screenX, screenY, radius * animationPosition, 0, Math.PI * 2);
+      ctx.closePath();
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(screenX, screenY, radius * animationPosition2, 0, Math.PI * 2);
+      ctx.closePath();
+      ctx.stroke();
+      //  ctx.arc(screenX, screenY, radius, direction, coneAngle);
     } else {
       ctx.moveTo(screenX, screenY); // Move to the center of the cone
       ctx.lineTo(screenX + Math.cos(direction - coneAngle / 2) * radius, screenY + Math.sin(direction - coneAngle / 2) * radius); // Draw one edge of the cone
       ctx.arc(screenX, screenY, radius, direction - coneAngle / 2, direction + coneAngle / 2); // Draw the arc representing the cone
       ctx.lineTo(screenX, screenY); // Connect back to the center to close the shape
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(screenX, screenY); // Move to the center of the cone
+      ctx.lineTo(
+        screenX + Math.cos(direction - coneAngle / 2) * radius * animationPosition,
+        screenY + Math.sin(direction - coneAngle / 2) * radius * animationPosition
+      ); // Draw one edge of the cone
+      ctx.arc(screenX, screenY, radius * animationPosition, direction - coneAngle / 2, direction + coneAngle / 2); // Draw the arc representing the cone
+      ctx.lineTo(screenX, screenY);
+      ctx.closePath();
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(screenX, screenY); // Move to the center of the cone
+      ctx.lineTo(
+        screenX + Math.cos(direction - coneAngle / 2) * radius * animationPosition2,
+        screenY + Math.sin(direction - coneAngle / 2) * radius * animationPosition2
+      ); // Draw one edge of the cone
+      ctx.arc(screenX, screenY, radius * animationPosition2, direction - coneAngle / 2, direction + coneAngle / 2); // Draw the arc representing the cone
+      ctx.lineTo(screenX, screenY);
+      ctx.closePath();
+      ctx.stroke();
     }
     // ctx.stroke();
     // ctx.closePath();
@@ -464,12 +510,14 @@ function drawForce(ctx, camX, camY, force, points) {
     ctx.closePath();
 
     // Continue with the first path with a thin line
-    ctx.beginPath();
+    // ctx.beginPath();
     ctx.moveTo(x3, y3);
     ctx.lineWidth = 1;
     ctx.lineTo(x4, y4);
     ctx.stroke();
-    ctx.closePath();
+    ctx.lineTo(x1, y1);
+
+    //ctx.closePath();
 
     if (!force.attractive) {
       angle = angle + Math.PI;
@@ -496,13 +544,50 @@ function drawForce(ctx, camX, camY, force, points) {
       numPointsDeep = Math.floor(halfRectHeight / 40);
       force.numberArrowsDeep = numPointsDeep;
     }
+    let speed = 6;
+    // let animationSpeed = 0.01;
+    // let animationPosition = (basicAnimationTimer % 50) / 100;
+    // let animationPosition = (basicAnimationTimer % (numPointsDeep * 10)) / 100;
+    let animationPosition = ((basicAnimationTimer * speed) % 100) / 100 / numPointsDeep;
 
-    let offset = 0.05; // adjust the offset to create more or less space around the arrows
-    let start = offset;
-    let end = 1 - offset;
+    let offsetWidthLeft = 0.05; // adjust the offset to create more or less space around the arrows
+    let offsetWidthRight = 0.05; // adjust the offset to create more or less space around the arrows
+    let startWidth = offsetWidthLeft;
+    let endWidth = 1 - offsetWidthRight;
+    // let offsetHeightBottom = -0.20 + animationPosition; // adjust the offset to create more or less space around the arrows
+    // let offsetHeightTop = -0.05 - animationPosition; // adjust the offset to create more or less space around the arrows
 
-    for (let i = start * (numPointsDeep - 1); i <= end * (numPointsDeep - 1); i++) {
-      for (let j = start * numPointsWide; j <= end * numPointsWide; j++) {
+    let offsetHeightBottom = -0.5 + animationPosition; // adjust the offset to create more or less space around the arrows
+    let offsetHeightTop = -0.2 - animationPosition; // adjust the offset to create more or less space around the arrows
+
+    let startHeight = offsetHeightBottom;
+    let endHeight = 1 - offsetHeightTop;
+
+    const clipRect1 = {
+      clipx1: x1,
+      clipy1: y1,
+      clipx2: x2,
+      clipy2: y2,
+      clipx3: x3,
+      clipy3: y3,
+      clipx4: x4,
+      clipy4: y4,
+    };
+
+    ctx.save();
+    //   Create clipping paths for the custom rectangles
+    ctx.beginPath();
+    ctx.moveTo(clipRect1.clipx1, clipRect1.clipy1);
+    ctx.lineTo(clipRect1.clipx2, clipRect1.clipy2);
+    ctx.lineTo(clipRect1.clipx3, clipRect1.clipy3);
+    ctx.lineTo(clipRect1.clipx4, clipRect1.clipy4);
+    ctx.closePath();
+    ctx.clip();
+
+    // ctx.strokeStyle = color;
+    for (let i = startHeight * numPointsDeep; i <= endHeight * numPointsDeep; i++) {
+      // for (let i = startHeight * (numPointsDeep - 1); i <= endHeight * (numPointsDeep - 1); i++) {
+      for (let j = startWidth * numPointsWide; j <= endWidth * numPointsWide; j++) {
         let t = j / numPointsWide; // Parameter value along the direction of the arrows.
         let s = i / numPointsDeep; // Parameter value along the direction perpendicular to arrows.
 
@@ -512,7 +597,9 @@ function drawForce(ctx, camX, camY, force, points) {
         drawArrow(ctx, { x, y }, angle, 50, 20);
       }
     }
+
     ctx.stroke();
+    ctx.restore();
   }
 }
 

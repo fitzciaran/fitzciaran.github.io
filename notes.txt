@@ -280,3 +280,5 @@ completely different graphic for star/invic timer?.
 some kind of background warping / blurring for the point gravity wells
 
 screenshake
+
+do I not have slave peers run the other game logic anymore?

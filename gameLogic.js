@@ -17,11 +17,12 @@ export let maxInvincibilityTime = initialInvincibleTime;
 export let maxSpecialMeter = 200;
 let maxPowerups = 10;
 let maxMines = 14;
-let maxDirectionalForces = 2;
+let maxDirectionalForces = 3;
 let directionalForces = [];
 export let spawnProtectionTime = 100;
 export let endGameMessage = "";
 export let gameWon = false;
+export let basicAnimationTimer = 0;
 
 export const PilotName = {
   PILOT_1: "pilot1",
@@ -90,85 +91,10 @@ export const pilot4 = new Pilot(
   "images/bore612.webp"
 );
 
-// export const pilot1 = {
-//   image: new Image(),
-//   x: 0,
-//   y: 0,
-//   width: 100,
-//   height: 100,
-//   selected: false,
-//   lore: "Orion, Speed: 4, Special: Gravity Attract, Agressive - likes to get powered up and use Gravity Attract to get kills",
-//   name: PilotName.PILOT_1,
-//   src: "images/wolf.webp",
-// };
-
-// export const pilot2 = {
-//   image: new Image(),
-//   x: 100,
-//   y: 0,
-//   width: 100,
-//   height: 100,
-//   selected: false,
-//   lore: "Bumble, Speed: 2, Special: Gravity Repel, Defensive - not so fast but can use Gravity Repel to keep attackers away ",
-//   name: PilotName.PILOT_2,
-//   src: "images/slippy.webp",
-// };
-
-// export const pilot3 = {
-//   image: new Image(),
-//   x: 100,
-//   y: 0,
-//   width: 100,
-//   height: 100,
-//   selected: false,
-//   lore: "Zippy, Speed: 5, Special: Speed Boost, Speedy - tricky to control. Not for scrubs! ",
-//   name: PilotName.PILOT_3,
-//   src: "images/mouse.webp",
-// };
-
-// export const pilot4 = {
-//   image: new Image(),
-//   x: 100,
-//   y: 0,
-//   width: 100,
-//   height: 100,
-//   selected: false,
-//   lore: "lorum ipsum, Speed: 3, Special: Tractor Beam, Sneaky! Powerful long range narrow tractor beam can cause havok from afar!",
-//   name: PilotName.PILOT_4,
-//   src: "images/bore612.webp",
-// };
-
 export let pilots = [pilot1, pilot2, pilot3, pilot4];
 
 export const max_player_name = 15;
 let chancePowerUpIsStar = 0.2;
-export function checkWinner(player, otherPlayers) {
-  //for now won't have a winner in this sense still thinking about what the game should be
-  return false;
-  if (player.powerUps >= pointsToWin) {
-    sendPlayerStates(player);
-    setGameState(GameState.FINISHED);
-    endGameMessage = "Winner! Rivals dreams crushed.";
-    var date = new Date();
-    var dateString = date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate();
-    //todo update this when have a real notion of score - for now random for testing
-    //will only be adding if/when it is in the top 10 for a category.
-    var score = Math.floor(Math.random() * 100) + 1;
-    addScore("daily-" + dateString, player.name, score);
-    gameWon = true;
-    return true;
-  }
-  for (let otherPlayer of otherPlayers) {
-    if (otherPlayer.powerUps >= pointsToWin) {
-      gameWon = false;
-      setGameState(GameState.FINISHED);
-      endGameMessage = "Get good scrub! You lose";
-      // drawWinnerMessage(ctx, canvas, "Get good scrub! You lose");
-      return true;
-    }
-  }
-  return false;
-}
 
 export function setEndGameMessage(newMessage) {
   endGameMessage = newMessage;
@@ -262,8 +188,10 @@ export function generateDirectionalForces(worldWidth, worldHeight, colors) {
       0,
       Math.random() * 2 * Math.PI,
       ForceType.DIRECTIONAL,
-      420,
-      600
+      420 + Math.floor((Math.random() - 1) * 300),
+      600 + Math.floor((Math.random() - 1) * 300)
+      // 420 + Math.floor((Math.random() - 1) * 0),
+      // 600 + Math.floor((Math.random() - 1) * 0)
     );
 
     forces.push(force);
@@ -616,7 +544,7 @@ export function calculateAngle(player) {
   return Math.atan2(player.mousePosY - player.y, player.mousePosX - player.x);
 }
 
-export function masterPeerUpdateGame(player, globalPowerUps, otherPlayers, bots, deltaTime) {
+export function masterUpdateGame(player, globalPowerUps, otherPlayers, bots, deltaTime) {
   // This peer is the master, so it runs the game logic for shared objects
 
   //eventually run this based on how many bots and existing players in total currently
@@ -643,10 +571,10 @@ export function masterPeerUpdateGame(player, globalPowerUps, otherPlayers, bots,
       mines.splice(i, 1);
     }
   }
-  // Send the game state to all other peers
+
+  basicAnimationTimer++;
 
   //...not sending game state of otherplayers...hmm?
-  //todo might need to undo condition
   if (isPlayerMasterPeer(player)) {
     sendEntitiesState();
   }
