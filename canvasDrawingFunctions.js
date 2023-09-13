@@ -184,17 +184,17 @@ export function drawPreGameOverlay(canvas, ctx) {
   let x = loreTablet.x + 60;
   let y = loreTablet.y + 65; // Initial y value
 
-  // Animate lore text for the selected pilot
+  // draw info text for the selected pilot
   for (let i = 0; i < pilots.length; i++) {
     let pilot = pilots[i];
     if (pilot.selected) {
-      renderInfoText(ctx, pilot.lore, x, y, 330);
+      renderInfoText(ctx, pilot.lore, x, y, 330, pilot.pilotAnimationFrame);
       break; // Exit the loop once a selected pilot is found
     }
   }
 }
 
-function renderInfoText(ctx, lore, x, y, maxWidth) {
+function renderInfoText(ctx, lore, x, y, maxWidth, animationFrame) {
   // Set font and color
   ctx.textAlign = "start";
   let sections = lore.split(",");
@@ -230,13 +230,14 @@ function renderInfoText(ctx, lore, x, y, maxWidth) {
         // Draw the "Speed:" label
         ctx.fillText("Speed:", x, currentY);
 
+        let percentOfFilledAnimatedTo = Math.min(animationFrame / 30, 1);
         // Draw the gauge next to it
         const centerX = x + ctx.measureText("Speed:").width + 50; // Adjust the offset as needed
         const gaugeWidth = 100; // Adjust the gauge width as needed
         const gaugeHeight = fontSize; // Match the height with the font size
-        const filled = speedValue; // Use the speed value
+        const filled = speedValue * percentOfFilledAnimatedTo;
         const total = 5; // Assuming the total is always 5
-        drawFilledGauge(ctx, centerX, currentY + 15, gaugeWidth, gaugeHeight, 3, filled, total,"blue");
+        drawFilledGauge(ctx, centerX, currentY + 15, gaugeWidth, gaugeHeight, 3, filled, total, "blue");
         currentY += lineHeight; // Move to the next line
         continue; // Skip the rest of the loop for this section
       }

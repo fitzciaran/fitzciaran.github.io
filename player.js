@@ -23,8 +23,8 @@ const bounceFactor = 1.5;
 const offset = 1;
 const minBounceSpeed = 5;
 const maxBotsThatCanTargetAtOnce = 1;
-const maxVel = 70;
-const minVel = -70;
+const maxVel = 50;
+const minVel = -50;
 
 export const BotState = {
   FOLLOW_PLAYER: "followPlayer",

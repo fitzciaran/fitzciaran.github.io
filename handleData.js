@@ -1,4 +1,15 @@
-import { setGlobalPowerUps, player, otherPlayers, bots, mines, setBots, setMines, setOtherPlayers, fixedDeltaTime, globalPowerUps } from "./astroids.js";
+import {
+  setGlobalPowerUps,
+  player,
+  otherPlayers,
+  bots,
+  mines,
+  setBots,
+  setMines,
+  setOtherPlayers,
+  fixedDeltaTime,
+  globalPowerUps,
+} from "./astroids.js";
 import {
   connections,
   connectedPeers,
@@ -12,8 +23,17 @@ import {
   setMasterPeerId,
 } from "./connectionHandlers.js";
 import { setEndGameMessage } from "./gameLogic.js";
-import { forces, setForces, createMineFromObject, createForceFromObject, createPowerUpFromObject,serializeForces,serializeMines,serializeGlobalPowerUps } from "./entities.js";
-import { createBotFromObject, Player, createPlayerFromObject,serializeBots } from "./player.js";
+import {
+  forces,
+  setForces,
+  createMineFromObject,
+  createForceFromObject,
+  createPowerUpFromObject,
+  serializeForces,
+  serializeMines,
+  serializeGlobalPowerUps,
+} from "./entities.js";
+import { createBotFromObject, Player, createPlayerFromObject, serializeBots } from "./player.js";
 
 let handleCounter = 0;
 let sendCounter = 0;
@@ -55,7 +75,6 @@ export function sendPlayerStates(playerToSend, isMaster) {
     hitBy: playerToSend.hitBy,
     recentScoreTicks: playerToSend.recentScoreTicks,
     recentScoreText: playerToSend.recentScoreText,
-    
   };
   if (isMaster) {
     data.isDead = playerToSend.isDead;
@@ -111,7 +130,7 @@ export function sendEntitiesState() {
     bots: serializeBots(bots),
     mines: serializeMines(mines),
     // otherPlayers: otherPlayers,
-    forces: serializeForces(forces), 
+    forces: serializeForces(forces),
     // connectedPeers: connectedPeers,
     //enemies and stuff here
   };
@@ -247,7 +266,11 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
     player.powerUps = data.powerUps;
     player.recentScoreTicks = data.recentScoreTicks;
     player.recentScoreText = data.recentScoreText;
-    setEndGameMessage("Killed by: " + player.hitBy + "\nScore: " + player.powerUps * 100);
+    if (player.hitBy != null && player.hitBy != "") {
+      setEndGameMessage("Killed by: " + player.hitBy + "\nScore: " + player.powerUps * 100);
+    } else {
+      setEndGameMessage("Score: " + player.powerUps * 100);
+    }
   }
   // Only update the powerups if the received data contains different powerups
   if (data.globalPowerUps && JSON.stringify(globalPowerUps) !== JSON.stringify(data.globalPowerUps)) {
@@ -322,7 +345,7 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
   }
   if (data.mines) {
     setTimeSinceMessageFromMaster(0);
-    
+
     for (const receivedMine of data.mines) {
       // Find the corresponding local bot by ID
       const localMine = findMineById(receivedMine.id);
@@ -415,6 +438,8 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
       if (dataPlayer.hitBy != null && dataPlayer.hitBy != "" && player.isDead) {
         player.hitBy = dataPlayer.hitBy;
         setEndGameMessage("Killed by: " + player.hitBy + "\nScore: " + player.powerUps * 100);
+      } else if (player.isDead) {
+        setEndGameMessage("Score: " + player.powerUps * 100);
       }
     }
     //we will just replace select properties of otherplayers from the master

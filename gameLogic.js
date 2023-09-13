@@ -2,7 +2,7 @@ import { setGameState, GameState, player, setMines, bots, otherPlayers, mines } 
 import { isPlayerMasterPeer } from "./connectionHandlers.js";
 import { sendPlayerStates, sendEntitiesState } from "./handleData.js";
 import { addScore } from "./db.js";
-import { forces, Mine, PowerUp, ForceType, ForceArea } from "./entities.js";
+import { forces, Mine, PowerUp, ForceType, ForceArea, Entity } from "./entities.js";
 import { Player, Bot } from "./player.js";
 // import { Bot } from "./bot.js";
 
@@ -30,53 +30,113 @@ export const PilotName = {
   PILOT_4: "pilot4",
 };
 
-export const pilot1 = {
-  image: new Image(),
-  x: 0,
-  y: 0,
-  width: 100,
-  height: 100,
-  selected: false,
-  lore: "Orion, Speed: 4, Special: Gravity Attract, Agressive - likes to get powered up and use Gravity Attract to get kills",
-  name: PilotName.PILOT_1,
-  src: "images/wolf.webp",
-};
+export class Pilot extends Entity {
+  constructor(id = null, x = null, y = null, width = 100, height = 100, lore = "", name = "", src = "", selected = false, pilotAnimationFrame = 0) {
+    super(id, x, y);
+    this.image = new Image();
+    this.width = width;
+    this.height = height;
+    this.lore = lore;
+    this.name = name;
+    this.src = src;
+    this.selected = selected;
+    this.pilotAnimationFrame = pilotAnimationFrame;
+  }
+  setSelected(newSelectedValue) {
+    if (newSelectedValue && !this.selected) {
+      this.pilotAnimationFrame = 0;
+    }
+    this.selected = newSelectedValue;
+  }
+}
+export const pilot1 = new Pilot(
+  PilotName.PILOT_1,
+  0,
+  0,
+  100,
+  100,
+  "Orion, Speed: 4, Special: Gravity Attract, Agressive - likes to get powered up and use Gravity Attract to get kills",
+  PilotName.PILOT_1,
+  "images/wolf.webp"
+);
+export const pilot2 = new Pilot(
+  PilotName.PILOT_2,
+  0,
+  0,
+  100,
+  100,
+  "Bumble, Speed: 2, Special: Gravity Repel, Defensive - not so fast but can use Gravity Repel to keep attackers away ",
+  PilotName.PILOT_2,
+  "images/slippy.webp"
+);
+export const pilot3 = new Pilot(
+  PilotName.PILOT_3,
+  0,
+  0,
+  100,
+  100,
+  "Zippy, Speed: 5, Special: Speed Boost, Speedy - tricky to control. Not for scrubs! ",
+  PilotName.PILOT_3,
+  "images/mouse.webp"
+);
+export const pilot4 = new Pilot(
+  PilotName.PILOT_4,
+  0,
+  0,
+  100,
+  100,
+  "Snaffle, Speed: 3, Special: Tractor Beam, Sneaky! Powerful long range narrow tractor beam can cause havok from afar!",
+  PilotName.PILOT_4,
+  "images/bore612.webp"
+);
 
-export const pilot2 = {
-  image: new Image(),
-  x: 100,
-  y: 0,
-  width: 100,
-  height: 100,
-  selected: false,
-  lore: "Bumble, Speed: 2, Special: Gravity Repel, Defensive - not so fast but can use Gravity Repel to keep attackers away ",
-  name: PilotName.PILOT_2,
-  src: "images/slippy.webp",
-};
+// export const pilot1 = {
+//   image: new Image(),
+//   x: 0,
+//   y: 0,
+//   width: 100,
+//   height: 100,
+//   selected: false,
+//   lore: "Orion, Speed: 4, Special: Gravity Attract, Agressive - likes to get powered up and use Gravity Attract to get kills",
+//   name: PilotName.PILOT_1,
+//   src: "images/wolf.webp",
+// };
 
-export const pilot3 = {
-  image: new Image(),
-  x: 100,
-  y: 0,
-  width: 100,
-  height: 100,
-  selected: false,
-  lore: "Zippy, Speed: 5, Special: Speed Boost, Speedy - tricky to control. Not for scrubs! ",
-  name: PilotName.PILOT_3,
-  src: "images/mouse.webp",
-};
+// export const pilot2 = {
+//   image: new Image(),
+//   x: 100,
+//   y: 0,
+//   width: 100,
+//   height: 100,
+//   selected: false,
+//   lore: "Bumble, Speed: 2, Special: Gravity Repel, Defensive - not so fast but can use Gravity Repel to keep attackers away ",
+//   name: PilotName.PILOT_2,
+//   src: "images/slippy.webp",
+// };
 
-export const pilot4 = {
-  image: new Image(),
-  x: 100,
-  y: 0,
-  width: 100,
-  height: 100,
-  selected: false,
-  lore: "lorum ipsum, Speed: 3, Special: Tractor Beam, Sneaky! Powerful long range narrow tractor beam can cause havok from afar!",
-  name: PilotName.PILOT_4,
-  src: "images/bore612.webp",
-};
+// export const pilot3 = {
+//   image: new Image(),
+//   x: 100,
+//   y: 0,
+//   width: 100,
+//   height: 100,
+//   selected: false,
+//   lore: "Zippy, Speed: 5, Special: Speed Boost, Speedy - tricky to control. Not for scrubs! ",
+//   name: PilotName.PILOT_3,
+//   src: "images/mouse.webp",
+// };
+
+// export const pilot4 = {
+//   image: new Image(),
+//   x: 100,
+//   y: 0,
+//   width: 100,
+//   height: 100,
+//   selected: false,
+//   lore: "lorum ipsum, Speed: 3, Special: Tractor Beam, Sneaky! Powerful long range narrow tractor beam can cause havok from afar!",
+//   name: PilotName.PILOT_4,
+//   src: "images/bore612.webp",
+// };
 
 export let pilots = [pilot1, pilot2, pilot3, pilot4];
 
@@ -225,9 +285,7 @@ export function checkPowerupCollision(playerToCheck, globalPowerUps) {
         // playerToCheck.powerUps += globalPowerUps[i].value;
         let scoreToAdd = globalPowerUps[i].value;
 
-        playerToCheck.gotPowerUp(globalPowerUps[i].isStar,scoreToAdd,i);
-        
-       
+        playerToCheck.gotPowerUp(globalPowerUps[i].isStar, scoreToAdd, i);
       }
       // sendPowerups(globalPowerUps);
 

@@ -255,11 +255,16 @@ function setupPilots(canvas, ctx) {
     }
   }
   if (!anySelected) {
-    pilots[0].selected = true;
+    pilots[0].setSelected(true);
   }
 }
 
 function updatePilot() {
+  for (let pilot of pilots) {
+    if (pilot.selected) {
+      pilot.pilotAnimationFrame++;
+    }
+  }
   drawPreGameOverlay(canvas, ctx);
 }
 

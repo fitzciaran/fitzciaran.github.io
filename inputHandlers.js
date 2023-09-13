@@ -159,11 +159,11 @@ export function addPilotEventListners(canvas, ctx) {
       let pilot = pilots[i];
 
       if (event.clientX > pilot.x && event.clientX < pilot.x + pilot.width && event.clientY > pilot.y && event.clientY < pilot.y + pilot.height) {
-        pilot.selected = true;
+        pilot.setSelected(true);
         for (let i = 0; i < pilots.length; i++) {
           let otherPilot = pilots[i];
           if (pilot != otherPilot) {
-            otherPilot.selected = false;
+            otherPilot.setSelected(false);
           }
         }
       }

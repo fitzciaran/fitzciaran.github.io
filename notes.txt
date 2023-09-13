@@ -250,10 +250,12 @@ points on screen when powerup collection
 direction forcepads should not spawn too close to a wall if facing that wall
 
 general collision visual effect (sound later)
+    just write "BOOM!" for now? mix it up with "CRASH!!"
 
 should remove/move boost / forcepads after a time... maybe just give them an actual expiry?
 
 speicals should pull / push mines/powerups?
+    could only pull powerups but they pull quite slowly?
 
 should "combo score" shown be the total score throughout the combo?
     differnt sound effect for extent of score in combo.. probably not.
@@ -261,3 +263,20 @@ should "combo score" shown be the total score throughout the combo?
 invicible could keep combo going even outside of normal tick time?
 
 random effects - stuck with special on for a period of time.
+
+add favicon.ico to source
+
+still sometimes get a blank "killed by" .. could at least put ??? to cover case?.. or make sure not to inlcude "killed by" line
+
+scores of the week?(last 7 days?)
+    All time scores?
+
+speed gauge animates up when pilot selected.
+maybe keep track of ticks since selected? to determine how much gauge should be drawn?
+On Click for selection?
+other unique properties for pilots?size? 
+max invincible time personal to pilot
+completely different graphic for star/invic timer?.
+some kind of background warping / blurring for the point gravity wells
+
+screenshake
