@@ -99,12 +99,12 @@ export function connectToPeers(player, otherPlayers, globalPowerUps) {
   // Connect to the other peers
   peerIds.forEach((id) => {
     if (id !== player.id) {
-      checkAndReplaceConnectionsFromId(id,player, otherPlayers, globalPowerUps);
+      checkAndReplaceConnectionsFromId(id, player, otherPlayers, globalPowerUps);
     }
   });
 }
 
-export function checkAndReplaceConnectionsFromId(id,player, otherPlayers, globalPowerUps) {
+export function checkAndReplaceConnectionsFromId(id, player, otherPlayers, globalPowerUps) {
   // Check if a connection with this id already exists
   let existingConnection = connections.find((conn) => conn.peer === id);
   if (!existingConnection || !existingConnection.open) {
@@ -115,13 +115,13 @@ export function checkAndReplaceConnectionsFromId(id,player, otherPlayers, global
     } else {
       console.log("peer undefined in connect to peers");
     }
-    checkAndReplaceConnection(conn,existingConnection,player, otherPlayers, globalPowerUps);
+    checkAndReplaceConnection(conn, existingConnection, player, otherPlayers, globalPowerUps);
   } else {
     // The existing connection is open, so no action needed
   }
 }
 
-export function checkAndReplaceConnection(conn,existingConnection,player, otherPlayers, globalPowerUps) {
+export function checkAndReplaceConnection(conn, existingConnection, player, otherPlayers, globalPowerUps) {
   if (conn != null && conn != undefined) {
     // If the connection was successfully (re)established, update or replace it
     if (existingConnection) {
@@ -198,7 +198,7 @@ function addConnectionHandlers(player, otherPlayers, conn, globalPowerUps) {
     }
     //not sure why this seems to be needed even if there is existing connection
     // connections.push(conn);
-    checkAndReplaceConnection(conn,existingConnection,player, otherPlayers, globalPowerUps);
+    checkAndReplaceConnection(conn, existingConnection, player, otherPlayers, globalPowerUps);
     let existingOtherPlayer = otherPlayers.some((player) => player.id === conn.peer);
 
     //todo check consequennces of removing below - I don't think we should be adding player to list based on connect
@@ -291,6 +291,9 @@ export function chooseNewMasterPeer(player, otherPlayers) {
   if (connectedPeers.length > 0) {
     connectedPeers.sort();
     for (let connectedPeer of connectedPeers) {
+      if (connectedPeer == player.id) {
+        foundActivePlayerWithId = true;
+      }
       otherPlayers.forEach((otherPlayer) => {
         if (otherPlayer.timeSinceSentMessageThatWasRecieved <= 60 && otherPlayer.id == connectedPeer) {
           foundActivePlayerWithId = true;
