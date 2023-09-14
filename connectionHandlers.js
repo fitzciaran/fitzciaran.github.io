@@ -48,10 +48,10 @@ export function attemptConnections(player, otherPlayers, globalPowerUps) {
   if (player.id === null) {
     console.log("in attemptConnections PLayer id is null");
     connectionBackOffTime = (connectionBackOffTime + 500) * 2;
-    setTimeout(() => tryNextId(player, otherPlayers, globalPowerUps), connectionBackOffTime);
+    setTimeout(() => createPeer(player, otherPlayers, globalPowerUps), connectionBackOffTime);
     return;
   }
-
+  verifyPeerHealth();
   peer.on("connection", function (conn) {
     console.log("Connection made with peer:", conn.peer);
     everConnected = true;
@@ -81,7 +81,7 @@ export function attemptConnections(player, otherPlayers, globalPowerUps) {
     // If the master peer has disconnected, choose a new master peer
     // if (isPlayerMasterPeer(player)) {
     masterPeerId = chooseNewMasterPeer(player, otherPlayers);
-    tryNextId(player, otherPlayers, globalPowerUps);
+    createPeer(player, otherPlayers, globalPowerUps);
     //  }
   });
 
@@ -110,10 +110,15 @@ export function checkAndReplaceConnectionsFromId(id, player, otherPlayers, globa
   if (!existingConnection || !existingConnection.open) {
     // If the connection doesn't exist or is closed, retry it
     let conn = null;
-    if (peer) {
+    verifyPeerHealth();
+    if (peer && !peer.disconnected) {
       conn = peer.connect(id);
     } else {
-      console.log("peer undefined in connect to peers");
+      console.log("peer undefined/closed/disconneced in connect to peers");
+      if (peer) {
+        console.log("peer open: " + peer.open);
+        console.log("peer disconnected: " + peer.disconnected);
+      }
     }
     checkAndReplaceConnection(conn, existingConnection, player, otherPlayers, globalPowerUps);
   } else {
@@ -140,16 +145,16 @@ export function checkAndReplaceConnection(conn, existingConnection, player, othe
   }
 }
 
-export function tryNextId(player, otherPlayers, globalPowerUps) {
+export function createPeer(player, otherPlayers, globalPowerUps) {
   if (index >= peerIds.length) {
-    console.log("All IDs are in use - trynextid function");
+    console.log("All IDs are in use - createPeer function");
     resolveConnectionConflicts(player, otherPlayers, globalPowerUps);
     return;
   }
 
   let id = peerIds[index];
   setPeer(new Peer(id)); // Assign the new Peer to the peer variable
-
+  verifyPeerHealth();
   peer.on("open", function () {
     // If the ID is already in use, this will not be called
     player.id = id;
@@ -166,7 +171,7 @@ export function tryNextId(player, otherPlayers, globalPowerUps) {
       console.log("ID is in use:", id);
       index++;
 
-      tryNextId(player, otherPlayers, globalPowerUps);
+      createPeer(player, otherPlayers, globalPowerUps);
     } else if (err.type === "browser-incompatible") {
       console.log("browser incompatible:", err);
       //console.log("Other error:");
@@ -175,8 +180,57 @@ export function tryNextId(player, otherPlayers, globalPowerUps) {
       //console.log("Other error:");
     }
   });
+  peer.on('close', () => {
+    console.log('Connection to signaling server closed. Attempting to reconnect...');
+    createPeer(player, otherPlayers, globalPowerUps);
+});
 }
 
+function verifyPeerHealth() {
+  // Check if peer.disconnected is true
+  if (peer.disconnected) {
+    console.log("peer was disconnected");
+    // Attempt to reconnect
+    peer.reconnect();
+
+    // Listen for the 'open' event to determine if the reconnection was successful
+    // peer.on("open", () => {
+    //   // The Peer connection is now open, you can proceed to create connections
+    //   const conn = peer.connect(id);
+
+    //   // Handle the connection as needed
+    //   conn.on("open", () => {
+    //     // Connection is open and ready to send data
+    //     console.log("Connected to peer:", conn.peer);
+    //   });
+
+    //   conn.on("data", (data) => {
+    //     // Handle incoming data
+    //     console.log("Received data:", data);
+    //   });
+    // });
+  }
+  if (!peer.open) {
+    console.log("peer was closed");
+   
+    // // Listen for the 'open' event to determine when the Peer connection becomes open
+    // peer.on("open", () => {
+    //   // The Peer connection is now open, you can proceed to create connections
+    //   const conn = peer.connect(id);
+
+    //   // Handle the connection as needed
+    //   conn.on("open", () => {
+    //     // Connection is open and ready to send data
+    //     console.log("Connected to peer:", conn.peer);
+    //   });
+
+    //   conn.on("data", (data) => {
+    //     // Handle incoming data
+    //     console.log("Received data:", data);
+    //   });
+    // });
+  }
+}
 function addConnectionHandlers(player, otherPlayers, conn, globalPowerUps) {
   // console.log("adding connection handlers");
   conn.on("open", function () {
@@ -352,7 +406,7 @@ function resolveConflicts(player, otherPlayers, globalPowerUps) {
   // If there is a conflict between the local game state and the received game state,
   // update the local game state to match the received game state
   if (player.id == null) {
-    tryNextId(player, otherPlayers, globalPowerUps);
+    createPeer(player, otherPlayers, globalPowerUps);
   }
   resolveConnectionConflicts(player, otherPlayers, globalPowerUps);
 }

@@ -78,7 +78,11 @@ export function sendPlayerStates(playerToSend, isMaster) {
     recentScoreText: playerToSend.recentScoreText,
   };
   if (isMaster) {
+    //only master sends is dead message since it is the abibter of collisions
     data.isDead = playerToSend.isDead;
+  }else{
+    //only player sends timeSinceSpawned because it know when it has reset
+    data.timeSinceSpawned = playerToSend.timeSinceSpawned;
   }
   connections.forEach((conn) => {
     if (conn && conn.open) {

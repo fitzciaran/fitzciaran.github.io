@@ -1,5 +1,5 @@
 import { setGameState, GameState, player, setMines, bots, otherPlayers, mines } from "./astroids.js";
-import { isPlayerMasterPeer,  setTimeSinceMessageFromMaster, timeSinceMessageFromMaster} from "./connectionHandlers.js";
+import { isPlayerMasterPeer, setTimeSinceMessageFromMaster, timeSinceMessageFromMaster } from "./connectionHandlers.js";
 import { sendPlayerStates, sendEntitiesState } from "./handleData.js";
 import { addScore } from "./db.js";
 import { forces, Mine, PowerUp, ForceType, ForceArea, Entity } from "./entities.js";
@@ -239,7 +239,11 @@ export function checkMineCollision(playerToCheck, mines) {
         // mines.splice(i, 1);
       }
       if (playerToCheck.invincibleTimer > 0 && playerToCheck.timeSinceSpawned > spawnProtectionTime && mines[i].hitFrames < 1) {
-        playerToCheck.setInvincibleTimer(playerToCheck.invincibleTimer - 100);
+        if (playerToCheck.invincibleTimer > 115) {
+          playerToCheck.setInvincibleTimer(playerToCheck.invincibleTimer - 100);
+        } else {
+          playerToCheck.setInvincibleTimer(15);
+        }
         mines[i].hitFrames = 5;
         // mines.splice(i, 1);
       }

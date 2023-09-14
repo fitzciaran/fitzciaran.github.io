@@ -229,7 +229,11 @@ export class Player {
     let textScore = score * 100;
 
     this.setRecentScoreText(textScore);
-    this.setInvincibleTimer(this.invincibleTimer - 150);
+    if (this.invincibleTimer > 165) {
+      this.setInvincibleTimer(this.invincibleTimer - 150);
+    } else {
+      this.setInvincibleTimer(15);
+    }
     this.addScore(score);
     if (this.comboScaler < 10) {
       this.comboScaler += 0.5;

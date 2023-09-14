@@ -3,7 +3,7 @@ import { setupPilotsImageSources, setupPilotsImages } from "./drawingUtils.js";
 import { forces } from "./entities.js";
 import { drawScene } from "./gameDrawing.js";
 import {
-  tryNextId,
+  createPeer,
   attemptConnections,
   connectToPeers,
   isPlayerMasterPeer,
@@ -149,10 +149,6 @@ function updateCamera(playerToFollow, deltaTime) {
 function updateGame(deltaTime, playerActive) {
   //scale deltaTime
   deltaTime *= 100;
-
-  // if (player.invincibleTimer > 0) {
-  //   player.invincibleTimer -= 1;
-  // }
 
   //todo work out what to do here, do we do this for every local or not?
   if (true || playerActive || isPlayerMasterPeer(player)) {
@@ -391,7 +387,7 @@ function update() {
 
 window.addEventListener("load", function () {
   /* START CONNECTION HANDLERS  */
-  tryNextId(player, otherPlayers, globalPowerUps);
+  createPeer(player, otherPlayers, globalPowerUps);
 
   setTimeout(() => attemptConnections(player, otherPlayers, globalPowerUps), 500);
   //do we need to keep doing this??
