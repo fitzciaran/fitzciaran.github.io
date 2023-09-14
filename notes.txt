@@ -271,14 +271,21 @@ still sometimes get a blank "killed by" .. could at least put ??? to cover case?
 scores of the week?(last 7 days?)
     All time scores?
 
-speed gauge animates up when pilot selected.
-maybe keep track of ticks since selected? to determine how much gauge should be drawn?
-On Click for selection?
 other unique properties for pilots?size? 
-max invincible time personal to pilot
+    max invincible time personal to pilot
+
 completely different graphic for star/invic timer?.
+
 some kind of background warping / blurring for the point gravity wells
 
 screenshake
 
-do I not have slave peers run the other game logic anymore?
+don't draw offscreen stuff!!
+
+
+character whose special changes between all the specials
+
+force refresh if fall behind in execution time?
+
+way to throw away peerjs messages?
+    maybe disconnect is delayed message? can reconnect later and not add to the backlog?

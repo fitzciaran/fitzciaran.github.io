@@ -38,7 +38,8 @@ export class ForceArea extends Entity {
     direction = 0,
     type = ForceType.POINT,
     width = 100,
-    length = 100
+    length = 100,
+    effect = false
   ) {
     super(id, x, y);
     this.force = force;
@@ -52,6 +53,7 @@ export class ForceArea extends Entity {
     this.type = type;
     this.width = width;
     this.length = length;
+    this.effect = effect;
   }
   setDuration(newDuration) {
     this.duration = newDuration;

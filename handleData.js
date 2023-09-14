@@ -44,6 +44,7 @@ export function sendPlayerStates(playerToSend, isMaster) {
   let data = {
     timestamp: Date.now(),
     priority: 3,
+    fromMaster: (isPlayerMasterPeer(player)),
     id: playerToSend.id,
     x: playerToSend.x,
     y: playerToSend.y,
@@ -96,35 +97,12 @@ export function sendPlayerStates(playerToSend, isMaster) {
   });
 }
 
-function sendGameState(globalPowerUps) {
-  // Send game state to other player
-  let data = {
-    timestamp: Date.now(),
-    priority: 2,
-    gameState: true,
-    globalPowerUps: globalPowerUps,
-    //enemies and stuff here
-  };
-
-  //console.log("Sending data:", data); // Log any data sent
-  connections.forEach((conn) => {
-    if (conn && conn.open) {
-      conn.send(data);
-      sendCounter++;
-      // Log the data every 1000 calls
-      if (sendCounter === 5000) {
-        //console.log("sending game state data:", data);
-        sendCounter = 0; // reset the counter
-      }
-    }
-  });
-}
-
 export function sendEntitiesState() {
   // Send game state to other player
   let data = {
     timestamp: Date.now(),
     priority: 2,
+    fromMaster: (isPlayerMasterPeer(player)),
     gameState: true,
     globalPowerUps: serializeGlobalPowerUps(globalPowerUps),
     bots: serializeBots(bots),
@@ -155,6 +133,7 @@ export function sendConnectedPeers() {
     timestamp: Date.now(),
     priority: 2,
     gameState: true,
+    fromMaster: (isPlayerMasterPeer(player)),
     //todo this could be the issue
     //connectedPeers: connectedPeers,
     //enemies and stuff here
@@ -175,6 +154,7 @@ export function sendConnectedPeers() {
 }
 
 export function handleData(player, otherPlayers, globalPowerUps, data) {
+  setTimeSinceAnyMessageRecieved(0);
   const currentTimestamp = Date.now();
   const messageTimestamp = data.timestamp;
   // let timeThreshold = 2 * fixedDeltaTime;
@@ -187,10 +167,15 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
   }
   let timeDifference = currentTimestamp - messageTimestamp;
   if (timeDifference > timeThreshold) {
-    //lets try ignoring old messages
+    //lets try not ignoring old messages
+    //return;
+  }
+  // setTimeSinceAnyMessageRecieved(0);
+  if(isPlayerMasterPeer(player) && data.isMaster){
+    wrappedResolveConflicts(player, otherPlayers, globalPowerUps);
+    console.log("master conflict");
     return;
   }
-  setTimeSinceAnyMessageRecieved(0);
   //console.log("handling data:");
   // Find the otherPlayer in the array
   let otherPlayer = otherPlayers.find((player) => player.id === data.id);

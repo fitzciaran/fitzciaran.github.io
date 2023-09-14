@@ -1,6 +1,6 @@
 import { chooseNewMasterPeer } from "./connectionHandlers.js";
 import { renderDebugInfo, drawPowerupLevels, drawInvincibilityGauge, drawSpecialGauge } from "./drawGameUI.js";
-import { rotateAndScalePoint, interpolate, spikeyBallPoints } from "./drawingUtils.js";
+import { rotateAndScalePoint, interpolate, spikeyBallPoints, drawArrow, applyGravityWarpEffect } from "./drawingUtils.js";
 import { ForceType, forces } from "./entities.js";
 import { shipScale, mineScale, basicAnimationTimer } from "./gameLogic.js";
 
@@ -176,7 +176,7 @@ export function drawBackground(ctx, camX, camY, canvas, backLayer, midBackLayer,
   ctx.drawImage(frontLayer, frontX + frontOffsetX, frontY + frontOffsetY, frontLayer.width * scale * 0.6, frontLayer.height * scale * 0.6);
 }
 
-// Export a drawWorldBounds function that takes the canvas context as an argument
+
 export function drawWorldBounds(ctx, camX, camY, worldWidth, worldHeight) {
   // Create gradient
   let gradient = ctx.createLinearGradient(0, 0, worldWidth, worldHeight);
@@ -394,7 +394,7 @@ function drawForce(ctx, camX, camY, force) {
       animationPosition = ((basicAnimationTimer * speed) % 85) / 100 + 0.15;
       animationPosition2 = ((basicAnimationTimer * speed + 42.5) % 85) / 100 + 0.15;
     }
-    
+
     if (coneAngle == 2 * Math.PI) {
       ctx.beginPath();
       ctx.arc(screenX, screenY, radius, 0, Math.PI * 2);
@@ -438,7 +438,7 @@ function drawForce(ctx, camX, camY, force) {
       ctx.closePath();
       ctx.stroke();
     }
-   
+
     ctx.moveTo(screenX, screenY);
 
     let increment = 10;
@@ -469,6 +469,9 @@ function drawForce(ctx, camX, camY, force) {
     }
     ctx.stroke();
     ctx.closePath();
+    if (force.effect == true && force.tracks != null && force.tracks.isLocal) {
+      // applyGravityWarpEffect(ctx, screenX, screenY, radius,coneAngle,direction);
+    }
   }
   if (force.type == ForceType.DIRECTIONAL) {
     // Calculate the coordinates of the four corners of the rectangle
@@ -541,14 +544,14 @@ function drawForce(ctx, camX, camY, force) {
       numPointsDeep = Math.floor(halfRectHeight / 40);
       force.numberArrowsDeep = numPointsDeep;
     }
-    let speed = 1 + (width/150) ;
+    let speed = 1 + width / 150;
     let animationPosition = ((basicAnimationTimer * speed) % 100) / 100 / numPointsDeep;
 
     let offsetWidthLeft = 0.05; // adjust the offset to create more or less space around the arrows
     let offsetWidthRight = 0.05; // adjust the offset to create more or less space around the arrows
     let startWidth = offsetWidthLeft;
     let endWidth = 1 - offsetWidthRight;
-   
+
     let offsetHeightBottom = -0.5 + animationPosition; // adjust the offset to create more or less space around the arrows
     let offsetHeightTop = -0.2 - animationPosition; // adjust the offset to create more or less space around the arrows
 
@@ -611,41 +614,6 @@ function drawForceLines(ctx, attractive, radius, angle, screenX, screenY) {
     const arrowY = screenY + 0.3 * radius * Math.sin(angle);
 
     drawArrow(ctx, { x: arrowX, y: arrowY }, angle, 100, arrowheadLength, arrowheadAngle);
-  }
-}
-
-function drawArrow(ctx, tail, angle, length, arrowheadLength, arrowheadAngle = Math.PI / 8) {
-  let head = {};
-
-  head.x = tail.x + length * Math.cos(angle);
-  head.y = tail.y + length * Math.sin(angle);
-  ctx.moveTo(head.x, head.y);
-  ctx.lineTo(tail.x, tail.y);
-
-  //const angle = Math.atan2(head.y - tail.y, head.x - tail.x);
-  const arrowhead1X = head.x - arrowheadLength * Math.cos(angle + arrowheadAngle);
-  const arrowhead1Y = head.y - arrowheadLength * Math.sin(angle + arrowheadAngle);
-  const arrowhead2X = head.x - arrowheadLength * Math.cos(angle - arrowheadAngle);
-  const arrowhead2Y = head.y - arrowheadLength * Math.sin(angle - arrowheadAngle);
-
-  ctx.moveTo(head.x, head.y);
-  ctx.lineTo(arrowhead1X, arrowhead1Y);
-  ctx.moveTo(head.x, head.y);
-  ctx.lineTo(arrowhead2X, arrowhead2Y);
-}
-
-function normalizeAngle(angle) {
-  return ((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
-}
-
-function isAngleInCone(angle, startAngle, endAngle) {
-  if (startAngle > endAngle) {
-    // If startAngle is greater than endAngle, it means the cone crosses the 0/2π line.
-    // In this case, we need to check if the angle is less than endAngle or greater than startAngle.
-    return angle <= endAngle || angle >= startAngle;
-  } else {
-    // If startAngle is less than endAngle, we can simply check if the angle is within this range.
-    return angle >= startAngle && angle <= endAngle;
   }
 }
 

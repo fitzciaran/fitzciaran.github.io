@@ -10,32 +10,26 @@ export function renderDebugInfo(ctx, player, bots) {
   const textHeight = 75; // Adjust this to the size of your text
   ctx.font = "14px Arial";
   const myIDText = `My ID: ${player.id}`;
-  ctx.fillStyle = player.color;
+  ctx.fillStyle = "white";
   ctx.fillText(myIDText, 558, topGap - textHeight);
-  //also render some other useful debug stuff
+
   const myDistanceFactorText = `distanceFactor ${player.distanceFactor}`;
-  ctx.fillStyle = player.color;
   ctx.fillText(myDistanceFactorText, 558, topGap + gap - textHeight);
 
   const isMasterText = `is Master =  ${isPlayerMasterPeer(player)}`;
-  ctx.fillStyle = player.color;
   ctx.fillText(isMasterText, 558, topGap + gap * 2 - textHeight);
   ctx.fillText(`invicible state: ${player.invincibleTimer}`, 558, topGap + gap * 3 - textHeight);
 
   const executionTimeText = `executionTime =  ${executionTime}`;
-  ctx.fillStyle = player.color;
   ctx.fillText(executionTimeText, 558, topGap + gap * 4 - textHeight);
 
   const timeSinceAnyMessageRecievedText = `timeSinceAnyMessageRecieved =  ${timeSinceAnyMessageRecieved}`;
-  ctx.fillStyle = player.color;
   ctx.fillText(timeSinceAnyMessageRecievedText, 558, topGap + gap * 5 - textHeight);
 
   const timeSinceMessageFromMasterText = `timeSinceMessageFromMaster =  ${timeSinceMessageFromMaster}`;
-  ctx.fillStyle = player.color;
   ctx.fillText(timeSinceMessageFromMasterText, 558, topGap + gap * 6 - textHeight);
 
   const velocityText = `player velocity = ${player.vel.x.toFixed(1)}, ${player.vel.y.toFixed(1)}`;
-  ctx.fillStyle = player.color;
   ctx.fillText(velocityText, 558, topGap + gap * 7 - textHeight);
 
   bots.forEach((bot, index) => {

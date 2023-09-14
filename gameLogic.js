@@ -1,5 +1,5 @@
 import { setGameState, GameState, player, setMines, bots, otherPlayers, mines } from "./astroids.js";
-import { isPlayerMasterPeer } from "./connectionHandlers.js";
+import { isPlayerMasterPeer,  setTimeSinceMessageFromMaster, timeSinceMessageFromMaster} from "./connectionHandlers.js";
 import { sendPlayerStates, sendEntitiesState } from "./handleData.js";
 import { addScore } from "./db.js";
 import { forces, Mine, PowerUp, ForceType, ForceArea, Entity } from "./entities.js";
@@ -546,13 +546,19 @@ export function calculateAngle(player) {
 
 export function masterUpdateGame(player, globalPowerUps, otherPlayers, bots, deltaTime) {
   // This peer is the master, so it runs the game logic for shared objects
-
+  if (!isPlayerMasterPeer(player)) {
+    setTimeSinceMessageFromMaster(timeSinceMessageFromMaster + 1);
+  }
+  player.updateTick(deltaTime);
   //eventually run this based on how many bots and existing players in total currently
   createBots();
   updateBots(deltaTime);
   updateOtherPlayers(deltaTime);
   updateEnemies(deltaTime);
   updatePowerups(deltaTime);
+
+  // Detect collisions with powerups or other ships
+  detectCollisions(player, globalPowerUps, bots, otherPlayers, forces);
 
   // The master peer also detects collisions between all ships and powerups
   otherPlayers.forEach((otherPlayer) => {
@@ -578,6 +584,7 @@ export function masterUpdateGame(player, globalPowerUps, otherPlayers, bots, del
   if (isPlayerMasterPeer(player)) {
     sendEntitiesState();
   }
+  sendPlayerStates(player, isPlayerMasterPeer(player));
 }
 
 //for now just create 4

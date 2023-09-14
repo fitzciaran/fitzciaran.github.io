@@ -88,6 +88,7 @@ export class Player {
     this.usingSpecial = 0;
     this.hitBy = "";
     this.recentScoreTicks = 0;
+    this.isLocal = false;
   }
 
   resetState(keepName, keepColor) {
@@ -142,6 +143,8 @@ export class Player {
   //Need to unpick this, maybe there should be events for gotHit and addscore and masterpeer responds to such events with sending player state for the given player
   gotHit(hitBy) {
     this.setIsDead(true);
+    this.recentScoreTicks = 0;
+    this.comboScaler = 1;
     this.hitBy = hitBy;
     if (this == player) {
       if (hitBy != null && hitBy != "") {
@@ -439,7 +442,8 @@ export class Player {
         direction,
         type,
         width,
-        length
+        length,
+        true
       );
       // let playerForce = new ForceArea(null, x, y, force, duration, radius, isAttractive, color, tracks, coneAngle, direction, type, width, length);
       // let minesForce = new ForceArea("player-" + this.id, this.x, this.y, 0.3, 10, 200, this.force == 1, "pink", this);
@@ -515,39 +519,41 @@ export class Player {
       setGameState(GameState.FINISHED);
       return;
     }
-    this.timeSinceSpawned++;
-    this.updatePlayerAngle();
-    this.updatePlayerVelocity(deltaTime);
-    this.bouncePlayer();
-    this.updatePlayerPosition(deltaTime);
-    if (this.u) {
-      //this is a debug cheat
-      this.setInvincibleTimer(this.invincibleTimer + 10);
-      this.specialMeter += 10;
-    }
-    if (this.invincibleTimer > 0) {
-      this.setInvincibleTimer(this.invincibleTimer - 1);
-      if (this.invincibleTimer == 0) {
-        //trying out different comboScaler end
-        // this.comboScaler = 1;
+    if (!this.isDead) {
+      this.timeSinceSpawned++;
+      this.updatePlayerAngle();
+      this.updatePlayerVelocity(deltaTime);
+      this.bouncePlayer();
+      this.updatePlayerPosition(deltaTime);
+      if (this.u) {
+        //this is a debug cheat
+        this.setInvincibleTimer(this.invincibleTimer + 10);
+        this.specialMeter += 10;
       }
-    }
-    if (this.specialMeter < maxSpecialMeter) {
-      this.specialMeter++;
-    }
-    this.usingSpecial = Math.max(this.usingSpecial - 1, 0);
+      if (this.invincibleTimer > 0) {
+        this.setInvincibleTimer(this.invincibleTimer - 1);
+        if (this.invincibleTimer == 0) {
+          //trying out different comboScaler end
+          // this.comboScaler = 1;
+        }
+      }
+      if (this.specialMeter < maxSpecialMeter) {
+        this.specialMeter++;
+      }
+      this.usingSpecial = Math.max(this.usingSpecial - 1, 0);
 
-    if (this.ticksSincePowerUpCollection > -1) {
-      this.ticksSincePowerUpCollection++;
-    }
-    if (this.ticksSincePowerUpCollection > 5) {
-      this.ticksSincePowerUpCollection = -1;
-    }
-    this.forceCoolDown = Math.max(this.forceCoolDown - 1, 0);
-    if (this.recentScoreTicks > 0) {
-      this.recentScoreTicks = Math.max(this.recentScoreTicks - 1, 0);
-      if (this.recentScoreTicks == 0) {
-        this.comboScaler = 1;
+      if (this.ticksSincePowerUpCollection > -1) {
+        this.ticksSincePowerUpCollection++;
+      }
+      if (this.ticksSincePowerUpCollection > 5) {
+        this.ticksSincePowerUpCollection = -1;
+      }
+      this.forceCoolDown = Math.max(this.forceCoolDown - 1, 0);
+      if (this.recentScoreTicks > 0) {
+        this.recentScoreTicks = Math.max(this.recentScoreTicks - 1, 0);
+        if (this.recentScoreTicks == 0) {
+          this.comboScaler = 1;
+        }
       }
     }
     otherPlayers.forEach((otherPlayer) => {

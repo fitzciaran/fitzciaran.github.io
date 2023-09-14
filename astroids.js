@@ -6,7 +6,6 @@ import {
   tryNextId,
   attemptConnections,
   connectToPeers,
-  updateConnections,
   isPlayerMasterPeer,
   removeClosedConnections,
   setTicksSinceLastConnectionAttempt,
@@ -51,7 +50,7 @@ import {
 import { Player } from "./player.js";
 
 export const { canvas, ctx } = setupCanvas();
-export const worldDimensions = { width: 3600, height: 2400 };
+export const worldDimensions = { width: 4200, height: 2400 };
 export const colors = [
   "red",
   "blue",
@@ -72,8 +71,9 @@ export const colors = [
 
 export const acceleration = 0.25;
 
-let lastTime = Date.now();
-export let executionTime = 6;
+// let lastTime = Date.now();
+let lastTime = performance.now();
+export let executionTime = 0;
 
 export const GameState = {
   PILOT_SELECT: "pilotSelect",
@@ -92,6 +92,7 @@ let prioritizeHumanSpectate = false;
 
 export const player = new Player(null, null, null, 0, null, 0, "", "", false, true);
 player.isMaster = true;
+player.isLocal = true;
 // player.isPlaying = false;
 // player.isUserControlledCharacter = true;
 export let otherPlayers = [];
@@ -148,18 +149,13 @@ function updateCamera(playerToFollow, deltaTime) {
 function updateGame(deltaTime, playerActive) {
   //scale deltaTime
   deltaTime *= 100;
-  if (playerActive) {
-    updateCamera(player, deltaTime);
-    player.updateTick(deltaTime);
-  }
+
   // if (player.invincibleTimer > 0) {
   //   player.invincibleTimer -= 1;
   // }
+
   //todo work out what to do here, do we do this for every local or not?
   if (true || playerActive || isPlayerMasterPeer(player)) {
-    // Detect collisions with powerups or other ships
-    detectCollisions(player, globalPowerUps, bots, otherPlayers, forces);
-
     //todo might have to uncomment the condition
     // if (isPlayerMasterPeer(player)) {
     // This peer is the master, so it runs the game logic for shared objects
@@ -168,15 +164,12 @@ function updateGame(deltaTime, playerActive) {
   }
 
   if (playerActive) {
+    updateCamera(player, deltaTime);
     drawScene(player, otherPlayers, bots, mines, ctx, camX, camY, worldDimensions, canvas, globalPowerUps);
   } else {
     camFollowPlayer(deltaTime);
     drawScene(null, otherPlayers, bots, mines, ctx, camX, camY, worldDimensions, canvas, globalPowerUps);
   }
-  // if (isPlayerMasterPeer(player)) {
-  //   masterUpdateGame(globalPowerUps,otherPlayers,bots,deltaTime);
-  // }
-  updateConnections(player, globalPowerUps);
   removeClosedConnections(otherPlayers);
   if (player.isDead) {
     setGameState(GameState.FINISHED);
@@ -360,9 +353,12 @@ export function setGameState(newState) {
 }
 
 function update() {
-  const startTime = Date.now();
-  let now = Date.now();
+  // const startTime = Date.now();
+  // let now = Date.now();
+  const startTime = performance.now();
+  let now = performance.now();
   let deltaTime = (now - lastTime) / 1000; // Time since last frame in seconds
+  // let deltaTime = (now - lastTime); // Time since last frame in seconds
   lastTime = now;
 
   accumulator += deltaTime;
@@ -386,7 +382,8 @@ function update() {
     accumulator -= fixedDeltaTime;
   }
 
-  const endTime = Date.now();
+  // const endTime = Date.now();
+  const endTime = performance.now();
   executionTime = endTime - startTime;
 
   requestAnimationFrame(update);
@@ -394,7 +391,7 @@ function update() {
 
 window.addEventListener("load", function () {
   /* START CONNECTION HANDLERS  */
-  tryNextId(player);
+  tryNextId(player, otherPlayers, globalPowerUps);
 
   setTimeout(() => attemptConnections(player, otherPlayers, globalPowerUps), 500);
   //do we need to keep doing this??
