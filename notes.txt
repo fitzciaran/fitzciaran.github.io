@@ -290,4 +290,5 @@ force refresh if fall behind in execution time?
 way to throw away peerjs messages?
     maybe disconnect is delayed message? can reconnect later and not add to the backlog?
 
-big connection issues again, seem to be able to be killed while invicible maybe needing player-player interaction idk 
+
+spawn check that itterates through all current objects and gives space (could just keep rerolling rng until a valid spot? should be fine as long as there's more valid spots than invalid)

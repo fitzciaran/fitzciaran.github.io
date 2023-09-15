@@ -190,9 +190,13 @@ function verifyPeerHealth() {
   // Check if peer.disconnected is true
   if (peer.disconnected) {
     console.log("peer was disconnected");
+    try{
     // Attempt to reconnect
     peer.reconnect();
-
+    }catch(error){
+      console.log("error reconnecting peer: " + error);
+      createPeer(player, otherPlayers, globalPowerUps);
+    }
     // Listen for the 'open' event to determine if the reconnection was successful
     // peer.on("open", () => {
     //   // The Peer connection is now open, you can proceed to create connections

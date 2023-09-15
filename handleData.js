@@ -44,7 +44,7 @@ export function sendPlayerStates(playerToSend, isMaster) {
   let data = {
     timestamp: Date.now(),
     priority: 3,
-    fromMaster: (isPlayerMasterPeer(player)),
+    fromMaster: isPlayerMasterPeer(player),
     id: playerToSend.id,
     x: playerToSend.x,
     y: playerToSend.y,
@@ -80,7 +80,7 @@ export function sendPlayerStates(playerToSend, isMaster) {
   if (isMaster) {
     //only master sends is dead message since it is the abibter of collisions
     data.isDead = playerToSend.isDead;
-  }else{
+  } else {
     //only player sends timeSinceSpawned because it know when it has reset
     data.timeSinceSpawned = playerToSend.timeSinceSpawned;
   }
@@ -106,7 +106,7 @@ export function sendEntitiesState() {
   let data = {
     timestamp: Date.now(),
     priority: 2,
-    fromMaster: (isPlayerMasterPeer(player)),
+    fromMaster: isPlayerMasterPeer(player),
     gameState: true,
     globalPowerUps: serializeGlobalPowerUps(globalPowerUps),
     bots: serializeBots(bots),
@@ -137,7 +137,7 @@ export function sendConnectedPeers() {
     timestamp: Date.now(),
     priority: 2,
     gameState: true,
-    fromMaster: (isPlayerMasterPeer(player)),
+    fromMaster: isPlayerMasterPeer(player),
     //todo this could be the issue
     //connectedPeers: connectedPeers,
     //enemies and stuff here
@@ -174,21 +174,24 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
     //lets try not ignoring old messages
     //return;
   }
-  // setTimeSinceAnyMessageRecieved(0);
-  if(isPlayerMasterPeer(player) && data.isMaster){
+
+  let otherPlayer = otherPlayers.find((player) => player.id === data.id);
+  if (otherPlayer) {
+    otherPlayer.timeSinceSentMessageThatWasRecieved = 0;
+  }
+  if (isPlayerMasterPeer(player) && data.isMaster) {
     wrappedResolveConflicts(player, otherPlayers, globalPowerUps);
     console.log("master conflict");
     return;
   }
   //console.log("handling data:");
   // Find the otherPlayer in the array
-  let otherPlayer = otherPlayers.find((player) => player.id === data.id);
+
   if (!otherPlayer) {
     otherPlayer = findBotById(data.id);
   }
   // If the player is found, update their data
   if (otherPlayer) {
-    otherPlayer.timeSinceSentMessageThatWasRecieved = 0;
     otherPlayer.x = data.x;
     otherPlayer.y = data.y;
     otherPlayer.powerUps = data.powerUps;

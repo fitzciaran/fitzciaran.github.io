@@ -19,7 +19,7 @@ let maxPowerups = 10;
 let maxMines = 14;
 let maxDirectionalForces = 3;
 let directionalForces = [];
-export let spawnProtectionTime = 100;
+export let spawnProtectionTime = 200;
 export let endGameMessage = "";
 export let gameWon = false;
 export let basicAnimationTimer = 0;
@@ -340,7 +340,7 @@ export function checkForcesCollision(playerToCheck, forces) {
 
     if (force.type == ForceType.POINT) {
       // Check if the player is within the cone and distance range
-      if (distance > force.radius || angleDifference > force.coneAngle / 2) {
+      if (distance > force.radius || (angleDifference > force.coneAngle / 2 && force.coneAngle < 2 * Math.PI - 0.01)) {
         continue;
       }
       playerToCheck.inForce += 2;
