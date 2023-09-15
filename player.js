@@ -13,11 +13,11 @@ import {
   GameState,
   globalPowerUps,
   setGlobalPowerUps,
-} from "./astroids.js";
+} from "./main.js";
 import { isPlayerMasterPeer } from "./connectionHandlers.js";
 import { forces, ForceArea, ForceType } from "./entities.js";
 import { setEndGameMessage, maxInvincibilityTime, spawnProtectionTime, maxSpecialMeter, PilotName, initialInvincibleTime } from "./gameLogic.js";
-import { sendPlayerStates } from "./handleData.js";
+import { sendPlayerStates, sendRequestForStates } from "./handleData.js";
 
 const bounceFactor = 1.5;
 const offset = 1;
@@ -67,7 +67,7 @@ export class Player {
     this.setIsDead(false);
     this.invincibleTimer = 0;
     this.forceCoolDown = 0;
-    this.comboScaler = 1;
+    this.setComboScaler(1);
     this.kills = 0;
     this.isBot = false;
     this.playerAngleData = {};
@@ -89,6 +89,9 @@ export class Player {
     this.hitBy = "";
     this.recentScoreTicks = 0;
     this.isLocal = false;
+    this.timeOfLastActive = "";
+    this.recentScoreText = 0;
+    this.devMode = false;
   }
 
   resetState(keepName, keepColor) {
@@ -109,9 +112,9 @@ export class Player {
     this.targetedBy = [];
     this.space = false;
     this.shift = false;
-    this.setIsDead(false);
+    // this.setIsDead(false);
     this.invincibleTimer = 0;
-    this.comboScaler = 1;
+    this.setComboScaler(1);
     this.kills = 0;
     this.inRangeTicks = 0;
     this.mousePosX = 0;
@@ -144,7 +147,7 @@ export class Player {
   gotHit(hitBy) {
     this.setIsDead(true);
     this.recentScoreTicks = 0;
-    this.comboScaler = 1;
+    this.setComboScaler(1);
     this.hitBy = hitBy;
     if (this == player) {
       if (hitBy != null && hitBy != "") {
@@ -153,8 +156,9 @@ export class Player {
         setEndGameMessage("Score: " + this.powerUps * 100);
       }
     }
-    if (isPlayerMasterPeer(player) && !isPlayerMasterPeer(this)) {
-      sendPlayerStates(this, true);
+    // if (isPlayerMasterPeer(player) && !isPlayerMasterPeer(this)) {
+    if (isPlayerMasterPeer(player)) {
+      sendPlayerStates(this, true, true);
     }
   }
   addScore(scoreToAdd) {
@@ -164,8 +168,9 @@ export class Player {
       // console.log("somehow not whole score added");
       this.powerUps = Math.floor(this.powerUps);
     }
-    if (isPlayerMasterPeer(player) && !isPlayerMasterPeer(this)) {
-      sendPlayerStates(this, true);
+    // if (isPlayerMasterPeer(player) && !isPlayerMasterPeer(this)) {
+    if (isPlayerMasterPeer(player)) {
+      sendPlayerStates(this, true, true);
     }
   }
 
@@ -181,13 +186,21 @@ export class Player {
     let textScore = scoreToAdd * 100;
     this.setRecentScoreText(textScore);
     if (this.comboScaler < 10) {
-      this.comboScaler += 0.5;
+      this.setComboScaler(this.comboScaler + 0.5);
     }
     globalPowerUps.splice(powerUpIndex, 1);
     if (isPlayerMasterPeer(player)) {
       setGlobalPowerUps(globalPowerUps);
     }
     this.addScore(scoreToAdd);
+  }
+
+  setComboScaler(newValue) {
+    if (newValue < 1) {
+      this.comboScaler = 1;
+    } else {
+      this.comboScaler = newValue;
+    }
   }
 
   setRecentScoreText(textScore) {
@@ -236,13 +249,18 @@ export class Player {
     }
     this.addScore(score);
     if (this.comboScaler < 10) {
-      this.comboScaler += 0.5;
+      this.setComboScaler(this.comboScaler + 0.5);
     }
   }
 
   setInvincibleTimer(newTime) {
     this.invincibleTimer = Math.min(newTime, maxInvincibilityTime);
     this.invincibleTimer = Math.max(this.invincibleTimer, 0);
+  }
+
+  setSpecialMeter(newTime) {
+    this.specialMeter = Math.min(newTime, maxSpecialMeter);
+    this.specialMeter = Math.max(this.specialMeter, 0);
   }
   setPilot(newPilot) {
     this.pilot = newPilot;
@@ -273,6 +291,14 @@ export class Player {
   }
 
   setPlayerIsMaster(isMaster) {
+    if (this.isLocal && !isMaster && this.isMaster) {
+      //if switching away from being master send basic ship data
+      sendPlayerStates(this, false, true);
+    }
+    if (isMaster && !this.isMaster) {
+      //if switching any player to being master request basic ship data
+      sendRequestForStates();
+    }
     this.isMaster = isMaster;
   }
   bouncePlayer() {
@@ -321,9 +347,9 @@ export class Player {
     }
     let boosting = false;
     if (this.shift && (this.specialMeter > 50 || (this.usingSpecial && this.specialMeter > 1))) {
-      if (this.usingSpecial < 1) {
+      if (this.usingSpecial < 1 && !this.devMode) {
         //initial cost more than keeping it going
-        this.specialMeter = Math.max(this.specialMeter - 10, 0);
+        this.setSpecialMeter(this.specialMeter - 10);
       }
       this.usingSpecial = 3;
       //todo specials other than boost shouldn't be triggered here
@@ -336,8 +362,9 @@ export class Player {
         // if (this.forceCoolDown < 1) {
         //try a gradual effect
         //this.forceCoolDown = 200;
-        this.specialMeter -= 3;
-        this.specialMeter = Math.max(this.specialMeter, 0);
+        if (!this.devMode) {
+          this.setSpecialMeter(this.specialMeter - 3);
+        }
         if (this.specialMeter == 0) {
           this.usingSpecial = 0;
         }
@@ -350,12 +377,12 @@ export class Player {
           // Calculate the cone's direction based on the ship's angle is needed since everything is offset by this
           const coneDirection = this.angle - Math.PI / 2;
           // Specify the desired cone angle (in radians) for the force
-          let coneAngle = Math.PI * 2; // For example, a 45-degree cone
+          let coneAngle = Math.PI * 2;
           let forcePower = 1.5;
           let radius = 200;
 
           if (this.special == Special.FORCE_PULL_FOCUS) {
-            coneAngle = Math.PI / 4; // For example, a 45-degree cone
+            coneAngle = Math.PI / 4; // 45-degree cone
             forcePower = 3.0;
             radius = 500;
           }
@@ -366,10 +393,10 @@ export class Player {
           this.createForce(this.x, this.y, forcePower, 5, radius, attractive, this.color, this, coneAngle, coneDirection, forceType);
         } else if (this.special == Special.BOOST) {
           //give a bit of meter back for the boost so it works out cheaper than force.
-          this.specialMeter += 1;
+          this.setSpecialMeter(this.specialMeter + 1);
           boosting = true;
-          if (this.specialMeter > 0) {
-            this.specialMeter = Math.max(this.specialMeter - 5, 0);
+          if (this.specialMeter > 0 && !this.devMode) {
+            this.setSpecialMeter(this.specialMeter - 5);
           }
           if (this.pilot == PilotName.PILOT_1) {
             pilotBoostFactor = 3;
@@ -470,6 +497,11 @@ export class Player {
       existingForce.length = length;
     }
   }
+
+  setDevMode(newMode) {
+    this.devMode = newMode;
+    sendPlayerStates(this, true, true);
+  }
   boundVelocity() {
     if (this.vel.x > maxVel) {
       this.vel.x = maxVel;
@@ -519,7 +551,7 @@ export class Player {
     setCam(camX, camY);
   }
   updateTick(deltaTime) {
-    if (player.isDead) {
+    if (this.id == player.id && player.isDead) {
       setGameState(GameState.FINISHED);
       return;
     }
@@ -529,16 +561,16 @@ export class Player {
       this.updatePlayerVelocity(deltaTime);
       this.bouncePlayer();
       this.updatePlayerPosition(deltaTime);
-      if (this.u) {
+      if (this.u && this.devMode) {
         //this is a debug cheat
-        this.setInvincibleTimer(this.invincibleTimer + 10);
-        this.specialMeter += 10;
+        this.setInvincibleTimer(this.invincibleTimer + 100);
+        this.setSpecialMeter(this.specialMeter + 100);
       }
-      if (this.invincibleTimer > 0) {
+      if (this.invincibleTimer > 0 && !this.devMode) {
         this.setInvincibleTimer(this.invincibleTimer - 1);
         if (this.invincibleTimer == 0) {
           //trying out different comboScaler end
-          // this.comboScaler = 1;
+          //  this.setComboScaler(1);
         }
       }
       if (this.specialMeter < maxSpecialMeter) {
@@ -556,7 +588,7 @@ export class Player {
       if (this.recentScoreTicks > 0) {
         this.recentScoreTicks = Math.max(this.recentScoreTicks - 1, 0);
         if (this.recentScoreTicks == 0) {
-          this.comboScaler = 1;
+          this.setComboScaler(1);
         }
       }
     }
@@ -620,7 +652,7 @@ export function createBotFromObject(obj) {
   bot.shift = obj.shift;
   bot.u = obj.u;
   bot.forceCoolDown = obj.forceCoolDown;
-  bot.comboScaler = obj.comboScaler;
+  bot.setComboScaler(obj.comboScaler);
   bot.kills = obj.kills;
   bot.ticksSincePowerUpCollection = obj.ticksSincePowerUpCollection;
   bot.timeSinceSpawned = obj.timeSinceSpawned;
@@ -648,11 +680,14 @@ export class Bot extends Player {
     this.botState = BotState.FOLLOW_PLAYER;
     this.followingPlayerID = "";
     this.timeOfLastMessage = "";
-    this.timeOfLastActive = "";
     this.randomTarget = { x: 0, y: 0, id: "" };
     this.inRangeTicks = 0;
     this.isBot = true;
     this.inForce = 0;
+  }
+  resetState(keepName, keepColor) {
+    super.resetState(keepName, keepColor);
+    this.setIsDead(false);
   }
 
   updateTick(deltaTime) {

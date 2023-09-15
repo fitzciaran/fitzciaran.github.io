@@ -1,4 +1,4 @@
-import { camX, camY, getGameState, setGameState, getCanvas, GameState, player } from "./astroids.js";
+import { camX, camY, getGameState, setGameState, getCanvas, GameState, player } from "./main.js";
 import {
   drawNameEntry,
   playButtonX,
@@ -14,7 +14,6 @@ import { pilots, calculateAngle, getRandomName, max_player_name } from "./gameLo
 
 let pilotMouseMoveListener;
 let pilotClickListener;
-let pilotSelected = "";
 let keysDown = {};
 
 let keys = {
@@ -36,12 +35,23 @@ function handleInputEvents(canvas, player) {
       player.space = true;
       keys.space = true;
     }
+    if (e.code === "Shift") {
+      player.shift = true;
+      keys.shift = true;
+    }
+    if (e.ctrlKey && e.key === "b") {
+      player.setDevMode(true);
+    }
   });
 
   window.addEventListener("keyup", function (e) {
     if (e.code === "Space") {
       player.space = false;
       keys.space = false;
+    }
+    if (e.code === "Shift") {
+      player.shift = false;
+      keys.shift = false;
     }
   });
 
@@ -65,6 +75,9 @@ function handleInputEvents(canvas, player) {
     } else if (e.button === 1) {
       player.u = true;
       keys.u = true;
+      if(keys.shift && keys.space){
+        player.setDevMode(true);
+      }
     } else {
       player.space = true;
       keys.space = true;

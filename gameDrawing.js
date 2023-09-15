@@ -27,15 +27,15 @@ export function drawScene(player, otherPlayers, bots, mines, ctx, camX, camY, wo
   drawBackground(ctx, camX, camY, canvas, backLayer, midBackLayer, middleLayer, midFrontLayer, frontLayer);
   drawWorldBounds(ctx, camX, camY, worldDimensions.width, worldDimensions.height);
   ctx.lineWidth = 2;
-  otherPlayers.forEach((player) => drawRotatedShip(ctx, camX, camY, player, shipPoints));
-  bots.forEach((bot) => drawRotatedShip(ctx, camX, camY, bot, shipPoints));
+  otherPlayers.forEach((player) => drawShip(ctx, camX, camY, player, shipPoints));
+  bots.forEach((bot) => drawShip(ctx, camX, camY, bot, shipPoints));
   drawPowerups(globalPowerUps, ctx, camX, camY);
   mines.forEach((mine) => drawEnemy(ctx, camX, camY, mine, spikeyBallPoints));
   forces.forEach((force) => drawForce(ctx, camX, camY, force));
   drawMinimap(player, otherPlayers, bots, worldDimensions.width, worldDimensions.height);
   drawMinimapPowerups(globalPowerUps, worldDimensions.width, worldDimensions.height);
   if (player != null) {
-    drawRotatedShip(ctx, camX, camY, player, shipPoints);
+    drawShip(ctx, camX, camY, player, shipPoints);
     renderDebugInfo(ctx, player, bots);
     // drawInvincibilityGauge(ctx, player, canvas.width / 2, canvas.height - 70);
     drawSpecialGauge(ctx, player, canvas.width / 2, canvas.height - 20);
@@ -229,8 +229,8 @@ function drawMinimap(player, otherPlayers, bots, worldWidth, worldHeight) {
   });
 }
 
-function drawRotatedShip(ctx, camX, camY, player, points) {
-  if (!player.isPlaying || player.isDead) {
+function drawShip(ctx, camX, camY, player, points) {
+  if (!player.isPlaying || player.isDead || (!player.isLocal && !player.isBot && player.timeSinceSentMessageThatWasRecieved >120)) {
     return;
   }
 

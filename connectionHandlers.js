@@ -1,4 +1,4 @@
-import { otherPlayers } from "./astroids.js";
+import { otherPlayers } from "./main.js";
 
 import { shuffleArray } from "./gameLogic.js";
 
@@ -7,14 +7,15 @@ import { Player } from "./player.js";
 export let everConnected = false;
 export let connections = [];
 export let peerIds = [
-  "a7ef962d-14a8-40e4-8a1e-226a438a3454",
-  "b7ef962d-14a8-40e4-8a1e-226a438a3454",
-  "c7ef962d-14a8-40e4-8a1e-226a438a3454",
-  "d7ef962d-14a8-40e4-8a1e-226a438a3454",
-  "e7ef962d-14a8-40e4-8a1e-226a438a3454",
-  "a6ef962d-14a8-40e4-8a1e-226a438a3454",
-  "b6ef962d-14a8-40e4-8a1e-226a438a3454",
+  "a7ef962d-14a8-40e4-8a1e-226a438a3321",
+  "b7ef962d-14a8-40e4-8a1e-226a438a3321",
+  "c7ef962d-14a8-40e4-8a1e-226a438a3321",
+  "d7ef962d-14a8-40e4-8a1e-226a438a3321",
+  "e7ef962d-14a8-40e4-8a1e-226a438a3321",
+  "a6ef962d-14a8-40e4-8a1e-226a438a3321",
+  "b6ef962d-14a8-40e4-8a1e-226a438a3321",
 ];
+let reconnectionAttempts = 0;
 shuffleArray(peerIds);
 export let ticksSinceLastConnectionAttempt = 0;
 export function setTicksSinceLastConnectionAttempt(newTime) {
@@ -51,7 +52,7 @@ export function attemptConnections(player, otherPlayers, globalPowerUps) {
     setTimeout(() => createPeer(player, otherPlayers, globalPowerUps), connectionBackOffTime);
     return;
   }
-  verifyPeerHealth();
+  verifyPeerHealth(player, otherPlayers, globalPowerUps);
   peer.on("connection", function (conn) {
     console.log("Connection made with peer:", conn.peer);
     everConnected = true;
@@ -110,14 +111,14 @@ export function checkAndReplaceConnectionsFromId(id, player, otherPlayers, globa
   if (!existingConnection || !existingConnection.open) {
     // If the connection doesn't exist or is closed, retry it
     let conn = null;
-    verifyPeerHealth();
+    verifyPeerHealth(player, otherPlayers, globalPowerUps);
     if (peer && !peer.disconnected) {
       conn = peer.connect(id);
     } else {
       console.log("peer undefined/closed/disconneced in connect to peers");
       if (peer) {
-        console.log("peer open: " + peer.open);
-        console.log("peer disconnected: " + peer.disconnected);
+        // console.log("peer open: " + peer.open);
+        // console.log("peer disconnected: " + peer.disconnected);
       }
     }
     checkAndReplaceConnection(conn, existingConnection, player, otherPlayers, globalPowerUps);
@@ -145,7 +146,26 @@ export function checkAndReplaceConnection(conn, existingConnection, player, othe
   }
 }
 
-export function createPeer(player, otherPlayers, globalPowerUps) {
+export function createPeer(player, otherPlayers, globalPowerUps, reconnectionAttempts = -1) {
+  if (!reconnectionAttempts == -1) {
+    reconnectionAttempts++;
+    let rand = Math.random();
+    if (reconnectionAttempts > 20) {
+      if (rand > 0.1) {
+        return;
+      }
+    }
+    if (reconnectionAttempts > 10) {
+      if (rand > 0.2) {
+        return;
+      }
+    }
+    if (reconnectionAttempts > 3) {
+      if (rand > 0.5) {
+        return;
+      }
+    }
+  }
   if (index >= peerIds.length) {
     console.log("All IDs are in use - createPeer function");
     resolveConnectionConflicts(player, otherPlayers, globalPowerUps);
@@ -154,7 +174,7 @@ export function createPeer(player, otherPlayers, globalPowerUps) {
 
   let id = peerIds[index];
   setPeer(new Peer(id)); // Assign the new Peer to the peer variable
-  verifyPeerHealth();
+  verifyPeerHealth(player, otherPlayers, globalPowerUps);
   peer.on("open", function () {
     // If the ID is already in use, this will not be called
     player.id = id;
@@ -171,7 +191,7 @@ export function createPeer(player, otherPlayers, globalPowerUps) {
       console.log("ID is in use:", id);
       index++;
 
-      createPeer(player, otherPlayers, globalPowerUps);
+      createPeer(player, otherPlayers, globalPowerUps, reconnectionAttempts);
     } else if (err.type === "browser-incompatible") {
       console.log("browser incompatible:", err);
       //console.log("Other error:");
@@ -180,22 +200,29 @@ export function createPeer(player, otherPlayers, globalPowerUps) {
       //console.log("Other error:");
     }
   });
-  peer.on('close', () => {
-    console.log('Connection to signaling server closed. Attempting to reconnect...');
-    createPeer(player, otherPlayers, globalPowerUps);
-});
+  peer.on("close", () => {
+    //peer.destroy();
+    // console.log("Connection to signaling server closed. Attempting to reconnect...");
+    // createPeer(player, otherPlayers, globalPowerUps);
+    console.log("Connection to signaling server closed. ");
+    if (peer.disconnected) {
+      peer.destroy();
+      createPeer(player, otherPlayers, globalPowerUps);
+    }
+  });
 }
 
-function verifyPeerHealth() {
+function verifyPeerHealth(player, otherPlayers, globalPowerUps) {
   // Check if peer.disconnected is true
   if (peer.disconnected) {
     console.log("peer was disconnected");
-    try{
-    // Attempt to reconnect
-    peer.reconnect();
-    }catch(error){
+    try {
+      // Attempt to reconnect
+      peer.reconnect();
+    } catch (error) {
       console.log("error reconnecting peer: " + error);
-      createPeer(player, otherPlayers, globalPowerUps);
+      index = 0;
+      createPeer(player, otherPlayers, globalPowerUps, reconnectionAttempts);
     }
     // Listen for the 'open' event to determine if the reconnection was successful
     // peer.on("open", () => {
@@ -215,19 +242,16 @@ function verifyPeerHealth() {
     // });
   }
   if (!peer.open) {
-    console.log("peer was closed");
-   
+    // console.log("peer was closed");
     // // Listen for the 'open' event to determine when the Peer connection becomes open
     // peer.on("open", () => {
     //   // The Peer connection is now open, you can proceed to create connections
     //   const conn = peer.connect(id);
-
     //   // Handle the connection as needed
     //   conn.on("open", () => {
     //     // Connection is open and ready to send data
     //     console.log("Connected to peer:", conn.peer);
     //   });
-
     //   conn.on("data", (data) => {
     //     // Handle incoming data
     //     console.log("Received data:", data);
@@ -290,7 +314,7 @@ function addConnectionHandlers(player, otherPlayers, conn, globalPowerUps) {
 
   conn.on("data", function (data) {
     //console.log("Received data:", data);
-    if ((data && data.id) || (data && data.globalPowerUps) || (data && data.bots)) {
+    if ((data && data.id) || (data && data.globalPowerUps) || (data && data.bots) || (data && data.requestForFullStates)) {
       handleData(player, otherPlayers, globalPowerUps, data);
     } else {
       console.log("Received unexpected data:", data);

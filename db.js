@@ -10,7 +10,7 @@ let firebaseConfig = {
   
   let db = firebase.firestore();
 
-  export function addScore(category, name, score) {
+  export function addScoreToDB(category, name, score) {
     var collection = db.collection(category);
   
     // Get the current top 10 scores

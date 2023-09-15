@@ -9,7 +9,7 @@ import {
   setOtherPlayers,
   fixedDeltaTime,
   globalPowerUps,
-} from "./astroids.js";
+} from "./main.js";
 import {
   connections,
   connectedPeers,
@@ -37,63 +37,146 @@ import { createBotFromObject, Player, createPlayerFromObject, serializeBots } fr
 
 let handleCounter = 0;
 let sendCounter = 0;
+let lastSentPlayerData = [];
 
-export function sendPlayerStates(playerToSend, isMaster) {
-  // Check if connection is open before sending data
-  // Send player state to other players
+export function sendRequestForStates() {
   let data = {
     timestamp: Date.now(),
-    priority: 3,
+    priority: 2,
+    fromMaster: isPlayerMasterPeer(player),
+    requestForFullStates: true,
+  };
+  sendData(data);
+}
+// Send player state to other connected players
+export function sendPlayerStates(playerToSend, isMaster, sendFullerData = false) {
+  if (Math.random() > 0.99) {
+    //every so often we will send the full data just to be sure master is in sync with important properties which don't often change
+    sendFullerData = true;
+  }
+  let priority = 3;
+  if(sendFullerData){
+    priority = 2;
+  }
+  let data = {
+    timestamp: Date.now(),
+    priority: priority,
     fromMaster: isPlayerMasterPeer(player),
     id: playerToSend.id,
-    x: playerToSend.x,
-    y: playerToSend.y,
-    powerUps: playerToSend.powerUps,
-    color: playerToSend.color,
-    angle: playerToSend.angle,
-    pilot: playerToSend.pilot,
-    isBot: playerToSend.isBot,
-    special: playerToSend.special,
-    name: playerToSend.name,
-    lives: playerToSend.lives,
-    isMaster: playerToSend.isMaster,
-    isPlaying: playerToSend.isPlaying,
-    invincibleTimer: playerToSend.invincibleTimer,
-    forceCoolDown: playerToSend.forceCoolDown,
-    comboScaler: playerToSend.comboScaler,
-    kills: playerToSend.kills,
-    playerAngleData: playerToSend.playerAngleData,
-    mousePosX: playerToSend.mousePosX,
-    mousePosY: playerToSend.mousePosY,
-    currentSpeed: playerToSend.currentSpeed,
-    vel: playerToSend.vel,
-    distanceFactor: playerToSend.distanceFactor,
-    space: playerToSend.space,
-    shift: playerToSend.shift,
-    ticksSincePowerUpCollection: playerToSend.ticksSincePowerUpCollection,
-    targetedBy: playerToSend.targetedBy,
-    timeOfLastActive: playerToSend.timeOfLastActive,
-    hitBy: playerToSend.hitBy,
-    recentScoreTicks: playerToSend.recentScoreTicks,
-    recentScoreText: playerToSend.recentScoreText,
+    // invincibleTimer: playerToSend.invincibleTimer,
   };
-  if (isMaster) {
-    //only master sends is dead message since it is the abibter of collisions
-    data.isDead = playerToSend.isDead;
-  } else {
-    //only player sends timeSinceSpawned because it know when it has reset
-    data.timeSinceSpawned = playerToSend.timeSinceSpawned;
+
+  // Define a function to add properties to the data object if they have changed
+  function addPropertyIfChanged(propertyKey, playerKey) {
+    if (lastSentPlayerData[propertyKey] !== playerToSend[playerKey]) {
+      if (playerToSend[playerKey] == null) {
+        console.log("null property in send player state");
+        return false;
+      }
+      data[propertyKey] = playerToSend[playerKey];
+      lastSentPlayerData[propertyKey] = playerToSend[playerKey];
+
+      return true; // Indicates that the property was changed
+    }
+    return false; // Indicates that the property was not changed
   }
+
+  function addProperty(propertyKey, playerKey) {
+    if (playerToSend[playerKey] == null) {
+      console.log("null property in send player state");
+      return false;
+    }
+    data[propertyKey] = playerToSend[playerKey];
+    lastSentPlayerData[propertyKey] = playerToSend[playerKey];
+
+    return true;
+  }
+
+  let newDataToSend = false;
+  newDataToSend = addPropertyIfChanged("x", "x") || newDataToSend;
+  newDataToSend = addPropertyIfChanged("y", "y") || newDataToSend;
+  newDataToSend = addPropertyIfChanged("powerUps", "powerUps") || newDataToSend;
+  newDataToSend = addPropertyIfChanged("invincibleTimer", "invincibleTimer") || newDataToSend;
+  if (sendFullerData) {
+    newDataToSend = addProperty("color", "color") || newDataToSend;
+    newDataToSend = addProperty("pilot", "pilot") || newDataToSend;
+    newDataToSend = addProperty("name", "name") || newDataToSend;
+    newDataToSend = addProperty("lives", "lives") || newDataToSend;
+    newDataToSend = addProperty("isMaster", "isMaster") || newDataToSend;
+    newDataToSend = addProperty("ticksSincePowerUpCollection", "ticksSincePowerUpCollection") || newDataToSend;
+    newDataToSend = addProperty("targetedBy", "targetedBy") || newDataToSend;
+    newDataToSend = addProperty("timeOfLastActive", "timeOfLastActive") || newDataToSend;
+    newDataToSend = addProperty("hitBy", "hitBy") || newDataToSend;
+    newDataToSend = addProperty("recentScoreTicks", "recentScoreTicks") || newDataToSend;
+    newDataToSend = addProperty("recentScoreText", "recentScoreText") || newDataToSend;
+    newDataToSend = addProperty("kills", "kills") || newDataToSend;
+    newDataToSend = addProperty("angle", "angle") || newDataToSend;
+    newDataToSend = addProperty("isBot", "isBot") || newDataToSend;
+    newDataToSend = addProperty("special", "special") || newDataToSend;
+    newDataToSend = addProperty("devMode", "devMode") || newDataToSend;
+  } else {
+    newDataToSend = addPropertyIfChanged("color", "color") || newDataToSend;
+    newDataToSend = addPropertyIfChanged("pilot", "pilot") || newDataToSend;
+    newDataToSend = addPropertyIfChanged("name", "name") || newDataToSend;
+    newDataToSend = addPropertyIfChanged("lives", "lives") || newDataToSend;
+    newDataToSend = addPropertyIfChanged("isMaster", "isMaster") || newDataToSend;
+    newDataToSend = addPropertyIfChanged("ticksSincePowerUpCollection", "ticksSincePowerUpCollection") || newDataToSend;
+    newDataToSend = addPropertyIfChanged("targetedBy", "targetedBy") || newDataToSend;
+    newDataToSend = addPropertyIfChanged("timeOfLastActive", "timeOfLastActive") || newDataToSend;
+    newDataToSend = addPropertyIfChanged("hitBy", "hitBy") || newDataToSend;
+    newDataToSend = addPropertyIfChanged("recentScoreTicks", "recentScoreTicks") || newDataToSend;
+    newDataToSend = addPropertyIfChanged("recentScoreText", "recentScoreText") || newDataToSend;
+    newDataToSend = addPropertyIfChanged("kills", "kills") || newDataToSend;
+    newDataToSend = addPropertyIfChanged("angle", "angle") || newDataToSend;
+    newDataToSend = addPropertyIfChanged("isBot", "isBot") || newDataToSend;
+    newDataToSend = addPropertyIfChanged("special", "special") || newDataToSend;
+    newDataToSend = addPropertyIfChanged("devMode", "devMode") || newDataToSend;
+
+  }
+
+  // newDataToSend = addPropertyIfChanged("invincibleTimer", "invincibleTimer") || newDataToSend;
+
+  newDataToSend = addPropertyIfChanged("forceCoolDown", "forceCoolDown") || newDataToSend;
+  newDataToSend = addPropertyIfChanged("comboScaler", "comboScaler") || newDataToSend;
+  newDataToSend = addPropertyIfChanged("playerAngleData", "playerAngleData") || newDataToSend;
+  newDataToSend = addPropertyIfChanged("mousePosX", "mousePosX") || newDataToSend;
+  newDataToSend = addPropertyIfChanged("mousePosY", "mousePosY") || newDataToSend;
+  newDataToSend = addPropertyIfChanged("currentSpeed", "currentSpeed") || newDataToSend;
+  newDataToSend = addPropertyIfChanged("vel", "vel") || newDataToSend;
+  newDataToSend = addPropertyIfChanged("distanceFactor", "distanceFactor") || newDataToSend;
+  newDataToSend = addPropertyIfChanged("space", "space") || newDataToSend;
+  newDataToSend = addPropertyIfChanged("shift", "shift") || newDataToSend;
+
+  if (isMaster || sendFullerData) {
+    //only master sends is dead message since it is the abibter of collisions, apart from sendFullerData
+    if (lastSentPlayerData.isDead != playerToSend.isDead || sendFullerData) {
+      newDataToSend = true;
+      data.isDead = playerToSend.isDead;
+      lastSentPlayerData.isDead = playerToSend.isDead;
+    }
+  }
+  if (!isMaster) {
+    //only player sends timeSinceSpawned because it know when it has reset
+    if (newDataToSend) {
+      data.timeSinceSpawned = playerToSend.timeSinceSpawned;
+    }
+  }
+  if (newDataToSend) {
+    sendData(data);
+  }
+}
+
+function sendData(data) {
   connections.forEach((conn) => {
     if (conn && conn.open) {
       try {
         conn.send(data);
-        sendCounter++;
-        // Log the data every 1000 calls
-        if (sendCounter === 5000) {
-          // console.log("sending data:", data);
-          sendCounter = 0; // reset the counter
-        }
+        // sendCounter++;
+        // // Log the data every 1000 calls
+        // if (sendCounter === 5000) {
+        //   // console.log("sending data:", data);
+        //   sendCounter = 0; // reset the counter
+        // }
       } catch (error) {
         console.error("Error sending data:", error);
       }
@@ -184,6 +267,10 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
     console.log("master conflict");
     return;
   }
+  if (data.requestForFullStates) {
+    sendPlayerStates(player, isPlayerMasterPeer(player), true);
+    return;
+  }
   //console.log("handling data:");
   // Find the otherPlayer in the array
 
@@ -191,38 +278,136 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
     otherPlayer = findBotById(data.id);
   }
   // If the player is found, update their data
+  // if (otherPlayer) {
+  //   otherPlayer.x = data.x;
+  //   otherPlayer.y = data.y;
+  //   otherPlayer.powerUps = data.powerUps;
+  //   otherPlayer.color = data.color;
+  //   otherPlayer.angle = data.angle;
+  //   otherPlayer.pilot = data.pilot;
+  //   otherPlayer.isBot = data.isBot;
+  //   otherPlayer.special = data.special;
+  //   otherPlayer.name = data.name;
+  //   otherPlayer.lives = data.lives;
+  //   otherPlayer.isMaster = data.isMaster;
+  //   otherPlayer.setIsDead(data.isDead);
+  //   otherPlayer.isPlaying = data.isPlaying;
+  //   otherPlayer.setInvincibleTimer(data.invincibleTimer);
+  //   otherPlayer.forceCoolDown = data.forceCoolDown;
+  //   otherPlayer.comboScaler = data.comboScaler;
+  //   otherPlayer.kills = data.kills;
+  //   otherPlayer.playerAngleData = data.playerAngleData;
+  //   otherPlayer.mousePosX = data.mousePosX;
+  //   otherPlayer.mousePosY = data.mousePosY;
+  //   otherPlayer.currentSpeed = data.currentSpeed;
+  //   otherPlayer.vel = data.vel;
+  //   otherPlayer.distanceFactor = data.distanceFactor;
+  //   otherPlayer.space = data.space;
+  //   otherPlayer.shift = data.shift;
+  //   otherPlayer.ticksSincePowerUpCollection = data.ticksSincePowerUpCollection;
+  //   otherPlayer.targetedBy = data.targetedBy;
+  //   otherPlayer.timeOfLastActive = data.timeOfLastActive;
+  //   otherPlayer.hitBy = data.hitBy;
+  //   otherPlayer.recentScoreTicks = data.recentScoreTicks;
+  //   otherPlayer.recentScoreText = data.recentScoreText;
+  // If the player is found, update their data
   if (otherPlayer) {
-    otherPlayer.x = data.x;
-    otherPlayer.y = data.y;
-    otherPlayer.powerUps = data.powerUps;
-    otherPlayer.color = data.color;
-    otherPlayer.angle = data.angle;
-    otherPlayer.pilot = data.pilot;
-    otherPlayer.isBot = data.isBot;
-    otherPlayer.special = data.special;
-    otherPlayer.name = data.name;
-    otherPlayer.lives = data.lives;
-    otherPlayer.isMaster = data.isMaster;
-    otherPlayer.setIsDead(data.isDead);
-    otherPlayer.isPlaying = data.isPlaying;
-    otherPlayer.setInvincibleTimer(data.invincibleTimer);
-    otherPlayer.forceCoolDown = data.forceCoolDown;
-    otherPlayer.comboScaler = data.comboScaler;
-    otherPlayer.kills = data.kills;
-    otherPlayer.playerAngleData = data.playerAngleData;
-    otherPlayer.mousePosX = data.mousePosX;
-    otherPlayer.mousePosY = data.mousePosY;
-    otherPlayer.currentSpeed = data.currentSpeed;
-    otherPlayer.vel = data.vel;
-    otherPlayer.distanceFactor = data.distanceFactor;
-    otherPlayer.space = data.space;
-    otherPlayer.shift = data.shift;
-    otherPlayer.ticksSincePowerUpCollection = data.ticksSincePowerUpCollection;
-    otherPlayer.targetedBy = data.targetedBy;
-    otherPlayer.timeOfLastActive = data.timeOfLastActive;
-    otherPlayer.hitBy = data.hitBy;
-    otherPlayer.recentScoreTicks = data.recentScoreTicks;
-    otherPlayer.recentScoreText = data.recentScoreText;
+    if (data.hasOwnProperty("x")) {
+      otherPlayer.x = data.x;
+    }
+    if (data.hasOwnProperty("y")) {
+      otherPlayer.y = data.y;
+    }
+    if (data.hasOwnProperty("powerUps")) {
+      otherPlayer.powerUps = data.powerUps;
+    }
+    if (data.hasOwnProperty("color")) {
+      otherPlayer.color = data.color;
+    }
+    if (data.hasOwnProperty("angle")) {
+      otherPlayer.angle = data.angle;
+    }
+    if (data.hasOwnProperty("devMode")) {
+      otherPlayer.devMode = data.devMode;
+    }
+    if (data.hasOwnProperty("pilot")) {
+      otherPlayer.pilot = data.pilot;
+    }
+    if (data.hasOwnProperty("isBot")) {
+      otherPlayer.isBot = data.isBot;
+    }
+    if (data.hasOwnProperty("special")) {
+      otherPlayer.special = data.special;
+    }
+    if (data.hasOwnProperty("name")) {
+      otherPlayer.name = data.name;
+    }
+    if (data.hasOwnProperty("lives")) {
+      otherPlayer.lives = data.lives;
+    }
+    if (data.hasOwnProperty("isMaster")) {
+      otherPlayer.isMaster = data.isMaster;
+    }
+    if (data.hasOwnProperty("isDead")) {
+      otherPlayer.setIsDead(data.isDead);
+    }
+    if (data.hasOwnProperty("isPlaying")) {
+      otherPlayer.isPlaying = data.isPlaying;
+    }
+    if (data.hasOwnProperty("invincibleTimer")) {
+      otherPlayer.setInvincibleTimer(data.invincibleTimer);
+    }
+    if (data.hasOwnProperty("forceCoolDown")) {
+      otherPlayer.forceCoolDown = data.forceCoolDown;
+    }
+    if (data.hasOwnProperty("comboScaler")) {
+      otherPlayer.setComboScaler(data.comboScaler);
+    }
+    if (data.hasOwnProperty("kills")) {
+      otherPlayer.kills = data.kills;
+    }
+    if (data.hasOwnProperty("playerAngleData")) {
+      otherPlayer.playerAngleData = data.playerAngleData;
+    }
+    if (data.hasOwnProperty("mousePosX")) {
+      otherPlayer.mousePosX = data.mousePosX;
+    }
+    if (data.hasOwnProperty("mousePosY")) {
+      otherPlayer.mousePosY = data.mousePosY;
+    }
+    if (data.hasOwnProperty("currentSpeed")) {
+      otherPlayer.currentSpeed = data.currentSpeed;
+    }
+    if (data.hasOwnProperty("vel")) {
+      otherPlayer.vel = data.vel;
+    }
+    if (data.hasOwnProperty("distanceFactor")) {
+      otherPlayer.distanceFactor = data.distanceFactor;
+    }
+    if (data.hasOwnProperty("space")) {
+      otherPlayer.space = data.space;
+    }
+    if (data.hasOwnProperty("shift")) {
+      otherPlayer.shift = data.shift;
+    }
+    if (data.hasOwnProperty("ticksSincePowerUpCollection")) {
+      otherPlayer.ticksSincePowerUpCollection = data.ticksSincePowerUpCollection;
+    }
+    if (data.hasOwnProperty("targetedBy")) {
+      otherPlayer.targetedBy = data.targetedBy;
+    }
+    if (data.hasOwnProperty("timeOfLastActive")) {
+      otherPlayer.timeOfLastActive = data.timeOfLastActive;
+    }
+    if (data.hasOwnProperty("hitBy")) {
+      otherPlayer.hitBy = data.hitBy;
+    }
+    if (data.hasOwnProperty("recentScoreTicks")) {
+      otherPlayer.recentScoreTicks = data.recentScoreTicks;
+    }
+    if (data.hasOwnProperty("recentScoreText")) {
+      otherPlayer.recentScoreText = data.recentScoreText;
+    }
 
     if (isPlayerMasterPeer(player) && otherPlayer.isMaster && !otherPlayer.isBot) {
       wrappedResolveConflicts(player, otherPlayers, globalPowerUps);
@@ -241,27 +426,112 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
     // if (data.powerUps > pointsToWin) {
     //   checkWinner(otherPlayer, otherPlayers);
     // }
+    // } else if (data.id && data.id == player.id) {
+    //   //if this is our own data we only update key properties from the master, not position, velocity etc
+    //   player.powerUps = data.powerUps;
+    //   player.comboScaler = data.comboScaler;
+    //   player.setIsDead(data.isDead);
+    //   if (data.isDead) {
+    //     player.vel.x = 0;
+    //     player.vel.y = 0;
+    //   }
+    //   player.lives = data.lives;
+    //   player.hitBy = data.hitBy;
+    //   player.kills = data.kills;
+    //   player.setInvincibleTimer(data.invincibleTimer);
+    //   player.ticksSincePowerUpCollection = data.ticksSincePowerUpCollection;
+    //   player.powerUps = data.powerUps;
+    //   player.recentScoreTicks = data.recentScoreTicks;
+    //   player.recentScoreText = data.recentScoreText;
+    //   if (player.hitBy != null && player.hitBy != "") {
+    //     setEndGameMessage("Killed by: " + player.hitBy + "\nScore: " + player.powerUps * 100);
+    //   } else {
+    //     setEndGameMessage("Score: " + player.powerUps * 100);
+    //   }
+    // }
   } else if (data.id && data.id == player.id) {
-    //if this is our own data we only update key properties from the master, not position, velocity etc
-    player.powerUps = data.powerUps;
-    player.comboScaler = data.comboScaler;
-    player.setIsDead(data.isDead);
-    if (data.isDead) {
-      player.vel.x = 0;
-      player.vel.y = 0;
+    // If this is our own data, update key properties from the master, not position, velocity, etc.
+
+    if (data.hasOwnProperty("powerUps")) {
+      player.powerUps = data.powerUps;
     }
-    player.lives = data.lives;
-    player.hitBy = data.hitBy;
-    player.kills = data.kills;
-    player.setInvincibleTimer(data.invincibleTimer);
-    player.ticksSincePowerUpCollection = data.ticksSincePowerUpCollection;
-    player.powerUps = data.powerUps;
-    player.recentScoreTicks = data.recentScoreTicks;
-    player.recentScoreText = data.recentScoreText;
-    if (player.hitBy != null && player.hitBy != "") {
-      setEndGameMessage("Killed by: " + player.hitBy + "\nScore: " + player.powerUps * 100);
-    } else {
-      setEndGameMessage("Score: " + player.powerUps * 100);
+    if (data.hasOwnProperty("comboScaler")) {
+      player.setComboScaler(data.comboScaler);
+    }
+    if (data.hasOwnProperty("isDead")) {
+      player.setIsDead(data.isDead);
+      if (data.isDead) {
+        player.vel.x = 0;
+        player.vel.y = 0;
+      }
+    }
+    if (data.hasOwnProperty("lives")) {
+      player.lives = data.lives;
+    }
+    if (data.hasOwnProperty("hitBy")) {
+      player.hitBy = data.hitBy;
+      if (player.hitBy != null && player.hitBy != "") {
+        setEndGameMessage("Killed by: " + player.hitBy + "\nScore: " + player.powerUps * 100);
+      } else {
+        setEndGameMessage("Score: " + player.powerUps * 100);
+      }
+    }
+    if (data.hasOwnProperty("kills")) {
+      player.kills = data.kills;
+    }
+    if (data.hasOwnProperty("invincibleTimer")) {
+      player.setInvincibleTimer(data.invincibleTimer);
+    }
+    if (data.hasOwnProperty("ticksSincePowerUpCollection")) {
+      player.ticksSincePowerUpCollection = data.ticksSincePowerUpCollection;
+    }
+    if (data.hasOwnProperty("recentScoreTicks")) {
+      player.recentScoreTicks = data.recentScoreTicks;
+    }
+    if (data.hasOwnProperty("recentScoreText")) {
+      player.recentScoreText = data.recentScoreText;
+    }
+  } else if (data.id && data.id == player.id) {
+    // If this is our own data, update key properties from the master, not position, velocity, etc.
+
+    if (data.hasOwnProperty("powerUps")) {
+      player.powerUps = data.powerUps;
+    }
+    if (data.hasOwnProperty("comboScaler")) {
+      player.setComboScaler(data.comboScaler);
+    }
+    if (data.hasOwnProperty("isDead")) {
+      player.setIsDead(data.isDead);
+      if (data.isDead) {
+        player.vel.x = 0;
+        player.vel.y = 0;
+      }
+    }
+    if (data.hasOwnProperty("lives")) {
+      player.lives = data.lives;
+    }
+    if (data.hasOwnProperty("hitBy")) {
+      player.hitBy = data.hitBy;
+      if (player.hitBy != null && player.hitBy != "") {
+        setEndGameMessage("Killed by: " + player.hitBy + "\nScore: " + player.powerUps * 100);
+      } else {
+        setEndGameMessage("Score: " + player.powerUps * 100);
+      }
+    }
+    if (data.hasOwnProperty("kills")) {
+      player.kills = data.kills;
+    }
+    if (data.hasOwnProperty("invincibleTimer")) {
+      player.setInvincibleTimer(data.invincibleTimer);
+    }
+    if (data.hasOwnProperty("ticksSincePowerUpCollection")) {
+      player.ticksSincePowerUpCollection = data.ticksSincePowerUpCollection;
+    }
+    if (data.hasOwnProperty("recentScoreTicks")) {
+      player.recentScoreTicks = data.recentScoreTicks;
+    }
+    if (data.hasOwnProperty("recentScoreText")) {
+      player.recentScoreText = data.recentScoreText;
     }
   }
   // Only update the powerups if the received data contains different powerups
@@ -309,7 +579,7 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
         localBot.shift = receivedBot.shift;
         localBot.u = receivedBot.u;
         localBot.forceCoolDown = receivedBot.forceCoolDown;
-        localBot.comboScaler = receivedBot.comboScaler;
+        localBot.setComboScaler(receivedBot.comboScaler);
         localBot.kills = receivedBot.kills;
         localBot.ticksSincePowerUpCollection = receivedBot.ticksSincePowerUpCollection;
         localBot.timeSinceSpawned = receivedBot.timeSinceSpawned;

@@ -1,7 +1,7 @@
 import { maxInvincibilityTime, maxSpecialMeter } from "./gameLogic.js";
 import { isPlayerMasterPeer, timeSinceAnyMessageRecieved, timeSinceMessageFromMaster } from "./connectionHandlers.js";
 import { BotState, Player } from "./player.js";
-import { executionTime } from "./astroids.js";
+import { executionTime } from "./main.js";
 
 export function renderDebugInfo(ctx, player, bots) {
   ctx.textAlign = "start";

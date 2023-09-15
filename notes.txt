@@ -292,3 +292,20 @@ way to throw away peerjs messages?
 
 
 spawn check that itterates through all current objects and gives space (could just keep rerolling rng until a valid spot? should be fine as long as there's more valid spots than invalid)
+
+power up could have a push point force? (Might have issue with bots getting them?)
+
+if anotherplayer leaves we should remove their character after no message for x time
+
+check getting hit by idle/left (and non drawn otherplayer) check general connection
+
+maybe point forces should have very strong grav right at center...but dont to make slingshot worse.. maybe an actual pos move when near center?
+
+keep track of a list of names that you killed and killed by for flavor text when die and for...
+
+when player becomes master is should request full sends.
+
+slave peers are not receiving info that the master is dead, so still gets rendered and collides
+
+if new player joins and becomes master it takes over the gamestate - bots, mines,powerups,forcepads... 
+    ideally it first takes the current masters state before taking over...not sure how to work that though... 

@@ -18,7 +18,7 @@ import {
 } from "./connectionHandlers.js";
 import { sendPlayerStates } from "./handleData.js";
 import { setupCanvas, setupSpikeyBallPoints } from "./drawingUtils.js";
-import { addScore } from "./db.js";
+import { addScoreToDB } from "./db.js";
 import {
   generatePowerups,
   generateMines,
@@ -170,6 +170,7 @@ function updateGame(deltaTime, playerActive) {
   if (player.isDead) {
     setGameState(GameState.FINISHED);
     player.resetState(true, true);
+    //set player.isPlayer = false here?
   }
 
   setTicksSinceLastConnectionAttempt(ticksSinceLastConnectionAttempt + 1);
@@ -311,11 +312,12 @@ export function setGameState(newState) {
     var date = new Date();
     var dateString = date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate();
     var score = Math.floor(Math.random() * 100) + 1;
-    addScore("daily-" + dateString, player.name, player.powerUps * 100);
+    addScoreToDB("daily-" + dateString, player.name, player.powerUps * 100);
 
     setupWinStateEventListeners(window, canvas);
     if (isPlayerMasterPeer(player)) {
-      sendPlayerStates(player, true);
+      //do we need this special send?
+      sendPlayerStates(player, true,true);
     }
   }
 
@@ -330,8 +332,12 @@ export function setGameState(newState) {
     // setupGameEventListeners(window);
 
     //todo add back in if not to blame
+    player.resetState(true, true);
     player.isPlaying = true;
-    setTimeout(() => connectToPeers(player, otherPlayers, globalPowerUps), 1000);
+    player.setIsDead(false);
+    sendPlayerStates(player, isPlayerMasterPeer(player),true);
+
+    // setTimeout(() => connectToPeers(player, otherPlayers, globalPowerUps), 1000);
     removePilotsEventListeners(canvas);
   }
 

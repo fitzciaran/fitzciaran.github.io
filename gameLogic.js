@@ -1,7 +1,7 @@
-import { setGameState, GameState, player, setMines, bots, otherPlayers, mines } from "./astroids.js";
+import { setGameState, GameState, player, setMines, bots, otherPlayers, mines } from "./main.js";
 import { isPlayerMasterPeer, setTimeSinceMessageFromMaster, timeSinceMessageFromMaster } from "./connectionHandlers.js";
 import { sendPlayerStates, sendEntitiesState } from "./handleData.js";
-import { addScore } from "./db.js";
+import { addScoreToDB } from "./db.js";
 import { forces, Mine, PowerUp, ForceType, ForceArea, Entity } from "./entities.js";
 import { Player, Bot } from "./player.js";
 // import { Bot } from "./bot.js";
@@ -262,6 +262,10 @@ export function checkPlayerCollision(playerToCheck, allPlayers) {
       //don't check collision against self
       continue;
     }
+    if (playerToCheck.timeSinceSentMessageThatWasRecieved > 120) {
+      //don't check collision against idle player
+      continue;
+    }
     let dx = playerToCheck.x - allPlayers[i].x;
     let dy = playerToCheck.y - allPlayers[i].y;
     let distance = Math.sqrt(dx * dx + dy * dy);
@@ -271,7 +275,8 @@ export function checkPlayerCollision(playerToCheck, allPlayers) {
       playerToCheck.isPlaying == true &&
       allPlayers[i].isPlaying == true &&
       !playerToCheck.isDead &&
-      !allPlayers[i].isDead
+      !allPlayers[i].isDead &&
+      !allPlayers[i].timeSinceSentMessageThatWasRecieved <= 120
     ) {
       // assuming hitbox  of both ships is simple radius
       //for now just reset player if a crash
@@ -588,7 +593,9 @@ export function masterUpdateGame(player, globalPowerUps, otherPlayers, bots, del
   if (isPlayerMasterPeer(player)) {
     sendEntitiesState();
   }
-  sendPlayerStates(player, isPlayerMasterPeer(player));
+  if (!player.isDead) {
+    sendPlayerStates(player, isPlayerMasterPeer(player));
+  }
 }
 
 //for now just create 4

@@ -38,7 +38,7 @@ export function drawGameOverMessage(ctx, canvas, message) {
   // Check if the message contains a newline character
   if (message.includes("\n")) {
     const messageParts = message.split("\n");
-    const lineHeight = 70; // Adjust this value as needed for spacing
+    const lineHeight = 90; // Adjust this value as needed for spacing
 
     // Calculate the position for the first part of the message
     const firstPartY = canvas.height / 2 - (lineHeight * messageParts.length) / 2;
@@ -61,7 +61,7 @@ export function drawGameOverMessage(ctx, canvas, message) {
   ctx.font = "20px Arial";
   ctx.fillStyle = "white";
   ctx.textAlign = "center";
-  ctx.fillText("press r to return to main menu", canvas.width / 2, canvas.height / 2 + 40);
+  // ctx.fillText("press r to return to main menu", canvas.width / 2, canvas.height / 2 + 40);
 
   let buttonWidth = 200;
   let buttonHeight = 40;
