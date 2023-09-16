@@ -13,6 +13,7 @@ import { setEndGameMessage } from "./gameLogic.js";
 import { forces, setForces, createMineFromObject, createForceFromObject, createPowerUpFromObject } from "./entities.js";
 import { createBotFromObject, Player } from "./player.js";
 import { differsFrom, findForceById, findBotById, findMineById } from "./gameUtils.js";
+import { sendPlayerStates } from "./sendData.js";
 
 export function handleData(player, otherPlayers, globalPowerUps, data) {
   setTimeSinceAnyMessageRecieved(0);
@@ -132,6 +133,9 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
     }
     if (data.hasOwnProperty("shift")) {
       otherPlayer.shift = data.shift;
+    }
+    if (data.hasOwnProperty("resetting") && data.resetting != null) {
+      otherPlayer.resetting = data.resetting;
     }
     if (data.hasOwnProperty("ticksSincePowerUpCollection")) {
       otherPlayer.ticksSincePowerUpCollection = data.ticksSincePowerUpCollection;
@@ -317,6 +321,9 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
         localBot.lives = receivedBot.lives;
         localBot.space = receivedBot.space;
         localBot.shift = receivedBot.shift;
+        if (receivedBot.resetting != null) {
+          localBot.resetting = receivedBot.resetting;
+        }
         localBot.u = receivedBot.u;
         localBot.forceCoolDown = receivedBot.forceCoolDown;
         localBot.setComboScaler(receivedBot.comboScaler);
@@ -367,12 +374,22 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
         mines.push(createMineFromObject(receivedMine));
       }
     }
-    //if there is a mine in our list that isn't in the master list remove it
-    for (let mineToCheck of mines) {
-      if (mineToCheck.id != null) {
-        let matchingMine = data.mines.find((dataMine) => dataMine.id === mineToCheck.id);
+    // //if there is a mine in our list that isn't in the master list remove it
+    // for (let mineToCheck of mines) {
+    //   if (mineToCheck.id != null) {
+    //     let matchingMine = data.mines.find((dataMine) => dataMine.id === mineToCheck.id);
+    //     if (matchingMine == null) {
+    //       setMines(mines.filter((mine) => mine.id !== mineToCheck.id));
+    //     }
+    //   }
+    // }
+  }
+  if (data.removeMines) {
+    for (let dataMine of data.removeMines) {
+      if (dataMine.id != null) {
+        let matchingMine = mines.find((currentMine) => currentMine.id === dataMine.id);
         if (matchingMine == null) {
-          setMines(mines.filter((mine) => mine.id !== mineToCheck.id));
+          setMines(mines.filter((mine) => mine.id !== dataMine.id));
         }
       }
     }

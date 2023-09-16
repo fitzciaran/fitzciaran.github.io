@@ -1,10 +1,8 @@
 import { setGameState, GameState, player, setMines, bots, otherPlayers, mines, setGameTimer, gameTimer } from "./main.js";
 import { isPlayerMasterPeer, setTimeSinceMessageFromMaster, timeSinceMessageFromMaster } from "./connectionHandlers.js";
-import { sendPlayerStates, sendEntitiesState } from "./sendData.js";
-import { addScoreToDB } from "./db.js";
+import { sendPlayerStates, sendEntitiesState, sendEntitiesUpdate,sendRemoveEntityUpdate } from "./sendData.js";
 import { forces, Mine, PowerUp, ForceType, ForceArea, Entity } from "./entities.js";
 import { Player, Bot } from "./player.js";
-// import { Bot } from "./bot.js";
 
 //if mess with these need to change the collision detection - factor these in
 export const shipScale = 2;
@@ -23,7 +21,11 @@ export let spawnProtectionTime = 200;
 export let endGameMessage = "";
 export let gameWon = false;
 export let basicAnimationTimer = 0;
-
+export let updateRequested = false;
+export function setUpdateRequested(newValue) {
+  updateRequested = newValue;
+}
+export const botRespawnDelay = 240;
 export const PilotName = {
   PILOT_1: "pilot1",
   PILOT_2: "pilot2",
@@ -296,7 +298,7 @@ export function checkPlayerCollision(playerToCheck, allPlayers) {
       }
       if (playerToCheck.isBot && playerToCheck.invincibleTimer == 0 && playerToCheck.timeSinceSpawned > spawnProtectionTime) {
         // playerToCheck.resetState(true, true);
-        playerToCheck.delayReset(3, true, true);
+        playerToCheck.delayReset(botRespawnDelay, true, true);
       }
       if (allPlayers[i] instanceof Player) {
         if (allPlayers[i].invincibleTimer == 0) {
@@ -312,7 +314,7 @@ export function checkPlayerCollision(playerToCheck, allPlayers) {
         }
         if (allPlayers[i].isBot && allPlayers[i].invincibleTimer == 0 && allPlayers[i].timeSinceSpawned > spawnProtectionTime) {
           // allPlayers[i].resetState(true, true);
-          allPlayers[i].delayReset(3, true, true);
+          allPlayers[i].delayReset(botRespawnDelay, true, true);
         }
       } else {
         console.log("non player in players array");
@@ -527,7 +529,10 @@ export function updateBots(deltaTime) {
       // Replace the old bot with the new Bot instance in the array
       bots[index] = newPlayer;
     }
-    if (bot != null && bot instanceof Bot) {
+    if (bot != null && bot instanceof Bot && bot.isDead) {
+      bot.delayReset(botRespawnDelay, true, true);
+    }
+    if (bot != null && bot instanceof Bot && !bot.isDead) {
       //todo not sure about this conditional
       if (isPlayerMasterPeer(player)) {
         bot.updateBotInputs();
@@ -585,6 +590,8 @@ export function masterUpdateGame(player, globalPowerUps, otherPlayers, bots, del
     if (mines[i].hitFrames > 0) {
       mines[i].hitFrames--;
       // If hit frames have expired, remove the mine.
+
+      sendRemoveEntityUpdate("minesToRemove", [mines[i]]);
       mines.splice(i, 1);
     }
   }
@@ -593,8 +600,12 @@ export function masterUpdateGame(player, globalPowerUps, otherPlayers, bots, del
 
   //...not sending game state of otherplayers...hmm?
   //trying out not sending updates every frame
-  if (isPlayerMasterPeer(player) && gameTimer % 2 == 1) {
-    sendEntitiesState();
+  if (isPlayerMasterPeer(player)) {
+    if (gameTimer % 2 == 1) {
+      sendEntitiesUpdate();
+    } else if (gameTimer % 29 == 1) {
+      sendEntitiesState();
+    }
   }
   if (!player.isDead && gameTimer % 2 == 1) {
     sendPlayerStates(player, isPlayerMasterPeer(player));

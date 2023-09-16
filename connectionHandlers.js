@@ -1,9 +1,5 @@
-import { otherPlayers } from "./main.js";
-
 import { shuffleArray } from "./gameLogic.js";
-
 import { handleData } from "./handleData.js";
-import { sendPlayerStates } from "./sendData.js";
 import { Player } from "./player.js";
 export let everConnected = false;
 export let connections = [];
@@ -315,7 +311,7 @@ function addConnectionHandlers(player, otherPlayers, conn, globalPowerUps) {
 
   conn.on("data", function (data) {
     //console.log("Received data:", data);
-    if ((data && data.id) || (data && data.globalPowerUps) || (data && data.bots) || (data && data.requestForFullStates)) {
+    if ((data && data.id) || (data && data.gameState) || (data && data.requestForFullStates)) {
       handleData(player, otherPlayers, globalPowerUps, data);
     } else {
       console.log("Received unexpected data:", data);

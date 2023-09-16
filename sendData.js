@@ -60,6 +60,7 @@ export function sendPlayerStates(playerToSend, isMaster, sendFullerData = false)
     newDataToSend = addProperty(playerToSend, data, "isPlaying", "isPlaying", true) || newDataToSend;
     newDataToSend = addProperty(playerToSend, data, "space", "space", true) || newDataToSend;
     newDataToSend = addProperty(playerToSend, data, "shift", "shift", true) || newDataToSend;
+    newDataToSend = addProperty(playerToSend, data, "resetting", "resetting", true) || newDataToSend;
   } else {
     newDataToSend = addProperty(playerToSend, data, "color", "color") || newDataToSend;
     newDataToSend = addProperty(playerToSend, data, "pilot", "pilot") || newDataToSend;
@@ -82,6 +83,7 @@ export function sendPlayerStates(playerToSend, isMaster, sendFullerData = false)
     newDataToSend = addProperty(playerToSend, data, "isPlaying", "isPlaying") || newDataToSend;
     newDataToSend = addProperty(playerToSend, data, "space", "space") || newDataToSend;
     newDataToSend = addProperty(playerToSend, data, "shift", "shift") || newDataToSend;
+    newDataToSend = addProperty(playerToSend, data, "resetting", "resetting") || newDataToSend;
   }
 
   // newDataToSend = addProperty(playerToSend, data, "invincibleTimer", "invincibleTimer") || newDataToSend;
@@ -120,7 +122,7 @@ export function sendPlayerStates(playerToSend, isMaster, sendFullerData = false)
 function addProperty(playerToSend, data, propertyKey, playerKey, sendAnyway = false) {
   if (lastSentPlayerData[propertyKey] !== playerToSend[playerKey] || sendAnyway) {
     if (playerToSend[playerKey] == null) {
-      console.log("null property in send player state");
+      console.log("null property in send player state: " + playerKey);
       return false;
     }
     data[propertyKey] = playerToSend[playerKey];
@@ -129,24 +131,6 @@ function addProperty(playerToSend, data, propertyKey, playerKey, sendAnyway = fa
     return true; // Indicates that the property was changed
   }
   return false; // Indicates that the property was not changed
-}
-
-function sendData(data) {
-  connections.forEach((conn) => {
-    if (conn && conn.open) {
-      try {
-        conn.send(data);
-        // sendCounter++;
-        // // Log the data every 1000 calls
-        // if (sendCounter === 5000) {
-        //   // console.log("sending data:", data);
-        //   sendCounter = 0; // reset the counter
-        // }
-      } catch (error) {
-        console.error("Error sending data:", error);
-      }
-    }
-  });
 }
 
 //this is the full send that will only be sent on request / occasionally
@@ -169,6 +153,41 @@ export function sendEntitiesState() {
   sendData(data);
 }
 
+//this is the full send that will only be sent on request / occasionally
+export function sendEntitiesUpdate() {
+  // Send game state to other player
+  let data = {
+    timestamp: Date.now(),
+    priority: 2,
+    fromMaster: isPlayerMasterPeer(player),
+    gameState: true,
+    globalPowerUps: serializeGlobalPowerUps(globalPowerUps),
+    bots: serializeBots(bots),
+    mines: serializeMines(mines, true),
+    // otherPlayers: otherPlayers,
+    forces: serializeForces(forces),
+    // connectedPeers: connectedPeers,
+    //enemies and stuff here
+  };
+
+  sendData(data);
+}
+
+export function sendRemoveEntityUpdate(propertyName, entitiesToRemove) {
+    // Send game state to other player
+    let data = {
+      timestamp: Date.now(),
+      priority: 2,
+      fromMaster: isPlayerMasterPeer(player),
+      gameState: true,
+    };
+  
+    // Add the specified property name and its value to the data object
+    data[propertyName] = entitiesToRemove;
+  
+    sendData(data);
+  }
+
 export function sendConnectedPeers() {
   // Send game state to other player
   let data = {
@@ -190,6 +209,24 @@ export function sendConnectedPeers() {
       if (sendCounter === 5000) {
         //console.log("sending bots state data:", data);
         sendCounter = 0; // reset the counter
+      }
+    }
+  });
+}
+
+function sendData(data) {
+  connections.forEach((conn) => {
+    if (conn && conn.open) {
+      try {
+        conn.send(data);
+        // sendCounter++;
+        // // Log the data every 1000 calls
+        // if (sendCounter === 5000) {
+        //   // console.log("sending data:", data);
+        //   sendCounter = 0; // reset the counter
+        // }
+      } catch (error) {
+        console.error("Error sending data:", error);
       }
     }
   });

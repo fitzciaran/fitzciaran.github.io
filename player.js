@@ -16,7 +16,7 @@ import {
 } from "./main.js";
 import { isPlayerMasterPeer } from "./connectionHandlers.js";
 import { forces, ForceArea, ForceType } from "./entities.js";
-import { setEndGameMessage, maxInvincibilityTime, spawnProtectionTime, maxSpecialMeter, PilotName, initialInvincibleTime } from "./gameLogic.js";
+import { setEndGameMessage, maxInvincibilityTime, spawnProtectionTime, maxSpecialMeter, PilotName, initialInvincibleTime,botRespawnDelay } from "./gameLogic.js";
 import { sendPlayerStates, sendRequestForStates } from "./sendData.js";
 
 const bounceFactor = 1.5;
@@ -94,6 +94,7 @@ export class Player {
     this.devMode = false;
     this.killed = [];
     this.killedBy = [];
+    this.resetting=false;
   }
 
   resetState(keepName, keepColor) {
@@ -127,6 +128,7 @@ export class Player {
     this.hitBy = "";
     this.recentScoreTicks = 0;
     this.recentScoreText = 0;
+    this.resetting=false;
   }
   isDead() {
     return this.isDead;
@@ -134,10 +136,16 @@ export class Player {
   setIsDead(newIsDead) {
     this.isDead = newIsDead;
   }
-  delayReset(framesToDelay, keepName, keepColor) {
+  delayReset(framesToDelay, keepName, keepColor,inProgress=false) {
+    if(!inProgress && this.resetting ==true){
+      //if already have a scheduled reset ignore future requests 
+      //may look at updating existing request in future.
+      return;
+    }
+    this.resetting = true;
     if (framesToDelay > 0) {
       requestAnimationFrame(() => {
-        this.delayReset(framesToDelay - 1, keepName, keepColor);
+        this.delayReset(framesToDelay - 1, keepName, keepColor,true);
       });
     } else {
       // Execute the reset after the specified number of frames
@@ -732,7 +740,7 @@ export class Bot extends Player {
     if (this.isDead) {
       //todo delay this?
       //this.resetState(true, true);
-      this.delayReset(5, true, true);
+      // this.delayReset(botRespawnDelay, true, true);
       return;
     }
     this.inForce = Math.max(this.inForce - 1, 0);

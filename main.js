@@ -1,6 +1,5 @@
 import { drawNameEntry, drawGameOverMessage, drawNameCursor, updateTopScoresInfo, drawPreGameOverlay } from "./canvasDrawingFunctions.js";
 import { setupPilotsImageSources, setupPilotsImages } from "./drawingUtils.js";
-import { forces } from "./entities.js";
 import { drawScene } from "./gameDrawing.js";
 import {
   createPeer,
@@ -23,27 +22,20 @@ import {
   generatePowerups,
   generateMines,
   generateDirectionalForces,
-  checkPowerupCollision,
   endGameMessage,
   setGameWon,
   resetPowerLevels,
   pilots,
-  updateEnemies,
-  updatePowerups,
-  detectCollisions,
   masterUpdateGame,
   shuffleArray,
-  setEndGameMessage,
 } from "./gameLogic.js";
 import {
   handleInputEvents,
-  mousePos,
   addPilotEventListners,
   removePilotsEventListeners,
   setupNameEventListeners,
   removeNameEventListeners,
   setupGameEventListeners,
-  removeGameStateEventListeners,
   setupWinStateEventListeners,
   removeWinStateEventListeners,
 } from "./inputHandlers.js";

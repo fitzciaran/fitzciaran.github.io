@@ -181,7 +181,6 @@ export function serializeForces(forces) {
   }));
 }
 
-
 export function serializeMines(mines, onlyChangedData = false) {
   if (onlyChangedData) {
     // Calculate the differences between the current mines and lastSentMasterMineData

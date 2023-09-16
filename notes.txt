@@ -312,3 +312,5 @@ cover the master switching with some kind of in game lore event / effect? storm 
 animation for pre spawn? play for 30 frames before object?
 
 send only changed data in standard master send, new slave peers need to request full update
+
+known camera follow bug if no bots alive and spectating (could )
