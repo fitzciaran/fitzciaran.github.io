@@ -253,3 +253,53 @@ function isAngleInCone(angle, startAngle, endAngle) {
     return angle >= startAngle && angle <= endAngle;
   }
 }
+
+function nameToRGB(colorName) {
+  const colorMap = {
+    red: "rgb(255, 0, 0)",
+    green: "rgb(0, 255, 0)",
+    blue: "rgb(0, 0, 255)",
+    orange: "rgb(255, 165, 0)",
+    springgreen: "rgb(0, 255, 127)",
+    lime: "rgb(0, 255, 0)",
+    cyan: "rgb(0, 255, 255)",
+    indigo: "rgb(75, 0, 130)",
+    purple: "rgb(128, 0, 128)",
+    pink: "rgb(255, 192, 203)",
+    mediumvioletred: "rgb(199, 21, 133)",
+    violet: "rgb(238, 130, 238)",
+    maroon: "rgb(128, 0, 0)",
+    crimson: "rgb(220, 20, 60)",
+    white: "rgb(255, 255, 255)",
+    // Add more color mappings here...
+  };
+
+  // Look up the color name in the map and return the corresponding RGB value
+  return colorMap[colorName.toLowerCase()] || null;
+}
+
+export function getComplementaryColor(color) {
+  // Assuming color is in the format "rgb(r, g, b)"
+  let match = /rgb\((\d+),\s*(\d+),\s*(\d+)\)/.exec(color);
+
+  if (!match) {
+    color = nameToRGB(color);
+    match = /rgb\((\d+),\s*(\d+),\s*(\d+)\)/.exec(color);
+    if (!match) {
+      // Invalid color format
+      return null;
+    }
+  }
+
+  const r = parseInt(match[1]);
+  const g = parseInt(match[2]);
+  const b = parseInt(match[3]);
+
+  // Calculate the complementary color by subtracting each RGB component from 255
+  const complementaryR = 255 - r;
+  const complementaryG = 255 - g;
+  const complementaryB = 255 - b;
+
+  // Return the complementary color in "rgb(r, g, b)" format
+  return `rgb(${complementaryR},${complementaryG},${complementaryB})`;
+}

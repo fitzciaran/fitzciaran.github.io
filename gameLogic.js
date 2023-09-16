@@ -1,6 +1,6 @@
 import { setGameState, GameState, player, setMines, bots, otherPlayers, mines, setGameTimer, gameTimer } from "./main.js";
 import { isPlayerMasterPeer, setTimeSinceMessageFromMaster, timeSinceMessageFromMaster } from "./connectionHandlers.js";
-import { sendPlayerStates, sendEntitiesState, sendEntitiesUpdate,sendRemoveEntityUpdate } from "./sendData.js";
+import { sendPlayerStates, sendEntitiesState, sendEntitiesUpdate, sendRemoveEntityUpdate, sendMinesUpdate, sendPowerUpsUpdate } from "./sendData.js";
 import { forces, Mine, PowerUp, ForceType, ForceArea, Entity } from "./entities.js";
 import { Player, Bot } from "./player.js";
 
@@ -106,6 +106,7 @@ export function generatePowerups(globalPowerUps, worldWidth, worldHeight, colors
   if (!isPlayerMasterPeer(player)) {
     return;
   }
+  let addedPowerUps = false;
   // Check if there are less than max powerups powerups
   while (globalPowerUps.length < maxPowerups) {
     // Generate a new dot with random x and y within the world
@@ -133,12 +134,16 @@ export function generatePowerups(globalPowerUps, worldWidth, worldHeight, colors
       radius,
       value
     );
+    addedPowerUps = true;
     globalPowerUps.push(powerUp);
     // setGlobalPowerUps(globalPowerUps);
     // Send the powerups every time you generate one
     // sendPowerups(globalPowerUps);
 
     //cf test do we need this sendGameState(globalPowerUps);
+  }
+  if (addedPowerUps) {
+    sendPowerUpsUpdate(true);
   }
 }
 
@@ -208,7 +213,7 @@ export function checkPowerupCollision(playerToCheck, globalPowerUps) {
     let dy = playerToCheck.y - globalPowerUps[i].y;
     let distance = Math.sqrt(dx * dx + dy * dy);
 
-    if (distance < 10 * shipScale + globalPowerUps[i].radius) {
+    if (distance < 10 * shipScale + globalPowerUps[i].radius && globalPowerUps[i].hitFrames == -1) {
       // assuming the radius of ship is 10 - todo update for better hitbox on ship
       if (playerToCheck.ticksSincePowerUpCollection == -1) {
         //may need to make this an array of "recently collected / iteracted stuff" to be more robust in the future rather than a simple power up timer
@@ -216,12 +221,15 @@ export function checkPowerupCollision(playerToCheck, globalPowerUps) {
         let scoreToAdd = globalPowerUps[i].value;
 
         playerToCheck.gotPowerUp(globalPowerUps[i].isStar, scoreToAdd, i);
+        if (isPlayerMasterPeer(player)) {
+          sendPowerUpsUpdate(false);
+        }
       }
       // sendPowerups(globalPowerUps);
 
       //cf test do we need this looks like yes
       //sendGameState(globalPowerUps);
-      break; // exit the loop to avoid possible index errors - does that mean we can only register 1 collection per tick? if so we could simply schedule the removal of collected until after this loop
+      // break; // exit the loop to avoid possible index errors - does that mean we can only register 1 collection per tick? if so we could simply schedule the removal of collected until after this loop
     }
   }
 }
@@ -235,22 +243,25 @@ export function checkMineCollision(playerToCheck, mines) {
 
     if (distance < 10 * shipScale + mines[i].radius) {
       // assuming the radius of ship is 10 - todo update for better hitbox on ship
-      if (playerToCheck.invincibleTimer == 0 && playerToCheck.timeSinceSpawned > spawnProtectionTime && mines[i].hitFrames < 1) {
+      if (playerToCheck.invincibleTimer == 0 && playerToCheck.timeSinceSpawned > spawnProtectionTime && mines[i].hitFrames == -1) {
         playerToCheck.gotHit("a mine");
-        mines[i].hitFrames = 5;
+        mines[i].hitFrames = 2;
         // mines.splice(i, 1);
       }
-      if (playerToCheck.invincibleTimer > 0 && playerToCheck.timeSinceSpawned > spawnProtectionTime && mines[i].hitFrames < 1) {
+      if (playerToCheck.invincibleTimer > 0 && playerToCheck.timeSinceSpawned > spawnProtectionTime && mines[i].hitFrames == -1) {
         if (playerToCheck.invincibleTimer > 115) {
           playerToCheck.setInvincibleTimer(playerToCheck.invincibleTimer - 100);
         } else {
           playerToCheck.setInvincibleTimer(15);
         }
-        mines[i].hitFrames = 5;
+        mines[i].hitFrames = 2;
         // mines.splice(i, 1);
       }
       // sendPowerups(globalPowerUps);
       setMines(mines);
+      if (isPlayerMasterPeer(player)) {
+        sendMinesUpdate(false);
+      }
       //cf test do we need this looks like yes
       //sendGameState(globalPowerUps);
       break; // exit the loop to avoid possible index errors - does that mean we can only register 1 collection per tick? if so we could simply schedule the removal of collected until after this loop
@@ -587,13 +598,40 @@ export function masterUpdateGame(player, globalPowerUps, otherPlayers, bots, del
 
   // Remove mines with hit frames that have expired.
   for (let i = mines.length - 1; i >= 0; i--) {
-    if (mines[i].hitFrames > 0) {
+    if (mines[i].hitFrames < -1) {
+      // in "initialising" state - do this first before potential splicing
+      mines[i].hitFrames++;
+    }
+    if (mines[i].hitFrames >= 0) {
       mines[i].hitFrames--;
       // If hit frames have expired, remove the mine.
-
-      sendRemoveEntityUpdate("minesToRemove", [mines[i]]);
-      mines.splice(i, 1);
+      if (mines[i].hitFrames < 0) {
+        if (isPlayerMasterPeer(player)) {
+          sendRemoveEntityUpdate("removeMines", [mines[i]]);
+        }
+        mines.splice(i, 1);
+      }
     }
+    
+  }
+
+  // Remove PowerUps with hit frames that have expired.
+  for (let i = globalPowerUps.length - 1; i >= 0; i--) {
+    if (globalPowerUps[i].hitFrames < -1) {
+      // in "initialising" state  - do this first before potential splicing
+      globalPowerUps[i].hitFrames++;
+    }
+    if (globalPowerUps[i].hitFrames >= 0) {
+      globalPowerUps[i].hitFrames--;
+      // If hit frames have expired, remove the PowerUps.
+      if (globalPowerUps[i].hitFrames < 0) {
+        if (isPlayerMasterPeer(player)) {
+          sendRemoveEntityUpdate("removePowerUps", [globalPowerUps[i]]);
+        }
+        globalPowerUps.splice(i, 1);
+      }
+    }
+    
   }
 
   basicAnimationTimer++;

@@ -126,6 +126,9 @@ export function drawPowerupLevels(ctx, player, otherPlayers, bots) {
     if (!bot.name) {
       // console.log("unnamed other player");
     }
+    if(bot.isDead){
+      return;
+    }
     let playerName = bot.name || "Unknown";
     const score = bot.powerUps * 100;
     const playerPowerupText = playerName + `: ${score}`;

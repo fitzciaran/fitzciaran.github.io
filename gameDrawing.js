@@ -1,6 +1,6 @@
 import { chooseNewMasterPeer } from "./connectionHandlers.js";
 import { renderDebugInfo, drawPowerupLevels, drawInvincibilityGauge, drawSpecialGauge } from "./drawGameUI.js";
-import { rotateAndScalePoint, interpolate, spikeyBallPoints, drawArrow, applyGravityWarpEffect } from "./drawingUtils.js";
+import { rotateAndScalePoint, interpolate, spikeyBallPoints, drawArrow, applyGravityWarpEffect, getComplementaryColor } from "./drawingUtils.js";
 import { ForceType, forces } from "./entities.js";
 import { shipScale, mineScale, basicAnimationTimer } from "./gameLogic.js";
 
@@ -30,7 +30,7 @@ export function drawScene(player, otherPlayers, bots, mines, ctx, camX, camY, wo
   otherPlayers.forEach((player) => drawShip(ctx, camX, camY, player, shipPoints));
   bots.forEach((bot) => drawShip(ctx, camX, camY, bot, shipPoints));
   drawPowerups(globalPowerUps, ctx, camX, camY);
-  mines.forEach((mine) => drawEnemy(ctx, camX, camY, mine, spikeyBallPoints));
+  mines.forEach((mine) => drawMine(ctx, camX, camY, mine, spikeyBallPoints));
   forces.forEach((force) => drawForce(ctx, camX, camY, force));
   drawMinimap(player, otherPlayers, bots, worldDimensions.width, worldDimensions.height);
   drawMinimapPowerups(globalPowerUps, worldDimensions.width, worldDimensions.height);
@@ -176,7 +176,6 @@ export function drawBackground(ctx, camX, camY, canvas, backLayer, midBackLayer,
   ctx.drawImage(frontLayer, frontX + frontOffsetX, frontY + frontOffsetY, frontLayer.width * scale * 0.6, frontLayer.height * scale * 0.6);
 }
 
-
 export function drawWorldBounds(ctx, camX, camY, worldWidth, worldHeight) {
   // Create gradient
   let gradient = ctx.createLinearGradient(0, 0, worldWidth, worldHeight);
@@ -229,31 +228,22 @@ function drawMinimap(player, otherPlayers, bots, worldWidth, worldHeight) {
   });
 }
 
+function applyGlowingEffect(ctx, transitionColor, glowColor, starTransitionStartColor, transitionDuration, elapsedTime, opacity = 1) {
+  ctx.shadowBlur = 10;
+  ctx.shadowColor = glowColor;
+
+  const colorProgress = Math.min(1, elapsedTime / transitionDuration);
+  const r = Math.floor(interpolate(starTransitionStartColor.r, transitionColor.r, colorProgress));
+  const g = Math.floor(interpolate(starTransitionStartColor.g, transitionColor.g, colorProgress));
+  const b = Math.floor(interpolate(starTransitionStartColor.b, transitionColor.b, colorProgress));
+
+  // Apply opacity to the glowing effect
+  ctx.strokeStyle = `rgba(${r},${g},${b},${opacity})`;
+}
+
 function drawShip(ctx, camX, camY, player, points) {
-  if (!player.isPlaying || player.isDead || (!player.isLocal && !player.isBot && player.timeSinceSentMessageThatWasRecieved >120)) {
+  if (!player.isPlaying || player.isDead || (!player.isLocal && !player.isBot && player.timeSinceSentMessageThatWasRecieved > 120)) {
     return;
-  }
-
-  function applyGlowingEffect(transitionColor, glowColor) {
-    ctx.shadowBlur = 10;
-    ctx.shadowColor = glowColor;
-    ctx.strokeStyle = glowColor;
-
-    const transitionDuration = 2000;
-    const currentTime = Date.now();
-    const elapsedTime = currentTime - player.starTransitionStartTime;
-
-    if (!player.starTransitionStartTime || elapsedTime >= transitionDuration) {
-      player.starTransitionStartTime = currentTime;
-      player.starTransitionStartColor = color;
-    }
-
-    const colorProgress = Math.min(1, elapsedTime / transitionDuration);
-    const r = Math.floor(interpolate(player.starTransitionStartColor.r, transitionColor.r, colorProgress));
-    const g = Math.floor(interpolate(player.starTransitionStartColor.g, transitionColor.g, colorProgress));
-    const b = Math.floor(interpolate(player.starTransitionStartColor.b, transitionColor.b, colorProgress));
-
-    ctx.strokeStyle = `rgb(${r},${g},${b})`;
   }
 
   let centerX = player.x;
@@ -263,7 +253,24 @@ function drawShip(ctx, camX, camY, player, points) {
   let name = player.name;
 
   if (player.invincibleTimer > 10 || (player.invincibleTimer > 0 && !player.isUserControlledCharacter)) {
-    applyGlowingEffect("gold", "gold");
+    const transitionDuration = 20;
+    const currentTime = Date.now();
+    const elapsedTime = currentTime - player.starTransitionStartTime;
+
+    if (!player.starTransitionStartTime || elapsedTime >= transitionDuration) {
+      player.starTransitionStartTime = currentTime;
+      player.starTransitionStartColor = color;
+    }
+    applyGlowingEffect(
+      ctx,
+      "gold",
+      "gold",
+      player.starTransitionStartTime,
+      player.starTransitionStartColor,
+      player.starTransitionStartColor,
+      transitionDuration,
+      elapsedTime
+    );
   }
 
   ctx.beginPath();
@@ -278,8 +285,24 @@ function drawShip(ctx, camX, camY, player, points) {
 
   try {
     if (typeof player.isInSpawnProtectionTime === "function") {
-      if (player.isInSpawnProtectionTime()) {
-        applyGlowingEffect("white", "white");
+      if (player.isInSpawnProtectionTime() && !(player.invincibleTimer > 10 || (player.invincibleTimer > 0 && !player.isUserControlledCharacter))) {
+        const transitionDuration = 20;
+        const currentTime = Date.now();
+        const elapsedTime = currentTime - player.starTransitionStartTime;
+        if (!player.starTransitionStartTime || elapsedTime >= transitionDuration) {
+          player.starTransitionStartTime = currentTime;
+          player.starTransitionStartColor = color;
+        }
+        applyGlowingEffect(
+          ctx,
+          "white",
+          "white",
+          player.starTransitionStartTime,
+          player.starTransitionStartColor,
+          player.starTransitionStartColor,
+          transitionDuration,
+          elapsedTime
+        );
       } else {
         ctx.strokeStyle = color;
       }
@@ -289,12 +312,10 @@ function drawShip(ctx, camX, camY, player, points) {
   } catch (error) {
     console.log("An error occurred:", error);
   }
-
-  ctx.stroke();
   ctx.closePath();
-  ctx.strokeStyle = color;
+  ctx.fillStyle = ctx.strokeStyle;
   ctx.stroke();
-  ctx.closePath();
+  ctx.fill();
 
   //for debug draw angle
   // Calculate the endpoint coordinates based on the angle
@@ -313,10 +334,12 @@ function drawShip(ctx, camX, camY, player, points) {
   const namePositionX = centerX - camX;
   const namePositionY = centerY - camY - 15;
 
-  ctx.fillStyle = color;
+  ctx.fillStyle = getComplementaryColor(color);
+  ctx.strokeStyle = getComplementaryColor(color);
   ctx.font = "14px Arial";
   ctx.textAlign = "center";
   ctx.fillText(name, namePositionX, namePositionY);
+
   const invincibleGuagePositionX = centerX - camX;
   const invincibleGuagePositionY = centerY - camY - 25;
   if (player.invincibleTimer > 0) {
@@ -333,13 +356,23 @@ function drawShip(ctx, camX, camY, player, points) {
   }
 }
 
-export function drawEnemy(ctx, camX, camY, mine, points) {
+export function drawMine(ctx, camX, camY, mine, points) {
   let centerX = mine.x;
   let centerY = mine.y;
   let color = mine.color;
   let angle = 0;
-  ctx.beginPath();
 
+  const currentTime = Date.now();
+  const elapsedTime = currentTime - mine.starTransitionStartTime;
+  const transitionDuration = 50;
+  if (mine.hitFrames < -1) {
+    if (!mine.starTransitionStartTime || elapsedTime >= transitionDuration) {
+      mine.starTransitionStartTime = currentTime;
+      mine.starTransitionStartColor = color;
+    }
+    applyGlowingEffect(ctx, "white", "white", mine.starTransitionStartTime, mine.color, 0.2);
+  }
+  ctx.beginPath();
   let rotatedPoint = rotateAndScalePoint(points[0].x, points[0].y, angle, mineScale);
   ctx.moveTo(centerX - camX + rotatedPoint.x, centerY - camY + rotatedPoint.y);
 
@@ -351,8 +384,8 @@ export function drawEnemy(ctx, camX, camY, mine, points) {
   ctx.stroke();
   ctx.closePath();
   ctx.strokeStyle = color;
-  ctx.stroke();
-  ctx.closePath();
+  ctx.shadowBlur = 0;
+  ctx.shadowColor = color;
 }
 
 function drawForce(ctx, camX, camY, force) {
@@ -676,7 +709,7 @@ function drawScoreInfo(ctx, player, score, camX, camY) {
   const scorePositionY = centerY - camY - 35; // You can adjust this value for the desired distance
 
   // Draw the score
-  ctx.fillStyle = player.color;
+  ctx.fillStyle = getComplementaryColor(player.color);
   ctx.font = "25px Arial"; // Adjust font size and family as needed
   ctx.textAlign = "center";
   ctx.fillText(score, scorePositionX, scorePositionY);

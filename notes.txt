@@ -314,3 +314,10 @@ animation for pre spawn? play for 30 frames before object?
 send only changed data in standard master send, new slave peers need to request full update
 
 known camera follow bug if no bots alive and spectating (could )
+
+pilots portrait while in game? with powerup icon?
+    could animate like the old carmageddon
+
+make the score / combo text bigger and more obnoxious, whoosh at screen?
+
+mines/...stuff could randomly/sporadically change color

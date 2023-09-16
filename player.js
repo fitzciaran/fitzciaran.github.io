@@ -16,7 +16,15 @@ import {
 } from "./main.js";
 import { isPlayerMasterPeer } from "./connectionHandlers.js";
 import { forces, ForceArea, ForceType } from "./entities.js";
-import { setEndGameMessage, maxInvincibilityTime, spawnProtectionTime, maxSpecialMeter, PilotName, initialInvincibleTime,botRespawnDelay } from "./gameLogic.js";
+import {
+  setEndGameMessage,
+  maxInvincibilityTime,
+  spawnProtectionTime,
+  maxSpecialMeter,
+  PilotName,
+  initialInvincibleTime,
+  botRespawnDelay,
+} from "./gameLogic.js";
 import { sendPlayerStates, sendRequestForStates } from "./sendData.js";
 
 const bounceFactor = 1.5;
@@ -25,6 +33,7 @@ const minBounceSpeed = 5;
 const maxBotsThatCanTargetAtOnce = 1;
 const maxVel = 50;
 const minVel = -50;
+const resettingBackupTimeout = 200;
 
 export const BotState = {
   FOLLOW_PLAYER: "followPlayer",
@@ -94,7 +103,7 @@ export class Player {
     this.devMode = false;
     this.killed = [];
     this.killedBy = [];
-    this.resetting=false;
+    this.resetting = false;
   }
 
   resetState(keepName, keepColor) {
@@ -115,6 +124,7 @@ export class Player {
     this.targetedBy = [];
     this.space = false;
     this.shift = false;
+    //don't reset isDead, that can be done explicity when game is (re)started
     // this.setIsDead(false);
     this.invincibleTimer = 0;
     this.setComboScaler(1);
@@ -128,7 +138,8 @@ export class Player {
     this.hitBy = "";
     this.recentScoreTicks = 0;
     this.recentScoreText = 0;
-    this.resetting=false;
+    this.resetting = false;
+    this.inForce = 0;
   }
   isDead() {
     return this.isDead;
@@ -136,22 +147,37 @@ export class Player {
   setIsDead(newIsDead) {
     this.isDead = newIsDead;
   }
-  delayReset(framesToDelay, keepName, keepColor,inProgress=false) {
-    if(!inProgress && this.resetting ==true){
-      //if already have a scheduled reset ignore future requests 
-      //may look at updating existing request in future.
+
+  delayReset(framesToDelay, keepName, keepColor, inProgress = false) {
+    if (!inProgress && this.resetting == true) {
+      // If already have a scheduled reset, ignore future requests.//could do this timeout only if master?
+      if (!this.resettingTimeout) {
+        this.resettingTimeout = setTimeout(() => {
+          this.resetting = false;
+          this.resettingTimeout = null;
+          console.log("Resetting flag was forcefully reset.");
+        }, resettingBackupTimeout);
+      }
       return;
     }
+
+    // Resetting is in progress, clear the timeout if it exists.
+    if (this.resettingTimeout) {
+      clearTimeout(this.resettingTimeout);
+      this.resettingTimeout = null;
+    }
+
     this.resetting = true;
     if (framesToDelay > 0) {
       requestAnimationFrame(() => {
-        this.delayReset(framesToDelay - 1, keepName, keepColor,true);
+        this.delayReset(framesToDelay - 1, keepName, keepColor, true);
       });
     } else {
-      // Execute the reset after the specified number of frames
+      // Execute the reset after the specified number of frames.
       this.resetState(keepName, keepColor);
     }
   }
+
   //gotHit and addScore are both doing an additional key function of sending the playerstates as master.
   //Need to unpick this, maybe there should be events for gotHit and addscore and masterpeer responds to such events with sending player state for the given player
   gotHit(hitBy) {
@@ -229,10 +255,12 @@ export class Player {
     if (this.comboScaler < 10) {
       this.setComboScaler(this.comboScaler + 0.5);
     }
-    globalPowerUps.splice(powerUpIndex, 1);
-    if (isPlayerMasterPeer(player)) {
-      setGlobalPowerUps(globalPowerUps);
-    }
+    globalPowerUps[powerUpIndex].hitFrames = 2;
+    // // globalPowerUps.splice(powerUpIndex, 1);
+
+    // if (isPlayerMasterPeer(player)) {
+    //   setGlobalPowerUps(globalPowerUps);
+    // }
     this.addScore(scoreToAdd);
   }
 
@@ -641,6 +669,7 @@ export class Player {
     otherPlayers.forEach((otherPlayer) => {
       otherPlayer.timeSinceSentMessageThatWasRecieved += 1;
     });
+    this.inForce = Math.max(this.inForce - 1, 0);
   }
 
   howLongSinceActive() {
@@ -729,7 +758,6 @@ export class Bot extends Player {
     this.randomTarget = { x: 0, y: 0, id: "" };
     this.inRangeTicks = 0;
     this.isBot = true;
-    this.inForce = 0;
   }
   resetState(keepName, keepColor) {
     super.resetState(keepName, keepColor);
@@ -743,7 +771,7 @@ export class Bot extends Player {
       // this.delayReset(botRespawnDelay, true, true);
       return;
     }
-    this.inForce = Math.max(this.inForce - 1, 0);
+
     super.updateTick(deltaTime);
   }
 

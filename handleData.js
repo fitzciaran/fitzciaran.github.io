@@ -12,7 +12,7 @@ import {
 import { setEndGameMessage } from "./gameLogic.js";
 import { forces, setForces, createMineFromObject, createForceFromObject, createPowerUpFromObject } from "./entities.js";
 import { createBotFromObject, Player } from "./player.js";
-import { differsFrom, findForceById, findBotById, findMineById } from "./gameUtils.js";
+import { differsFrom, findForceById, findBotById, findMineById ,findPowerUpById} from "./gameUtils.js";
 import { sendPlayerStates } from "./sendData.js";
 
 export function handleData(player, otherPlayers, globalPowerUps, data) {
@@ -279,9 +279,38 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
     }
   }
   // Only update the powerups if the received data contains different powerups
-  if (data.globalPowerUps && JSON.stringify(globalPowerUps) !== JSON.stringify(data.globalPowerUps)) {
-    const powerUpInstances = data.globalPowerUps.map(createPowerUpFromObject);
-    setGlobalPowerUps(powerUpInstances);
+  // if (data.globalPowerUps && JSON.stringify(globalPowerUps) !== JSON.stringify(data.globalPowerUps)) {
+  //   const powerUpInstances = data.globalPowerUps.map(createPowerUpFromObject);
+  //   setGlobalPowerUps(powerUpInstances);
+  // }
+  if (data.globalPowerUps) {
+    for (const receivedPowerUp of data.globalPowerUps) {
+      // Find the corresponding local powerup by ID
+      const localPowerUp = findPowerUpById(receivedPowerUp.id);
+      const interpFactor = 0.2;
+      if (localPowerUp) {
+        localPowerUp.x = localPowerUp.x + (receivedPowerUp.x - localPowerUp.x) * interpFactor;
+        localPowerUp.y = localPowerUp.y + (receivedPowerUp.y - localPowerUp.y) * interpFactor;
+        localPowerUp.color = receivedPowerUp.color;
+        localPowerUp.isStar = receivedPowerUp.isStar;
+        localPowerUp.value = receivedPowerUp.value;
+        localPowerUp.radius = receivedPowerUp.radius;
+        localPowerUp.hitFrames = receivedPowerUp.hitFrames;
+      } else {
+        // If the local powerup doesn't exist, add it to the mines array
+        globalPowerUps.push(createPowerUpFromObject(receivedPowerUp));
+      }
+    }
+  }
+  if (data.removePowerUps) {
+    for (let dataPowerUp of data.removePowerUps) {
+      if (dataPowerUp.id != null) {
+        let matchingPowerUp = globalPowerUps.find((currentPowerUp) => currentPowerUp.id === dataPowerUp.id);
+        if (matchingPowerUp == null) {
+          setGlobalPowerUps(globalPowerUps.filter((powerUp) => powerUp.id !== dataPowerUp.id));
+        }
+      }
+    }
   }
   if (data.bots) {
     setTimeSinceMessageFromMaster(0);
@@ -343,7 +372,9 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
         if (receivedBot.name != null && receivedBot.name != "") {
           localBot.name = receivedBot.name;
         }
-        localBot.inForce = receivedBot.inForce;
+        if (receivedBot.inForce != null) {
+          localBot.inForce = receivedBot.inForce;
+        }
       } else {
         // If the local bot doesn't exist, add it to the bots array
         // bots.push(receivedBot);

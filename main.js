@@ -340,14 +340,13 @@ export function setGameState(newState) {
 
   if (newState !== GameState.GAME && prevGameState === GameState.GAME) {
     //for now moving to showing game underneath all the time
-    //  fixedDeltaTime = 1 / 30; //30 fps is plenty if not in game
-    //  removeGameStateEventListeners(window);
     player.resetState(true, true);
 
-    //todo add back in if not to blame
     player.isPlaying = false;
     player.centerCameraOnPlayer(canvas.width, canvas.height);
-    globalPowerUps = [];
+
+    //todo addback in if there was a good reason for this
+    // globalPowerUps = [];
   }
 }
 

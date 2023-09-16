@@ -6,7 +6,9 @@ export let forces = [];
 export function setForces(newForces) {
   forces = newForces;
 }
+
 let lastSentMasterMineData = [];
+let lastSentGlobalPowerUps = []; 
 
 export class Entity {
   constructor(id = null, x = null, y = null) {
@@ -78,7 +80,7 @@ export class Mine extends Enemy {
     this.duration = duration;
     this.radius = radius;
     this.color = color;
-    this.hitFrames = 0;
+    this.hitFrames = -85;
     this.force = force;
     if (force != 0) {
       this.createForce();
@@ -111,6 +113,7 @@ export class PowerUp extends Entity {
     this.isStar = isStar;
     this.radius = radius;
     this.value = value;
+    this.hitFrames = -6;
   }
 }
 
@@ -236,14 +239,58 @@ function isEqualMine(mine1, mine2) {
   );
 }
 
-export function serializeGlobalPowerUps(globalPowerUps) {
-  return globalPowerUps.map((globalPowerUp) => ({
-    id: globalPowerUp.id,
-    x: globalPowerUp.x,
-    y: globalPowerUp.y,
-    color: globalPowerUp.color,
-    isStar: globalPowerUp.isStar,
-    radius: globalPowerUp.radius,
-    value: globalPowerUp.value,
-  }));
+
+export function serializeGlobalPowerUps(globalPowerUps, onlyChangedData = false) {
+  if (onlyChangedData) {
+    // Calculate the differences between the current globalPowerUps and lastSentGlobalPowerUps
+    const changedGlobalPowerUps = globalPowerUps.filter((currentPowerUp) => {
+      const lastSentPowerUp = lastSentGlobalPowerUps.find((lastPowerUp) => lastPowerUp.id === currentPowerUp.id);
+      return !lastSentPowerUp || !isEqualGlobalPowerUp(currentPowerUp, lastSentPowerUp);
+    });
+
+    // Update lastSentGlobalPowerUps with the new data
+    lastSentGlobalPowerUps = globalPowerUps.slice();
+
+    // Serialize and return the changed globalPowerUps
+    return changedGlobalPowerUps.map((globalPowerUp) => ({
+      id: globalPowerUp.id,
+      x: globalPowerUp.x,
+      y: globalPowerUp.y,
+      color: globalPowerUp.color,
+      isStar: globalPowerUp.isStar,
+      radius: globalPowerUp.radius,
+      value: globalPowerUp.value,
+      hitFrames: globalPowerUp.hitFrames,
+    }));
+  } else {
+    // If onlyChangedData is false, update lastSentGlobalPowerUps with the current globalPowerUps
+    lastSentGlobalPowerUps = globalPowerUps.slice();
+
+    // Serialize and return all globalPowerUps
+    return globalPowerUps.map((globalPowerUp) => ({
+      id: globalPowerUp.id,
+      x: globalPowerUp.x,
+      y: globalPowerUp.y,
+      color: globalPowerUp.color,
+      isStar: globalPowerUp.isStar,
+      radius: globalPowerUp.radius,
+      value: globalPowerUp.value,
+      hitFrames: globalPowerUp.hitFrames,
+    }));
+  }
+}
+
+// Define a function to compare globalPowerUp objects for equality
+function isEqualGlobalPowerUp(powerUp1, powerUp2) {
+  // Implement your logic for comparing globalPowerUp objects here
+  // For example, you can compare relevant properties to check if they are equal
+  return (
+    powerUp1.x === powerUp2.x &&
+    powerUp1.y === powerUp2.y &&
+    powerUp1.color === powerUp2.color &&
+    powerUp1.isStar === powerUp2.isStar &&
+    powerUp1.radius === powerUp2.radius &&
+    powerUp1.value === powerUp2.value &&
+    powerUp1.hitFrames === powerUp2.hitFrames
+  );
 }

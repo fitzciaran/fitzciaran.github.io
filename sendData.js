@@ -155,24 +155,52 @@ export function sendEntitiesState() {
 
 //this is the full send that will only be sent on request / occasionally
 export function sendEntitiesUpdate() {
-  // Send game state to other player
-  let data = {
-    timestamp: Date.now(),
-    priority: 2,
-    fromMaster: isPlayerMasterPeer(player),
-    gameState: true,
-    globalPowerUps: serializeGlobalPowerUps(globalPowerUps),
-    bots: serializeBots(bots),
-    mines: serializeMines(mines, true),
-    // otherPlayers: otherPlayers,
-    forces: serializeForces(forces),
-    // connectedPeers: connectedPeers,
-    //enemies and stuff here
-  };
+    // Send game state to other player
+    let data = {
+      timestamp: Date.now(),
+      priority: 2,
+      fromMaster: isPlayerMasterPeer(player),
+      gameState: true,
+      globalPowerUps: serializeGlobalPowerUps(globalPowerUps,true),
+      bots: serializeBots(bots),
+      mines: serializeMines(mines, true),
+      forces: serializeForces(forces),
+      // connectedPeers: connectedPeers,
+    };
+  
+    sendData(data);
+  }
 
-  sendData(data);
-}
+  
+  //this is the full send that will only be sent on request / occasionally
+export function sendPowerUpsUpdate(onlyChangedData=true) {
+    // Send game state to other player
+    let data = {
+      timestamp: Date.now(),
+      priority: 2,
+      fromMaster: isPlayerMasterPeer(player),
+      gameState: true,
+      globalPowerUps: serializeGlobalPowerUps(globalPowerUps,onlyChangedData),
+    };
+  
+    sendData(data);
+  }
 
+  
+  //this is the full send that will only be sent on request / occasionally
+export function sendMinesUpdate(onlyChangedData=true) {
+    // Send game state to other player
+    let data = {
+      timestamp: Date.now(),
+      priority: 2,
+      fromMaster: isPlayerMasterPeer(player),
+      gameState: true,
+      mines: serializeMines(mines, onlyChangedData),
+    };
+  
+    sendData(data);
+  }
+  
 export function sendRemoveEntityUpdate(propertyName, entitiesToRemove) {
     // Send game state to other player
     let data = {
