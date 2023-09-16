@@ -2,7 +2,8 @@ import { otherPlayers } from "./main.js";
 
 import { shuffleArray } from "./gameLogic.js";
 
-import { sendPlayerStates, handleData } from "./handleData.js";
+import { handleData } from "./handleData.js";
+import { sendPlayerStates } from "./sendData.js";
 import { Player } from "./player.js";
 export let everConnected = false;
 export let connections = [];

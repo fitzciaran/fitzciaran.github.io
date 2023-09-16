@@ -1,20 +1,7 @@
+import { setGlobalPowerUps, bots, mines, setBots, setMines } from "./main.js";
 import {
-  setGlobalPowerUps,
-  player,
-  otherPlayers,
-  bots,
-  mines,
-  setBots,
-  setMines,
-  setOtherPlayers,
-  fixedDeltaTime,
-  globalPowerUps,
-} from "./main.js";
-import {
-  connections,
   connectedPeers,
   setConnectedPeers,
-  timeSinceMessageFromMaster,
   setTimeSinceMessageFromMaster,
   setTimeSinceAnyMessageRecieved,
   isPlayerMasterPeer,
@@ -23,222 +10,9 @@ import {
   setMasterPeerId,
 } from "./connectionHandlers.js";
 import { setEndGameMessage } from "./gameLogic.js";
-import {
-  forces,
-  setForces,
-  createMineFromObject,
-  createForceFromObject,
-  createPowerUpFromObject,
-  serializeForces,
-  serializeMines,
-  serializeGlobalPowerUps,
-} from "./entities.js";
-import { createBotFromObject, Player, createPlayerFromObject, serializeBots } from "./player.js";
-
-let handleCounter = 0;
-let sendCounter = 0;
-let lastSentPlayerData = [];
-
-export function sendRequestForStates() {
-  let data = {
-    timestamp: Date.now(),
-    priority: 2,
-    fromMaster: isPlayerMasterPeer(player),
-    requestForFullStates: true,
-  };
-  sendData(data);
-}
-// Send player state to other connected players
-export function sendPlayerStates(playerToSend, isMaster, sendFullerData = false) {
-  if (Math.random() > 0.99) {
-    //every so often we will send the full data just to be sure master is in sync with important properties which don't often change
-    sendFullerData = true;
-  }
-  let priority = 3;
-  if(sendFullerData){
-    priority = 2;
-  }
-  let data = {
-    timestamp: Date.now(),
-    priority: priority,
-    fromMaster: isPlayerMasterPeer(player),
-    id: playerToSend.id,
-    // invincibleTimer: playerToSend.invincibleTimer,
-  };
-
-  // Define a function to add properties to the data object if they have changed
-  function addPropertyIfChanged(propertyKey, playerKey) {
-    if (lastSentPlayerData[propertyKey] !== playerToSend[playerKey]) {
-      if (playerToSend[playerKey] == null) {
-        console.log("null property in send player state");
-        return false;
-      }
-      data[propertyKey] = playerToSend[playerKey];
-      lastSentPlayerData[propertyKey] = playerToSend[playerKey];
-
-      return true; // Indicates that the property was changed
-    }
-    return false; // Indicates that the property was not changed
-  }
-
-  function addProperty(propertyKey, playerKey) {
-    if (playerToSend[playerKey] == null) {
-      console.log("null property in send player state");
-      return false;
-    }
-    data[propertyKey] = playerToSend[playerKey];
-    lastSentPlayerData[propertyKey] = playerToSend[playerKey];
-
-    return true;
-  }
-
-  let newDataToSend = false;
-  newDataToSend = addPropertyIfChanged("x", "x") || newDataToSend;
-  newDataToSend = addPropertyIfChanged("y", "y") || newDataToSend;
-  newDataToSend = addPropertyIfChanged("powerUps", "powerUps") || newDataToSend;
-  newDataToSend = addPropertyIfChanged("invincibleTimer", "invincibleTimer") || newDataToSend;
-  if (sendFullerData) {
-    newDataToSend = addProperty("color", "color") || newDataToSend;
-    newDataToSend = addProperty("pilot", "pilot") || newDataToSend;
-    newDataToSend = addProperty("name", "name") || newDataToSend;
-    newDataToSend = addProperty("lives", "lives") || newDataToSend;
-    newDataToSend = addProperty("isMaster", "isMaster") || newDataToSend;
-    newDataToSend = addProperty("ticksSincePowerUpCollection", "ticksSincePowerUpCollection") || newDataToSend;
-    newDataToSend = addProperty("targetedBy", "targetedBy") || newDataToSend;
-    newDataToSend = addProperty("timeOfLastActive", "timeOfLastActive") || newDataToSend;
-    newDataToSend = addProperty("hitBy", "hitBy") || newDataToSend;
-    newDataToSend = addProperty("recentScoreTicks", "recentScoreTicks") || newDataToSend;
-    newDataToSend = addProperty("recentScoreText", "recentScoreText") || newDataToSend;
-    newDataToSend = addProperty("kills", "kills") || newDataToSend;
-    newDataToSend = addProperty("angle", "angle") || newDataToSend;
-    newDataToSend = addProperty("isBot", "isBot") || newDataToSend;
-    newDataToSend = addProperty("special", "special") || newDataToSend;
-    newDataToSend = addProperty("devMode", "devMode") || newDataToSend;
-  } else {
-    newDataToSend = addPropertyIfChanged("color", "color") || newDataToSend;
-    newDataToSend = addPropertyIfChanged("pilot", "pilot") || newDataToSend;
-    newDataToSend = addPropertyIfChanged("name", "name") || newDataToSend;
-    newDataToSend = addPropertyIfChanged("lives", "lives") || newDataToSend;
-    newDataToSend = addPropertyIfChanged("isMaster", "isMaster") || newDataToSend;
-    newDataToSend = addPropertyIfChanged("ticksSincePowerUpCollection", "ticksSincePowerUpCollection") || newDataToSend;
-    newDataToSend = addPropertyIfChanged("targetedBy", "targetedBy") || newDataToSend;
-    newDataToSend = addPropertyIfChanged("timeOfLastActive", "timeOfLastActive") || newDataToSend;
-    newDataToSend = addPropertyIfChanged("hitBy", "hitBy") || newDataToSend;
-    newDataToSend = addPropertyIfChanged("recentScoreTicks", "recentScoreTicks") || newDataToSend;
-    newDataToSend = addPropertyIfChanged("recentScoreText", "recentScoreText") || newDataToSend;
-    newDataToSend = addPropertyIfChanged("kills", "kills") || newDataToSend;
-    newDataToSend = addPropertyIfChanged("angle", "angle") || newDataToSend;
-    newDataToSend = addPropertyIfChanged("isBot", "isBot") || newDataToSend;
-    newDataToSend = addPropertyIfChanged("special", "special") || newDataToSend;
-    newDataToSend = addPropertyIfChanged("devMode", "devMode") || newDataToSend;
-
-  }
-
-  // newDataToSend = addPropertyIfChanged("invincibleTimer", "invincibleTimer") || newDataToSend;
-
-  newDataToSend = addPropertyIfChanged("forceCoolDown", "forceCoolDown") || newDataToSend;
-  newDataToSend = addPropertyIfChanged("comboScaler", "comboScaler") || newDataToSend;
-  newDataToSend = addPropertyIfChanged("playerAngleData", "playerAngleData") || newDataToSend;
-  newDataToSend = addPropertyIfChanged("mousePosX", "mousePosX") || newDataToSend;
-  newDataToSend = addPropertyIfChanged("mousePosY", "mousePosY") || newDataToSend;
-  newDataToSend = addPropertyIfChanged("currentSpeed", "currentSpeed") || newDataToSend;
-  newDataToSend = addPropertyIfChanged("vel", "vel") || newDataToSend;
-  newDataToSend = addPropertyIfChanged("distanceFactor", "distanceFactor") || newDataToSend;
-  newDataToSend = addPropertyIfChanged("space", "space") || newDataToSend;
-  newDataToSend = addPropertyIfChanged("shift", "shift") || newDataToSend;
-
-  if (isMaster || sendFullerData) {
-    //only master sends is dead message since it is the abibter of collisions, apart from sendFullerData
-    if (lastSentPlayerData.isDead != playerToSend.isDead || sendFullerData) {
-      newDataToSend = true;
-      data.isDead = playerToSend.isDead;
-      lastSentPlayerData.isDead = playerToSend.isDead;
-    }
-  }
-  if (!isMaster) {
-    //only player sends timeSinceSpawned because it know when it has reset
-    if (newDataToSend) {
-      data.timeSinceSpawned = playerToSend.timeSinceSpawned;
-    }
-  }
-  if (newDataToSend) {
-    sendData(data);
-  }
-}
-
-function sendData(data) {
-  connections.forEach((conn) => {
-    if (conn && conn.open) {
-      try {
-        conn.send(data);
-        // sendCounter++;
-        // // Log the data every 1000 calls
-        // if (sendCounter === 5000) {
-        //   // console.log("sending data:", data);
-        //   sendCounter = 0; // reset the counter
-        // }
-      } catch (error) {
-        console.error("Error sending data:", error);
-      }
-    }
-  });
-}
-
-export function sendEntitiesState() {
-  // Send game state to other player
-  let data = {
-    timestamp: Date.now(),
-    priority: 2,
-    fromMaster: isPlayerMasterPeer(player),
-    gameState: true,
-    globalPowerUps: serializeGlobalPowerUps(globalPowerUps),
-    bots: serializeBots(bots),
-    mines: serializeMines(mines),
-    // otherPlayers: otherPlayers,
-    forces: serializeForces(forces),
-    // connectedPeers: connectedPeers,
-    //enemies and stuff here
-  };
-
-  //console.log("Sending data:", data); // Log any data sent
-  connections.forEach((conn) => {
-    if (conn && conn.open) {
-      conn.send(data);
-      sendCounter++;
-      // Log the data every 1000 calls
-      if (sendCounter === 5000) {
-        //console.log("sending entities state data:", data);
-        sendCounter = 0; // reset the counter
-      }
-    }
-  });
-}
-
-export function sendConnectedPeers() {
-  // Send game state to other player
-  let data = {
-    timestamp: Date.now(),
-    priority: 2,
-    gameState: true,
-    fromMaster: isPlayerMasterPeer(player),
-    //todo this could be the issue
-    //connectedPeers: connectedPeers,
-    //enemies and stuff here
-  };
-
-  //console.log("Sending data:", data); // Log any data sent
-  connections.forEach((conn) => {
-    if (conn && conn.open) {
-      conn.send(data);
-      sendCounter++;
-      // Log the data every 1000 calls
-      if (sendCounter === 5000) {
-        //console.log("sending bots state data:", data);
-        sendCounter = 0; // reset the counter
-      }
-    }
-  });
-}
+import { forces, setForces, createMineFromObject, createForceFromObject, createPowerUpFromObject } from "./entities.js";
+import { createBotFromObject, Player } from "./player.js";
+import { differsFrom, findForceById, findBotById, findMineById } from "./gameUtils.js";
 
 export function handleData(player, otherPlayers, globalPowerUps, data) {
   setTimeSinceAnyMessageRecieved(0);
@@ -278,39 +52,6 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
     otherPlayer = findBotById(data.id);
   }
   // If the player is found, update their data
-  // if (otherPlayer) {
-  //   otherPlayer.x = data.x;
-  //   otherPlayer.y = data.y;
-  //   otherPlayer.powerUps = data.powerUps;
-  //   otherPlayer.color = data.color;
-  //   otherPlayer.angle = data.angle;
-  //   otherPlayer.pilot = data.pilot;
-  //   otherPlayer.isBot = data.isBot;
-  //   otherPlayer.special = data.special;
-  //   otherPlayer.name = data.name;
-  //   otherPlayer.lives = data.lives;
-  //   otherPlayer.isMaster = data.isMaster;
-  //   otherPlayer.setIsDead(data.isDead);
-  //   otherPlayer.isPlaying = data.isPlaying;
-  //   otherPlayer.setInvincibleTimer(data.invincibleTimer);
-  //   otherPlayer.forceCoolDown = data.forceCoolDown;
-  //   otherPlayer.comboScaler = data.comboScaler;
-  //   otherPlayer.kills = data.kills;
-  //   otherPlayer.playerAngleData = data.playerAngleData;
-  //   otherPlayer.mousePosX = data.mousePosX;
-  //   otherPlayer.mousePosY = data.mousePosY;
-  //   otherPlayer.currentSpeed = data.currentSpeed;
-  //   otherPlayer.vel = data.vel;
-  //   otherPlayer.distanceFactor = data.distanceFactor;
-  //   otherPlayer.space = data.space;
-  //   otherPlayer.shift = data.shift;
-  //   otherPlayer.ticksSincePowerUpCollection = data.ticksSincePowerUpCollection;
-  //   otherPlayer.targetedBy = data.targetedBy;
-  //   otherPlayer.timeOfLastActive = data.timeOfLastActive;
-  //   otherPlayer.hitBy = data.hitBy;
-  //   otherPlayer.recentScoreTicks = data.recentScoreTicks;
-  //   otherPlayer.recentScoreText = data.recentScoreText;
-  // If the player is found, update their data
   if (otherPlayer) {
     if (data.hasOwnProperty("x")) {
       otherPlayer.x = data.x;
@@ -340,7 +81,9 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
       otherPlayer.special = data.special;
     }
     if (data.hasOwnProperty("name")) {
-      otherPlayer.name = data.name;
+      if (data.name != null && data.name != "") {
+        otherPlayer.name = data.name;
+      }
     }
     if (data.hasOwnProperty("lives")) {
       otherPlayer.lives = data.lives;
@@ -402,6 +145,12 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
     if (data.hasOwnProperty("hitBy")) {
       otherPlayer.hitBy = data.hitBy;
     }
+    if (data.hasOwnProperty("killedBy")) {
+      otherPlayer.killedBy = data.killedBy;
+    }
+    if (data.hasOwnProperty("killed")) {
+      otherPlayer.killed = data.killed;
+    }
     if (data.hasOwnProperty("recentScoreTicks")) {
       otherPlayer.recentScoreTicks = data.recentScoreTicks;
     }
@@ -423,32 +172,6 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
     connectedPeers.sort();
 
     setMasterPeerId(chooseNewMasterPeer(player, otherPlayers));
-    // if (data.powerUps > pointsToWin) {
-    //   checkWinner(otherPlayer, otherPlayers);
-    // }
-    // } else if (data.id && data.id == player.id) {
-    //   //if this is our own data we only update key properties from the master, not position, velocity etc
-    //   player.powerUps = data.powerUps;
-    //   player.comboScaler = data.comboScaler;
-    //   player.setIsDead(data.isDead);
-    //   if (data.isDead) {
-    //     player.vel.x = 0;
-    //     player.vel.y = 0;
-    //   }
-    //   player.lives = data.lives;
-    //   player.hitBy = data.hitBy;
-    //   player.kills = data.kills;
-    //   player.setInvincibleTimer(data.invincibleTimer);
-    //   player.ticksSincePowerUpCollection = data.ticksSincePowerUpCollection;
-    //   player.powerUps = data.powerUps;
-    //   player.recentScoreTicks = data.recentScoreTicks;
-    //   player.recentScoreText = data.recentScoreText;
-    //   if (player.hitBy != null && player.hitBy != "") {
-    //     setEndGameMessage("Killed by: " + player.hitBy + "\nScore: " + player.powerUps * 100);
-    //   } else {
-    //     setEndGameMessage("Score: " + player.powerUps * 100);
-    //   }
-    // }
   } else if (data.id && data.id == player.id) {
     // If this is our own data, update key properties from the master, not position, velocity, etc.
 
@@ -458,26 +181,37 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
     if (data.hasOwnProperty("comboScaler")) {
       player.setComboScaler(data.comboScaler);
     }
-    if (data.hasOwnProperty("isDead")) {
-      player.setIsDead(data.isDead);
-      if (data.isDead) {
-        player.vel.x = 0;
-        player.vel.y = 0;
-      }
-    }
+
     if (data.hasOwnProperty("lives")) {
       player.lives = data.lives;
     }
     if (data.hasOwnProperty("hitBy")) {
       player.hitBy = data.hitBy;
-      if (player.hitBy != null && player.hitBy != "") {
-        setEndGameMessage("Killed by: " + player.hitBy + "\nScore: " + player.powerUps * 100);
-      } else {
-        setEndGameMessage("Score: " + player.powerUps * 100);
-      }
+      // if (player.hitBy != null && player.hitBy != "") {
+      //   setEndGameMessage("Killed by: " + player.hitBy + "\nScore: " + player.powerUps * 100);
+      // } else {
+      //   setEndGameMessage("Score: " + player.powerUps * 100);
+      // }
+      // player.updateKilledAndKilledByLists(player.hitBy, true);
     }
     if (data.hasOwnProperty("kills")) {
       player.kills = data.kills;
+    }
+    if (data.hasOwnProperty("killed")) {
+      player.killed = data.killed;
+    }
+    if (data.hasOwnProperty("killedBy")) {
+      player.killedBy = data.killedBy;
+    }
+    if (data.hasOwnProperty("isDead")) {
+      if (data.isDead && !player.isDead) {
+        player.updateKilledAndKilledByLists(player.hitBy, true);
+      }
+      player.setIsDead(data.isDead);
+      if (data.isDead) {
+        player.vel.x = 0;
+        player.vel.y = 0;
+      }
     }
     if (data.hasOwnProperty("invincibleTimer")) {
       player.setInvincibleTimer(data.invincibleTimer);
@@ -520,6 +254,12 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
     }
     if (data.hasOwnProperty("kills")) {
       player.kills = data.kills;
+    }
+    if (data.hasOwnProperty("killed")) {
+      player.killed = data.killed;
+    }
+    if (data.hasOwnProperty("killedBy")) {
+      player.killedBy = data.killedBy;
     }
     if (data.hasOwnProperty("invincibleTimer")) {
       player.setInvincibleTimer(data.invincibleTimer);
@@ -593,7 +333,9 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
         localBot.playerAngleData = receivedBot.playerAngleData;
         localBot.mousePosX = receivedBot.mousePosX;
         localBot.mousePosY = receivedBot.mousePosY;
-        localBot.name = receivedBot.name;
+        if (receivedBot.name != null && receivedBot.name != "") {
+          localBot.name = receivedBot.name;
+        }
         localBot.inForce = receivedBot.inForce;
       } else {
         // If the local bot doesn't exist, add it to the bots array
@@ -637,10 +379,7 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
   }
   if (data.forces) {
     setTimeSinceMessageFromMaster(0);
-    //const forceInstances = data.forces.map(createForceFromObject);
-    // setForces(forceInstances);
-    // Iterate through forceInstances received from the master peer
-    // for (const receivedForce of forceInstances) {
+
     for (const receivedForce of data.forces) {
       // Find the corresponding local bot by ID
       const localForce = findForceById(receivedForce.id);
@@ -649,7 +388,6 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
         if (localForce.tracks == null || localForce.tracks.id != player.id) {
           //if the local force is the current local players force don't need to update it
           // If the local force exists, interpolate its position
-          // This assumes you have a variable for interpolation factor (e.g., interpFactor)
           localForce.x = localForce.x + (receivedForce.x - localForce.x) * interpFactor;
           localForce.y = localForce.y + (receivedForce.y - localForce.y) * interpFactor;
           localForce.force = receivedForce.force;
@@ -670,7 +408,6 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
         }
       } else if (receivedForce.tracks == null || receivedForce.tracks.id != player.id) {
         // If the local force doesn't exist, add it to the forces array
-        //forces.push(receivedForce);
         forces.push(createForceFromObject(receivedForce));
       }
     }
@@ -684,6 +421,7 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
       }
     }
   }
+  //don't curently sent this data
   if (data.otherPlayers) {
     setTimeSinceMessageFromMaster(0);
     // const otherPlayersInstances = data.otherPlayers.map(createPlayerFromObject);
@@ -703,6 +441,8 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
       } else if (player.isDead) {
         setEndGameMessage("Score: " + player.powerUps * 100);
       }
+      player.killed = dataPlayer.killed;
+      player.killedBy = dataPlayer.killedBy;
     }
     //we will just replace select properties of otherplayers from the master
     for (let otherPlayer of otherPlayers) {
@@ -740,37 +480,4 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
       sendConnectedPeers();
     }
   }
-  //   handleCounter++;
-  //   // Log the data every 1000 calls
-  //   if (handleCounter === 1000) {
-  //     console.log("handling data:", data);
-  //     handleCounter = 0; // reset the counter
-  //   }
-}
-
-// Function to find a bot by ID in the bots array
-function findBotById(id) {
-  return bots.find((bot) => bot.id === id);
-}
-
-// Function to find a force by ID in the forces array
-function findForceById(id) {
-  return forces.find((force) => force.id === id);
-}
-// Function to find a bot by ID in the bots array
-function findMineById(id) {
-  return mines.find((mine) => mine.id === id);
-}
-
-function differsFrom(firstArray, secondArray) {
-  // Convert the second array to a Set for efficient lookup
-  const secondArraySet = new Set(secondArray);
-
-  // Check if any element in the first array is not in the second array
-  for (const element of firstArray) {
-    if (!secondArraySet.has(element)) {
-      return true; // Found a value in the first array that's not in the second array
-    }
-  }
-  return false; // All values in the first array are also in the second array
 }

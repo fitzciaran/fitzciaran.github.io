@@ -16,7 +16,7 @@ import {
   timeSinceMessageFromMaster,
   setTimeSinceMessageFromMaster,
 } from "./connectionHandlers.js";
-import { sendPlayerStates } from "./handleData.js";
+import { sendPlayerStates } from "./sendData.js";
 import { setupCanvas, setupSpikeyBallPoints } from "./drawingUtils.js";
 import { addScoreToDB } from "./db.js";
 import {
@@ -48,7 +48,10 @@ import {
   removeWinStateEventListeners,
 } from "./inputHandlers.js";
 import { Player } from "./player.js";
-
+export let gameTimer = 0;
+export function setGameTimer(newTime) {
+  gameTimer = newTime;
+}
 export const { canvas, ctx } = setupCanvas();
 export const worldDimensions = { width: 4200, height: 2400 };
 export const colors = [
@@ -298,6 +301,8 @@ export function setGameState(newState) {
   }
 
   if (newState === GameState.INTRO && prevGameState !== GameState.INTRO) {
+    player.isPlaying = false;
+    player.isDead = false;
     updateTopScoresInfo();
     setupPilots(canvas, ctx);
     setupNameEventListeners(window);
@@ -317,7 +322,7 @@ export function setGameState(newState) {
     setupWinStateEventListeners(window, canvas);
     if (isPlayerMasterPeer(player)) {
       //do we need this special send?
-      sendPlayerStates(player, true,true);
+      sendPlayerStates(player, true, true);
     }
   }
 
@@ -335,7 +340,7 @@ export function setGameState(newState) {
     player.resetState(true, true);
     player.isPlaying = true;
     player.setIsDead(false);
-    sendPlayerStates(player, isPlayerMasterPeer(player),true);
+    sendPlayerStates(player, isPlayerMasterPeer(player), true);
 
     // setTimeout(() => connectToPeers(player, otherPlayers, globalPowerUps), 1000);
     removePilotsEventListeners(canvas);

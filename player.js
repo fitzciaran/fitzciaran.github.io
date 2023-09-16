@@ -17,7 +17,7 @@ import {
 import { isPlayerMasterPeer } from "./connectionHandlers.js";
 import { forces, ForceArea, ForceType } from "./entities.js";
 import { setEndGameMessage, maxInvincibilityTime, spawnProtectionTime, maxSpecialMeter, PilotName, initialInvincibleTime } from "./gameLogic.js";
-import { sendPlayerStates, sendRequestForStates } from "./handleData.js";
+import { sendPlayerStates, sendRequestForStates } from "./sendData.js";
 
 const bounceFactor = 1.5;
 const offset = 1;
@@ -92,6 +92,8 @@ export class Player {
     this.timeOfLastActive = "";
     this.recentScoreText = 0;
     this.devMode = false;
+    this.killed = [];
+    this.killedBy = [];
   }
 
   resetState(keepName, keepColor) {
@@ -149,18 +151,49 @@ export class Player {
     this.recentScoreTicks = 0;
     this.setComboScaler(1);
     this.hitBy = hitBy;
-    if (this == player) {
-      if (hitBy != null && hitBy != "") {
-        setEndGameMessage("Killed by: " + hitBy + "\nScore: " + this.powerUps * 100);
-      } else {
-        setEndGameMessage("Score: " + this.powerUps * 100);
-      }
+
+    this.updateKilledAndKilledByLists(hitBy, this == player);
+
+    if (!this.killedBy.includes(hitBy) && hitBy != "a mine") {
+      this.killedBy.push(hitBy);
     }
     // if (isPlayerMasterPeer(player) && !isPlayerMasterPeer(this)) {
     if (isPlayerMasterPeer(player)) {
       sendPlayerStates(this, true, true);
     }
   }
+
+  updateKilledAndKilledByLists(hitBy, isPlayer) {
+    if (hitBy != null && hitBy != "") {
+      this.updateKilledAndKilledByListsValidHitBy(hitBy, isPlayer);
+    } else if (isPlayer) {
+      setEndGameMessage("Score: " + this.powerUps * 100);
+    }
+  }
+
+  updateKilledAndKilledByListsValidHitBy(hitBy, isPlayer) {
+    if (!this.killed.includes(hitBy)) {
+      if (!this.killedBy.includes(hitBy)) {
+        if (isPlayer) {
+          if (hitBy == "a mine") {
+            setEndGameMessage("Watch out for mines! \nScore: " + this.powerUps * 100);
+          } else {
+            setEndGameMessage("Killed by: " + hitBy + "\nScore: " + this.powerUps * 100);
+          }
+        }
+      } else {
+        if (isPlayer) {
+          setEndGameMessage(hitBy + " is dominating you" + "\nScore: " + this.powerUps * 100);
+        }
+      }
+    } else {
+      this.killed = this.killed.filter((item) => item !== hitBy);
+      if (isPlayer) {
+        setEndGameMessage(hitBy + " took their revenge!" + "\nScore: " + this.powerUps * 100);
+      }
+    }
+  }
+
   addScore(scoreToAdd) {
     this.powerUps += scoreToAdd;
     if (this.powerUps != Math.floor(this.powerUps)) {
@@ -235,7 +268,12 @@ export class Player {
 
   hitOtherPlayer(playerThatGotHit) {
     this.kills += 1;
-
+    if (!this.killed.includes(playerThatGotHit.name)) {
+      this.killed.push(playerThatGotHit.name);
+    }
+    if (this.killedBy.includes(playerThatGotHit.name)) {
+      this.killedBy = this.killedBy.filter((item) => item !== playerThatGotHit.name);
+    }
     let score = 2 * this.comboScaler;
     score += Math.round(playerThatGotHit.powerUps / 3);
     this.recentScoreTicks = 250;

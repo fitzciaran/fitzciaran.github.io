@@ -303,9 +303,12 @@ maybe point forces should have very strong grav right at center...but dont to ma
 
 keep track of a list of names that you killed and killed by for flavor text when die and for...
 
-when player becomes master is should request full sends.
-
-slave peers are not receiving info that the master is dead, so still gets rendered and collides
-
 if new player joins and becomes master it takes over the gamestate - bots, mines,powerups,forcepads... 
     ideally it first takes the current masters state before taking over...not sure how to work that though... 
+
+in transition of master collision detection allows multiple collections...
+cover the master switching with some kind of in game lore event / effect? storm activating or something? No interactions during the "event" when event is done could push startStorm and frameOfStorm, so all could finish at the same time
+
+animation for pre spawn? play for 30 frames before object?
+
+send only changed data in standard master send, new slave peers need to request full update

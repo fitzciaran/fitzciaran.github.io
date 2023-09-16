@@ -1,6 +1,6 @@
-import { setGameState, GameState, player, setMines, bots, otherPlayers, mines } from "./main.js";
+import { setGameState, GameState, player, setMines, bots, otherPlayers, mines, setGameTimer, gameTimer } from "./main.js";
 import { isPlayerMasterPeer, setTimeSinceMessageFromMaster, timeSinceMessageFromMaster } from "./connectionHandlers.js";
-import { sendPlayerStates, sendEntitiesState } from "./handleData.js";
+import { sendPlayerStates, sendEntitiesState } from "./sendData.js";
 import { addScoreToDB } from "./db.js";
 import { forces, Mine, PowerUp, ForceType, ForceArea, Entity } from "./entities.js";
 import { Player, Bot } from "./player.js";
@@ -276,7 +276,9 @@ export function checkPlayerCollision(playerToCheck, allPlayers) {
       allPlayers[i].isPlaying == true &&
       !playerToCheck.isDead &&
       !allPlayers[i].isDead &&
-      !allPlayers[i].timeSinceSentMessageThatWasRecieved <= 120
+      !allPlayers[i].timeSinceSentMessageThatWasRecieved <= 120 &&
+      playerToCheck.timeSinceSpawned > spawnProtectionTime &&
+      allPlayers[i].timeSinceSpawned > spawnProtectionTime
     ) {
       // assuming hitbox  of both ships is simple radius
       //for now just reset player if a crash
@@ -554,12 +556,12 @@ export function calculateAngle(player) {
 }
 
 export function masterUpdateGame(player, globalPowerUps, otherPlayers, bots, deltaTime) {
-  // This peer is the master, so it runs the game logic for shared objects
+  //this isn't synced between peers
+  setGameTimer(gameTimer + 1);
   if (!isPlayerMasterPeer(player)) {
     setTimeSinceMessageFromMaster(timeSinceMessageFromMaster + 1);
   }
   player.updateTick(deltaTime);
-  //eventually run this based on how many bots and existing players in total currently
   createBots();
   updateBots(deltaTime);
   updateOtherPlayers(deltaTime);
@@ -590,10 +592,11 @@ export function masterUpdateGame(player, globalPowerUps, otherPlayers, bots, del
   basicAnimationTimer++;
 
   //...not sending game state of otherplayers...hmm?
-  if (isPlayerMasterPeer(player)) {
+  //trying out not sending updates every frame
+  if (isPlayerMasterPeer(player) && gameTimer % 2 == 1) {
     sendEntitiesState();
   }
-  if (!player.isDead) {
+  if (!player.isDead && gameTimer % 2 == 1) {
     sendPlayerStates(player, isPlayerMasterPeer(player));
   }
 }

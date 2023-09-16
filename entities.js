@@ -6,6 +6,7 @@ export let forces = [];
 export function setForces(newForces) {
   forces = newForces;
 }
+let lastSentMasterMineData = [];
 
 export class Entity {
   constructor(id = null, x = null, y = null) {
@@ -180,18 +181,62 @@ export function serializeForces(forces) {
   }));
 }
 
-export function serializeMines(mines) {
-  return mines.map((mine) => ({
-    id: mine.id,
-    x: mine.x,
-    y: mine.y,
-    force: mine.force,
-    duration: mine.duration,
-    radius: mine.radius,
-    hitFrames: mine.hitFrames,
-    color: mine.color,
-  }));
+
+export function serializeMines(mines, onlyChangedData = false) {
+  if (onlyChangedData) {
+    // Calculate the differences between the current mines and lastSentMasterMineData
+    const changedMines = mines.filter((currentMine) => {
+      const lastSentMine = lastSentMasterMineData.find((lastMine) => lastMine.id === currentMine.id);
+      return !lastSentMine || !isEqualMine(currentMine, lastSentMine);
+    });
+
+    // Update lastSentMasterMineData with the new data
+    lastSentMasterMineData = mines.slice();
+
+    // Serialize and return the changed mines
+    return changedMines.map((mine) => ({
+      id: mine.id,
+      x: mine.x,
+      y: mine.y,
+      force: mine.force,
+      duration: mine.duration,
+      radius: mine.radius,
+      hitFrames: mine.hitFrames,
+      color: mine.color,
+    }));
+  } else {
+    // If onlyChangedData is false, update lastSentMasterMineData with the current mines
+    lastSentMasterMineData = mines.slice();
+
+    // Serialize and return all mines
+    return mines.map((mine) => ({
+      id: mine.id,
+      x: mine.x,
+      y: mine.y,
+      force: mine.force,
+      duration: mine.duration,
+      radius: mine.radius,
+      hitFrames: mine.hitFrames,
+      color: mine.color,
+    }));
+  }
 }
+
+// Define a function to compare mine objects for equality
+function isEqualMine(mine1, mine2) {
+  // Implement your logic for comparing mine objects here
+  // For example, you can compare relevant properties to check if they are equal
+  return (
+    mine1.x === mine2.x &&
+    mine1.y === mine2.y &&
+    mine1.force === mine2.force &&
+    mine1.duration === mine2.duration &&
+    mine1.radius === mine2.radius &&
+    mine1.hitFrames === mine2.hitFrames &&
+    mine1.color === mine2.color
+  );
+}
+
 export function serializeGlobalPowerUps(globalPowerUps) {
   return globalPowerUps.map((globalPowerUp) => ({
     id: globalPowerUp.id,
