@@ -46,14 +46,12 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
     sendPlayerStates(player, isPlayerMasterPeer(player), true);
     return;
   }
-  //console.log("handling data:");
-  // Find the otherPlayer in the array
 
   if (!otherPlayer) {
     otherPlayer = findBotById(data.id);
   }
   if (otherPlayer) {
-    updateOtherPlayerData(otherPlayer, data,otherPlayers, globalPowerUps);
+    updateOtherPlayerData(otherPlayer, data, otherPlayers, globalPowerUps);
   } // If the player is not found, add them to the array
   else if (data.id && data.id != player.id && !data.isBot) {
     let newPlayer = new Player(data.id, data.x, data.y, data.powerUps, data.color, data.angle, data.pilot, data.name, data.isPlaying, true);
@@ -70,134 +68,15 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
   }
 
   updateGlobalPowerUps(data, globalPowerUps);
-  // if (data.globalPowerUps && data.globalPowerUps.length > 0) {
-  //   for (const receivedPowerUp of data.globalPowerUps) {
-  //     // Find the corresponding local powerup by ID
-  //     const localPowerUp = findPowerUpById(receivedPowerUp.id);
-  //     const interpFactor = 0.2;
-  //     if (localPowerUp) {
-  //       localPowerUp.x = localPowerUp.x + (receivedPowerUp.x - localPowerUp.x) * interpFactor;
-  //       localPowerUp.y = localPowerUp.y + (receivedPowerUp.y - localPowerUp.y) * interpFactor;
-  //       localPowerUp.color = receivedPowerUp.color;
-  //       localPowerUp.isStar = receivedPowerUp.isStar;
-  //       localPowerUp.value = receivedPowerUp.value;
-  //       localPowerUp.radius = receivedPowerUp.radius;
-  //       localPowerUp.hitFrames = receivedPowerUp.hitFrames;
-  //     } else {
-  //       // If the local powerup doesn't exist, add it to the mines array
-  //       globalPowerUps.push(createPowerUpFromObject(receivedPowerUp));
-  //     }
-  //   }
-  // }
   removeGlobalPowerUps(data, globalPowerUps);
-
-  if (data.bots && data.bots.length > 0) {
-    setTimeSinceMessageFromMaster(0);
-
-    // Iterate through botInstances received from the master peer
-    for (const receivedBot of data.bots) {
-      // Find the corresponding local bot by ID
-      const localBot = findBotById(receivedBot.id);
-      const interpFactor = 0.2;
-      if (localBot) {
-        // If the local bot exists, interpolate its position
-        if (localBot.isDead && !receivedBot.isDead) {
-          //if we are getting respawn info just set the new coordinates
-          localBot.x = receivedBot.x;
-          localBot.y = receivedBot.y;
-          localBot.vel.x = receivedBot.vel.x;
-          localBot.vel.y = receivedBot.vel.y;
-        } else {
-          // else inerpolate to smooth the update
-          localBot.x = localBot.x + (receivedBot.x - localBot.x) * interpFactor;
-          localBot.y = localBot.y + (receivedBot.y - localBot.y) * interpFactor;
-          localBot.vel.x = localBot.vel.x + (receivedBot.vel.x - localBot.vel.x) * interpFactor;
-          localBot.vel.y = localBot.vel.y + (receivedBot.vel.y - localBot.vel.y) * interpFactor;
-        }
-        localBot.setIsDead(receivedBot.isDead);
-
-        //don't interpolate the angle because that can natually change very sharply
-        localBot.angle = receivedBot.angle;
-        localBot.currentSpeed = receivedBot.currentSpeed;
-        localBot.timeOfLastActive = receivedBot.timeOfLastActive;
-        localBot.playerAngleData = receivedBot.playerAngleData;
-        localBot.mousePosX = receivedBot.mousePosX;
-        localBot.mousePosY = receivedBot.mousePosY;
-        localBot.isPlaying = receivedBot.isPlaying;
-        localBot.special = receivedBot.special;
-        localBot.distanceFactor = receivedBot.distanceFactor;
-        localBot.lives = receivedBot.lives;
-        localBot.space = receivedBot.space;
-        localBot.shift = receivedBot.shift;
-        if (receivedBot.resetting != null) {
-          localBot.resetting = receivedBot.resetting;
-        }
-        localBot.u = receivedBot.u;
-        localBot.forceCoolDown = receivedBot.forceCoolDown;
-        localBot.setComboScaler(receivedBot.comboScaler);
-        localBot.kills = receivedBot.kills;
-        localBot.ticksSincePowerUpCollection = receivedBot.ticksSincePowerUpCollection;
-        localBot.timeSinceSpawned = receivedBot.timeSinceSpawned;
-        localBot.botState = receivedBot.botState;
-        localBot.randomTarget = receivedBot.randomTarget;
-        localBot.followingPlayerID = receivedBot.followingPlayerID;
-        localBot.previousAngleDifference = receivedBot.previousAngleDifference;
-        localBot.previousTurnDirection = receivedBot.previousTurnDirection;
-        localBot.setInvincibleTimer(receivedBot.invincibleTimer);
-        localBot.forceCoolDown = receivedBot.forceCoolDown;
-        localBot.playerAngleData = receivedBot.playerAngleData;
-        localBot.mousePosX = receivedBot.mousePosX;
-        localBot.mousePosY = receivedBot.mousePosY;
-        if (receivedBot.name != null && receivedBot.name != "") {
-          localBot.name = receivedBot.name;
-        }
-        if (receivedBot.inForce != null) {
-          localBot.inForce = receivedBot.inForce;
-        }
-      } else {
-        // If the local bot doesn't exist, add it to the bots array
-        // bots.push(receivedBot);
-        bots.push(createBotFromObject(receivedBot));
-      }
-    }
-
-    // This ensures that local bots that have been removed on the master peer are also removed locally
-    setBots(bots.filter((localBot) => data.bots.some((receivedBot) => receivedBot.id === localBot.id)));
-  }
+ 
+  updateBots(data, bots);
+  removeBots(data, bots);
+ 
   updateMines(data, mines);
   removeMines(data, mines);
-  // if (data.mines && data.mines.length > 0) {
-  //   setTimeSinceMessageFromMaster(0);
 
-  //   for (const receivedMine of data.mines) {
-  //     // Find the corresponding local bot by ID
-  //     const localMine = findMineById(receivedMine.id);
-  //     const interpFactor = 0.2;
-  //     if (localMine) {
-  //       localMine.x = localMine.x + (receivedMine.x - localMine.x) * interpFactor;
-  //       localMine.y = localMine.y + (receivedMine.y - localMine.y) * interpFactor;
-  //       localMine.force = receivedMine.force;
-  //       localMine.duration = receivedMine.duration;
-  //       localMine.radius = receivedMine.radius;
-  //       localMine.hitFrames = receivedMine.hitFrames;
-  //       localMine.color = receivedMine.color;
-  //     } else {
-  //       // If the local mine doesn't exist, add it to the mines array
-  //       mines.push(createMineFromObject(receivedMine));
-  //     }
-  //   }
-  // }
-  // if (data.removeMines && data.removeMines.length > 0) {
-  //   for (let dataMine of data.removeMines) {
-  //     if (dataMine.id != null) {
-  //       let matchingMine = mines.find((currentMine) => currentMine.id === dataMine.id);
-  //       if (matchingMine == null) {
-  //         setMines(mines.filter((mine) => mine.id !== dataMine.id));
-  //       }
-  //     }
-  //   }
-  // }
-  updateForces(data, player, forces,player.id);
+  updateForces(data, player, forces, player.id);
   removeForces(data, forces);
   //don't curently send this data
   if (data.otherPlayers && data.otherPlayers.length > 0) {
@@ -260,7 +139,7 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
   }
 }
 
-function updateOtherPlayerData(player, data,otherPlayers, globalPowerUps) {
+function updateOtherPlayerData(player, data, otherPlayers, globalPowerUps) {
   if (!player) return;
 
   for (const key in data) {
@@ -268,6 +147,10 @@ function updateOtherPlayerData(player, data,otherPlayers, globalPowerUps) {
       if (key === "name") {
         if (data.name != null && data.name != "") {
           player.name = data.name;
+        }
+      } else if (key === "pilot") {
+        if (data.pilot != null && data.pilot != "") {
+          player.pilot = data.pilot;
         }
       } else if (key === "isDead") {
         player.setIsDead(data.isDead);
@@ -431,7 +314,105 @@ function removeMines(data, mines) {
   }
 }
 
-function updateLocalForce(localForce, receivedForce,playerId) {
+function updateBots(data, bots) {
+  if (data.bots && data.bots.length > 0) {
+    setTimeSinceMessageFromMaster(0);
+
+    for (const receivedBot of data.bots) {
+      // Find the corresponding local bot by ID
+      const localBot = findBotById(receivedBot.id);
+      const interpFactor = 0.2;
+      if (localBot) {
+        // If the local bot exists, interpolate its position
+        if (localBot.isDead && !receivedBot.isDead) {
+          //if we are getting respawn info just set the new coordinates
+          localBot.x = receivedBot.x;
+          localBot.y = receivedBot.y;
+          localBot.vel.x = receivedBot.vel.x;
+          localBot.vel.y = receivedBot.vel.y;
+        } else {
+          // else interpolate to smooth the update
+          localBot.x = localBot.x + (receivedBot.x - localBot.x) * interpFactor;
+          localBot.y = localBot.y + (receivedBot.y - localBot.y) * interpFactor;
+          localBot.vel.x = localBot.vel.x + (receivedBot.vel.x - localBot.vel.x) * interpFactor;
+          localBot.vel.y = localBot.vel.y + (receivedBot.vel.y - localBot.vel.y) * interpFactor;
+        }
+        localBot.setIsDead(receivedBot.isDead);
+
+        // Don't interpolate the angle because that can naturally change very sharply
+        localBot.angle = receivedBot.angle;
+        localBot.currentSpeed = receivedBot.currentSpeed;
+        localBot.timeOfLastActive = receivedBot.timeOfLastActive;
+        localBot.playerAngleData = receivedBot.playerAngleData;
+        localBot.mousePosX = receivedBot.mousePosX;
+        localBot.mousePosY = receivedBot.mousePosY;
+        localBot.isPlaying = receivedBot.isPlaying;
+        localBot.special = receivedBot.special;
+        localBot.distanceFactor = receivedBot.distanceFactor;
+        localBot.lives = receivedBot.lives;
+        localBot.space = receivedBot.space;
+        localBot.shift = receivedBot.shift;
+        if (receivedBot.resetting != null) {
+          localBot.resetting = receivedBot.resetting;
+        }
+        localBot.u = receivedBot.u;
+        localBot.forceCoolDown = receivedBot.forceCoolDown;
+        localBot.setComboScaler(receivedBot.comboScaler);
+        localBot.kills = receivedBot.kills;
+        localBot.ticksSincePowerUpCollection = receivedBot.ticksSincePowerUpCollection;
+        localBot.timeSinceSpawned = receivedBot.timeSinceSpawned;
+        localBot.botState = receivedBot.botState;
+        localBot.randomTarget = receivedBot.randomTarget;
+        localBot.followingPlayerID = receivedBot.followingPlayerID;
+        localBot.previousAngleDifference = receivedBot.previousAngleDifference;
+        localBot.previousTurnDirection = receivedBot.previousTurnDirection;
+        localBot.setInvincibleTimer(receivedBot.invincibleTimer);
+        localBot.forceCoolDown = receivedBot.forceCoolDown;
+        localBot.playerAngleData = receivedBot.playerAngleData;
+        localBot.mousePosX = receivedBot.mousePosX;
+        localBot.mousePosY = receivedBot.mousePosY;
+        if (receivedBot.name != null && receivedBot.name != "") {
+          localBot.name = receivedBot.name;
+        }
+        if (receivedBot.inForce != null) {
+          localBot.inForce = receivedBot.inForce;
+        }
+      } else {
+        // If the local bot doesn't exist, add it to the bots array
+        bots.push(createBotFromObject(receivedBot));
+      }
+    }
+
+    updateBotsFromFullSend(data, bots);
+    // This ensures that local bots that have been removed on the master peer are also removed locally
+    setBots(bots.filter((localBot) => data.bots.some((receivedBot) => receivedBot.id === localBot.id)));
+  }
+}
+
+function updateBotsFromFullSend(data, bots) {
+  if (data.fullSend && data.bots) {
+    // Create a new bots array by filtering only the bots that exist in data.bots
+    const updatedBots = bots.filter((botToCheck) => botToCheck.id == null || data.bots.some((dataBot) => dataBot.id === botToCheck.id));
+
+    // Update the bots array once
+    setBots(updatedBots);
+  }
+}
+
+function removeBots(data, bots) {
+  if (data.removeBots && data.removeBots.length > 0) {
+    for (let dataBot of data.removeBots) {
+      if (dataBot.id != null) {
+        let matchingBot = bots.find((currentBot) => currentBot.id === dataBot.id);
+        if (matchingBot == null) {
+          setBots(bots.filter((bot) => bot.id !== dataBot.id));
+        }
+      }
+    }
+  }
+}
+
+function updateLocalForce(localForce, receivedForce, playerId) {
   const interpFactor = 0.2;
 
   if (localForce.tracks == null || localForce.tracks.id != playerId) {
@@ -453,7 +434,7 @@ function updateLocalForce(localForce, receivedForce,playerId) {
   }
 }
 
-function updateForces(data, player, forces,playerId) {
+function updateForces(data, player, forces, playerId) {
   if (data.forces && data.forces.length > 0) {
     setTimeSinceMessageFromMaster(0);
 
@@ -461,7 +442,7 @@ function updateForces(data, player, forces,playerId) {
       // Find the corresponding local bot by ID
       const localForce = findForceById(receivedForce.id);
       if (localForce) {
-        updateLocalForce(localForce, receivedForce,playerId);
+        updateLocalForce(localForce, receivedForce, playerId);
       } else if (receivedForce.tracks == null || receivedForce.tracks.id != player.id) {
         // If the local force doesn't exist, add it to the forces array
         forces.push(createForceFromObject(receivedForce));

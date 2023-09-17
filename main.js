@@ -28,6 +28,7 @@ import {
   pilots,
   masterUpdateGame,
   shuffleArray,
+  createBots,
 } from "./gameLogic.js";
 import {
   handleInputEvents,
@@ -413,6 +414,7 @@ window.addEventListener("load", function () {
   // setInterval(() => connectToPeers(player, otherPlayers, globalPowerUps), 6000);
   setTimeout(() => connectToPeers(player, otherPlayers, globalPowerUps), 6000);
 
+  setTimeout(() => createBots(worldDimensions.width, worldDimensions.height, colors), 300);
   setTimeout(() => generatePowerups(globalPowerUps, worldDimensions.width, worldDimensions.height, colors), 300);
   setTimeout(() => generateMines(worldDimensions.width, worldDimensions.height, colors), 310);
   setTimeout(() => generateDirectionalForces(worldDimensions.width, worldDimensions.height, colors), 320);

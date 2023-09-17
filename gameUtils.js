@@ -1,23 +1,21 @@
-
 import { forces } from "./entities.js";
-import { bots, globalPowerUps, mines, } from "./main.js";
+import { bots, globalPowerUps, mines } from "./main.js";
 // Function to find a bot by ID in the bots array
 export function findBotById(id) {
   return bots.find((bot) => bot.id === id);
 }
-
 
 export function findForceById(id) {
   return forces.find((force) => force.id === id);
 }
 
 export function findMineById(id) {
-    return mines.find((mine) => mine.id === id);
-  }
-  
+  return mines.find((mine) => mine.id === id);
+}
+
 export function findPowerUpById(id) {
-    return globalPowerUps.find((powerUp) => powerUp.id === id);
-  }
+  return globalPowerUps.find((powerUp) => powerUp.id === id);
+}
 
 export function differsFrom(firstArray, secondArray) {
   // Convert the second array to a Set for efficient lookup

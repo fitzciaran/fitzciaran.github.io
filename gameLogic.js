@@ -1,6 +1,6 @@
 import { setGameState, GameState, player, setMines, bots, otherPlayers, mines, setGameTimer, gameTimer } from "./main.js";
 import { isPlayerMasterPeer, setTimeSinceMessageFromMaster, timeSinceMessageFromMaster } from "./connectionHandlers.js";
-import { sendPlayerStates, sendEntitiesState, sendEntitiesUpdate, sendRemoveEntityUpdate, sendMinesUpdate, sendPowerUpsUpdate,sendForcesUpdate } from "./sendData.js";
+import { sendPlayerStates, sendEntitiesState, sendEntitiesUpdate, sendRemoveEntityUpdate, sendMinesUpdate, sendPowerUpsUpdate,sendForcesUpdate,sendBotsUpdate } from "./sendData.js";
 import { forces, Mine, PowerUp, ForceType, ForceArea, Entity } from "./entities.js";
 import { Player, Bot } from "./player.js";
 
@@ -15,6 +15,7 @@ export let maxInvincibilityTime = initialInvincibleTime;
 export let maxSpecialMeter = 200;
 let maxPowerups = 10;
 let maxMines = 14;
+let maxBots = 4;
 let maxDirectionalForces = 3;
 // let directionalForces = [];
 export let spawnProtectionTime = 200;
@@ -152,6 +153,43 @@ export function generatePowerups(globalPowerUps, worldWidth, worldHeight, colors
       sendRemoveEntityUpdate("removePowerUps", [removedPowerUp]);
     }
     //- in futre can add effect for this
+  }
+}
+
+export function createBots(worldWidth, worldHeight,colors) {
+  if (!isPlayerMasterPeer(player)) {
+    return;
+  }
+  let addedBots = false;
+
+  // Check if there are less than maxBots bots
+  while (bots.length < maxBots) {
+    let botID = Math.floor(Math.random() * 10000);
+    let bot = new Bot(
+      botID,
+      (Math.random() * 0.8 + 0.1) * worldWidth,
+      (Math.random() * 0.8 + 0.1) * worldHeight,
+      0, // Set other properties for the bot as needed
+      colors[Math.floor(Math.random() * colors.length)]
+    );
+
+    bot.isBot = true;
+    bot.name = getRandomName();
+    bots.push(bot);
+    addedBots = true;
+  }
+
+  if (addedBots) {
+    sendBotsUpdate(true);
+  }
+
+  // Remove excess bots if there are more than maxBots
+  while (bots.length > maxBots) {
+    const removedBot = bots.pop();
+    if (isPlayerMasterPeer(player)) {
+      sendRemoveEntityUpdate("removeBots", [removedBot]);
+    }
+    //  add effects in the future
   }
 }
 
@@ -572,7 +610,7 @@ export function updateBots(deltaTime) {
         bot.name
         // Add other properties as needed
       );
-
+      console.log("had to reinitialise bot");
       // Replace the old bot with the new Bot instance in the array
       bots[index] = newPlayer;
     }
@@ -614,7 +652,7 @@ export function masterUpdateGame(player, globalPowerUps, otherPlayers, bots, del
     setTimeSinceMessageFromMaster(timeSinceMessageFromMaster + 1);
   }
   player.updateTick(deltaTime);
-  createBots();
+  // createBots(worldWidth,worldHeight,colors);
   updateBots(deltaTime);
   updateOtherPlayers(deltaTime);
   updateEnemies(deltaTime);
@@ -684,20 +722,6 @@ export function masterUpdateGame(player, globalPowerUps, otherPlayers, bots, del
   }
 }
 
-//for now just create 4
-export function createBots() {
-  if (bots != null && bots[0] == null) {
-    let botID = 1234;
-    while (bots != null && bots.length < 4) {
-      // let bot = new Bot(botID, null, null, 0, "yellow", 0, "", getRandomName());
-      let bot = new Bot(botID, null, null, 0, null, 0, "", getRandomName());
-      bot.isBot = true;
-      // bot.name = getRandomName();
-      botID += 1;
-      bots.push(bot);
-    }
-  }
-}
 export function getRandomName() {
   const prefixes = [
     "Astro",

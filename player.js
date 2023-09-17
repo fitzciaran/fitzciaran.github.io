@@ -34,6 +34,7 @@ const maxBotsThatCanTargetAtOnce = 1;
 const maxVel = 50;
 const minVel = -50;
 const resettingBackupTimeout = 200;
+let lastSentBots = [];
 
 export const BotState = {
   FOLLOW_PLAYER: "followPlayer",
@@ -550,8 +551,6 @@ export class Player {
         length,
         true
       );
-      // let playerForce = new ForceArea(null, x, y, force, duration, radius, isAttractive, color, tracks, coneAngle, direction, type, width, length);
-      // let minesForce = new ForceArea("player-" + this.id, this.x, this.y, 0.3, 10, 200, this.force == 1, "pink", this);
 
       //currently  doesn't keep a reference to it's force, is that fine?
       forces.push(playerForce);
@@ -1059,8 +1058,40 @@ export class Bot extends Player {
   }
 }
 
-export function serializeBots(bots) {
-  return bots.map((bot) => ({
+export function serializeBots(bots, onlyChangedData = false) {
+  if (onlyChangedData) {
+    // Serialize and return only the changed bots
+    const changedBotData = bots.map((currentBot) => {
+      const lastSentBotData = lastSentBots.find((lastBotData) => lastBotData.id === currentBot.id);
+      const serializedBot = serializeBot(currentBot);
+
+      // Compare the serialized data of the current bot with the last sent data
+      if (!lastSentBotData || !isEqualBot(serializedBot, lastSentBotData)) {
+        // Update lastSentBots with the new serialized data if changed
+        lastSentBots = lastSentBots.map((bot) =>
+          bot.id === currentBot.id ? serializedBot : bot
+        );
+        return serializedBot;
+      }
+
+      // Return the last sent data for bots that haven't changed
+      return lastSentBotData;
+    });
+
+    return changedBotData;
+  } else {
+    // If onlyChangedData is false, update lastSentBots with the current serialized data
+    lastSentBots = bots.map(serializeBot);
+
+    // Serialize and return all bots
+    return lastSentBots;
+  }
+}
+
+
+// Define a function to serialize a bot's data
+function serializeBot(bot) {
+  return {
     id: bot.id,
     x: bot.x,
     y: bot.y,
@@ -1092,5 +1123,43 @@ export function serializeBots(bots) {
     invincibleTimer: bot.invincibleTimer,
     name: bot.name,
     inForce: bot.inForce,
-  }));
+  };
+}
+
+// Define a function to compare bot objects for equality
+function isEqualBot(bot1, bot2) {
+
+  let isSame =  (
+    bot1.x === bot2.x &&
+    bot1.y === bot2.y &&
+    bot1.vel === bot2.vel &&
+    bot1.isDead === bot2.isDead &&
+    bot1.angle === bot2.angle &&
+    bot1.currentSpeed === bot2.currentSpeed &&
+    bot1.timeOfLastActive === bot2.timeOfLastActive &&
+    bot1.playerAngleData === bot2.playerAngleData &&
+    bot1.mousePosX === bot2.mousePosX &&
+    bot1.mousePosY === bot2.mousePosY &&
+    bot1.isPlaying === bot2.isPlaying &&
+    bot1.special === bot2.special &&
+    bot1.distanceFactor === bot2.distanceFactor &&
+    bot1.lives === bot2.lives &&
+    bot1.space === bot2.space &&
+    bot1.shift === bot2.shift &&
+    bot1.u === bot2.u &&
+    bot1.forceCoolDown === bot2.forceCoolDown &&
+    bot1.comboScaler === bot2.comboScaler &&
+    bot1.kills === bot2.kills &&
+    bot1.ticksSincePowerUpCollection === bot2.ticksSincePowerUpCollection &&
+    bot1.timeSinceSpawned === bot2.timeSinceSpawned &&
+    bot1.botState === bot2.botState &&
+    bot1.randomTarget === bot2.randomTarget &&
+    bot1.followingPlayerID === bot2.followingPlayerID &&
+    bot1.previousAngleDifference === bot2.previousAngleDifference &&
+    bot1.previousTurnDirection === bot2.previousTurnDirection &&
+    bot1.invincibleTimer === bot2.invincibleTimer &&
+    bot1.name === bot2.name &&
+    bot1.inForce === bot2.inForce
+  );
+  return isSame;
 }

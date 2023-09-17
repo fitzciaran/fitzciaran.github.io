@@ -178,64 +178,56 @@ export function createPowerUpFromObject(obj) {
 
 export function serializeForces(forces, onlyChangedData = false) {
   if (onlyChangedData) {
-    // Calculate the differences between the current forces and lastSentForces
-    const changedForces = forces.filter((currentForce) => {
-      const lastSentForce = lastSentForces.find((lastForce) => lastForce.id === currentForce.id);
-      return !lastSentForce || !isEqualForce(currentForce, lastSentForce);
+    // Serialize and return only the changed forces
+    const changedForceData = forces.map((currentForce) => {
+      const lastSentForceData = lastSentForces.find((lastForceData) => lastForceData.id === currentForce.id);
+      const serializedForce = serializeForce(currentForce);
+
+      // Compare the serialized data of the current force with the last sent data
+      if (!lastSentForceData || !isEqualForce(serializedForce, lastSentForceData)) {
+        // Update lastSentForces with the new serialized data if changed
+        lastSentForces = lastSentForces.map((force) => (force.id === currentForce.id ? serializedForce : force));
+        return serializedForce;
+      }
+
+      // Return the last sent data for forces that haven't changed
+      return lastSentForceData;
     });
 
-    // Update lastSentForces with the new data
-    lastSentForces = forces.slice();
-
-    // Serialize and return the changed forces
-    return changedForces.map((force) => ({
-      id: force.id,
-      x: force.x,
-      y: force.y,
-      force: force.force,
-      duration: force.duration,
-      radius: force.radius,
-      isAttractive: force.isAttractive,
-      color: force.color,
-      tracks: force.tracks,
-      coneAngle: force.coneAngle,
-      direction: force.direction,
-      type: force.type,
-      numberArrowsEachSide: force.numberArrowsEachSide,
-      numberArrowsDeep: force.numberArrowsDeep,
-      width: force.width,
-      length: force.length,
-    }));
+    return changedForceData;
   } else {
-    // If onlyChangedData is false, update lastSentForces with the current forces
-    lastSentForces = forces.slice();
+    // If onlyChangedData is false, update lastSentForces with the current serialized data
+    lastSentForces = forces.map(serializeForce);
 
     // Serialize and return all forces
-    return forces.map((force) => ({
-      id: force.id,
-      x: force.x,
-      y: force.y,
-      force: force.force,
-      duration: force.duration,
-      radius: force.radius,
-      isAttractive: force.isAttractive,
-      color: force.color,
-      tracks: force.tracks,
-      coneAngle: force.coneAngle,
-      direction: force.direction,
-      type: force.type,
-      numberArrowsEachSide: force.numberArrowsEachSide,
-      numberArrowsDeep: force.numberArrowsDeep,
-      width: force.width,
-      length: force.length,
-    }));
+    return lastSentForces;
   }
 }
 
-// Define a function to compare force objects for equality
+// Define a function to serialize a force's data
+function serializeForce(force) {
+  return {
+    id: force.id,
+    x: force.x,
+    y: force.y,
+    force: force.force,
+    duration: force.duration,
+    radius: force.radius,
+    isAttractive: force.isAttractive,
+    color: force.color,
+    tracks: force.tracks,
+    coneAngle: force.coneAngle,
+    direction: force.direction,
+    type: force.type,
+    numberArrowsEachSide: force.numberArrowsEachSide,
+    numberArrowsDeep: force.numberArrowsDeep,
+    width: force.width,
+    length: force.length,
+  };
+}
+
+// compare force objects for equality
 function isEqualForce(force1, force2) {
-  // Implement your logic for comparing force objects here
-  // For example, you can compare relevant properties to check if they are equal
   return (
     force1.x === force2.x &&
     force1.y === force2.y &&
@@ -258,48 +250,48 @@ function isEqualForce(force1, force2) {
 
 export function serializeMines(mines, onlyChangedData = false) {
   if (onlyChangedData) {
-    // Calculate the differences between the current mines and lastSentMasterMineData
-    const changedMines = mines.filter((currentMine) => {
-      const lastSentMine = lastSentMasterMineData.find((lastMine) => lastMine.id === currentMine.id);
-      return !lastSentMine || !isEqualMine(currentMine, lastSentMine);
+    // Serialize and return only the changed mines
+    const changedMineData = mines.map((currentMine) => {
+      const lastSentMineData = lastSentMasterMineData.find((lastMineData) => lastMineData.id === currentMine.id);
+      const serializedMine = serializeMine(currentMine);
+
+      // Compare the serialized data of the current mine with the last sent data
+      if (!lastSentMineData || !isEqualMine(serializedMine, lastSentMineData)) {
+        // Update lastSentMasterMineData with the new serialized data if changed
+        lastSentMasterMineData = lastSentMasterMineData.map((mine) => (mine.id === currentMine.id ? serializedMine : mine));
+        return serializedMine;
+      }
+
+      // Return the last sent data for mines that haven't changed
+      return lastSentMineData;
     });
 
-    // Update lastSentMasterMineData with the new data
-    lastSentMasterMineData = mines.slice();
-
-    // Serialize and return the changed mines
-    return changedMines.map((mine) => ({
-      id: mine.id,
-      x: mine.x,
-      y: mine.y,
-      force: mine.force,
-      duration: mine.duration,
-      radius: mine.radius,
-      hitFrames: mine.hitFrames,
-      color: mine.color,
-    }));
+    return changedMineData;
   } else {
-    // If onlyChangedData is false, update lastSentMasterMineData with the current mines
-    lastSentMasterMineData = mines.slice();
+    // If onlyChangedData is false, update lastSentMasterMineData with the current serialized data
+    lastSentMasterMineData = mines.map(serializeMine);
 
     // Serialize and return all mines
-    return mines.map((mine) => ({
-      id: mine.id,
-      x: mine.x,
-      y: mine.y,
-      force: mine.force,
-      duration: mine.duration,
-      radius: mine.radius,
-      hitFrames: mine.hitFrames,
-      color: mine.color,
-    }));
+    return lastSentMasterMineData;
   }
+}
+
+// Define a function to serialize a mine's data
+function serializeMine(mine) {
+  return {
+    id: mine.id,
+    x: mine.x,
+    y: mine.y,
+    force: mine.force,
+    duration: mine.duration,
+    radius: mine.radius,
+    hitFrames: mine.hitFrames,
+    color: mine.color,
+  };
 }
 
 // Define a function to compare mine objects for equality
 function isEqualMine(mine1, mine2) {
-  // Implement your logic for comparing mine objects here
-  // For example, you can compare relevant properties to check if they are equal
   return (
     mine1.x === mine2.x &&
     mine1.y === mine2.y &&
@@ -313,48 +305,50 @@ function isEqualMine(mine1, mine2) {
 
 export function serializeGlobalPowerUps(globalPowerUps, onlyChangedData = false) {
   if (onlyChangedData) {
-    // Calculate the differences between the current globalPowerUps and lastSentGlobalPowerUps
-    const changedGlobalPowerUps = globalPowerUps.filter((currentPowerUp) => {
-      const lastSentPowerUp = lastSentGlobalPowerUps.find((lastPowerUp) => lastPowerUp.id === currentPowerUp.id);
-      return !lastSentPowerUp || !isEqualGlobalPowerUp(currentPowerUp, lastSentPowerUp);
+    // Serialize and return only the changed globalPowerUps
+    const changedGlobalPowerUpData = globalPowerUps.map((currentPowerUp) => {
+      const lastSentPowerUpData = lastSentGlobalPowerUps.find((lastPowerUpData) => lastPowerUpData.id === currentPowerUp.id);
+      const serializedPowerUp = serializeGlobalPowerUp(currentPowerUp);
+
+      // Compare the serialized data of the current globalPowerUp with the last sent data
+      if (!lastSentPowerUpData || !isEqualGlobalPowerUp(serializedPowerUp, lastSentPowerUpData)) {
+        // Update lastSentGlobalPowerUps with the new serialized data if changed
+        lastSentGlobalPowerUps = lastSentGlobalPowerUps.map((powerUp) =>
+          powerUp.id === currentPowerUp.id ? serializedPowerUp : powerUp
+        );
+        return serializedPowerUp;
+      }
+
+      // Return the last sent data for globalPowerUps that haven't changed
+      return lastSentPowerUpData;
     });
 
-    // Update lastSentGlobalPowerUps with the new data
-    lastSentGlobalPowerUps = globalPowerUps.slice();
-
-    // Serialize and return the changed globalPowerUps
-    return changedGlobalPowerUps.map((globalPowerUp) => ({
-      id: globalPowerUp.id,
-      x: globalPowerUp.x,
-      y: globalPowerUp.y,
-      color: globalPowerUp.color,
-      isStar: globalPowerUp.isStar,
-      radius: globalPowerUp.radius,
-      value: globalPowerUp.value,
-      hitFrames: globalPowerUp.hitFrames,
-    }));
+    return changedGlobalPowerUpData;
   } else {
-    // If onlyChangedData is false, update lastSentGlobalPowerUps with the current globalPowerUps
-    lastSentGlobalPowerUps = globalPowerUps.slice();
+    // If onlyChangedData is false, update lastSentGlobalPowerUps with the current serialized data
+    lastSentGlobalPowerUps = globalPowerUps.map(serializeGlobalPowerUp);
 
     // Serialize and return all globalPowerUps
-    return globalPowerUps.map((globalPowerUp) => ({
-      id: globalPowerUp.id,
-      x: globalPowerUp.x,
-      y: globalPowerUp.y,
-      color: globalPowerUp.color,
-      isStar: globalPowerUp.isStar,
-      radius: globalPowerUp.radius,
-      value: globalPowerUp.value,
-      hitFrames: globalPowerUp.hitFrames,
-    }));
+    return lastSentGlobalPowerUps;
   }
+}
+
+// Define a function to serialize a globalPowerUp's data
+function serializeGlobalPowerUp(powerUp) {
+  return {
+    id: powerUp.id,
+    x: powerUp.x,
+    y: powerUp.y,
+    color: powerUp.color,
+    isStar: powerUp.isStar,
+    radius: powerUp.radius,
+    value: powerUp.value,
+    hitFrames: powerUp.hitFrames,
+  };
 }
 
 // Define a function to compare globalPowerUp objects for equality
 function isEqualGlobalPowerUp(powerUp1, powerUp2) {
-  // Implement your logic for comparing globalPowerUp objects here
-  // For example, you can compare relevant properties to check if they are equal
   return (
     powerUp1.x === powerUp2.x &&
     powerUp1.y === powerUp2.y &&

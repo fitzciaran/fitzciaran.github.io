@@ -163,9 +163,9 @@ export function sendEntitiesUpdate() {
     fromMaster: isPlayerMasterPeer(player),
     gameState: true,
     globalPowerUps: serializeGlobalPowerUps(globalPowerUps, true),
-    bots: serializeBots(bots),
+    bots: serializeBots(bots,true),
     mines: serializeMines(mines, true),
-    forces: serializeForces(forces),
+    forces: serializeForces(forces, true),
     // connectedPeers: connectedPeers,
   };
 
@@ -208,6 +208,19 @@ export function sendForcesUpdate(onlyChangedData = true) {
     fromMaster: isPlayerMasterPeer(player),
     gameState: true,
     forces: serializeForces(forces, onlyChangedData),
+  };
+
+  sendData(data);
+}
+
+export function sendBotsUpdate(onlyChangedData = true) {
+  // Send game state to other player
+  let data = {
+    timestamp: Date.now(),
+    priority: 2,
+    fromMaster: isPlayerMasterPeer(player),
+    gameState: true,
+    bots: serializeBots(bots, onlyChangedData),
   };
 
   sendData(data);
