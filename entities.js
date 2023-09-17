@@ -1,4 +1,7 @@
 import { Player } from "./player.js";
+import { player } from "./main.js";
+import { isPlayerMasterPeer } from "./connectionHandlers.js";
+import { sendRemoveEntityUpdate } from "./sendData.js";
 
 export let forces = [];
 
@@ -65,9 +68,15 @@ export class ForceArea extends Entity {
   setDuration(newDuration) {
     this.duration = newDuration;
     if (this.duration < 1) {
-      forces = forces.filter(function (element) {
-        return element !== this;
-      }, this);
+      // forces = forces.filter(function (element) {
+      setForces(
+        forces.filter(function (element) {
+          return element !== this;
+        }, this)
+      );
+      if (isPlayerMasterPeer(player)) {
+        sendRemoveEntityUpdate("removeForces", [this]);
+      }
     }
   }
 }

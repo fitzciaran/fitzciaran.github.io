@@ -274,14 +274,15 @@ function updateWinState() {
 
 export function setGlobalPowerUps(newPowerUps) {
   if (newPowerUps !== globalPowerUps) {
-    //update original array
+    //update original array while keeping the reference
     globalPowerUps.length = 0;
     globalPowerUps.push(...newPowerUps);
   }
 }
+
 export function setMines(newMines) {
   if (newMines !== mines) {
-    //update original array
+    //update original array while keeping the reference
     mines.length = 0;
     mines.push(...newMines);
   }

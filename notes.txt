@@ -327,3 +327,7 @@ add a "request full update" payload for when set new master peer. have master pe
 maybe have basic player updates include who they consider master peer? could be used to trigger choosenewmaster
 
 ensure unique id's for entities
+
+sometimes can get into game without name set (think without pilot set too?)
+
+blocking troll error screen overlay if "specs too low"

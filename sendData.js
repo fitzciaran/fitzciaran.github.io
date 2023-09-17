@@ -141,6 +141,7 @@ export function sendEntitiesState() {
     priority: 2,
     fromMaster: isPlayerMasterPeer(player),
     gameState: true,
+    fullSend: true,
     globalPowerUps: serializeGlobalPowerUps(globalPowerUps),
     bots: serializeBots(bots),
     mines: serializeMines(mines),
@@ -155,66 +156,77 @@ export function sendEntitiesState() {
 
 //this is the full send that will only be sent on request / occasionally
 export function sendEntitiesUpdate() {
-    // Send game state to other player
-    let data = {
-      timestamp: Date.now(),
-      priority: 2,
-      fromMaster: isPlayerMasterPeer(player),
-      gameState: true,
-      globalPowerUps: serializeGlobalPowerUps(globalPowerUps,true),
-      bots: serializeBots(bots),
-      mines: serializeMines(mines, true),
-      forces: serializeForces(forces),
-      // connectedPeers: connectedPeers,
-    };
-  
-    sendData(data);
-  }
+  // Send game state to other player
+  let data = {
+    timestamp: Date.now(),
+    priority: 2,
+    fromMaster: isPlayerMasterPeer(player),
+    gameState: true,
+    globalPowerUps: serializeGlobalPowerUps(globalPowerUps, true),
+    bots: serializeBots(bots),
+    mines: serializeMines(mines, true),
+    forces: serializeForces(forces),
+    // connectedPeers: connectedPeers,
+  };
 
-  
-  //this is the full send that will only be sent on request / occasionally
-export function sendPowerUpsUpdate(onlyChangedData=true) {
-    // Send game state to other player
-    let data = {
-      timestamp: Date.now(),
-      priority: 2,
-      fromMaster: isPlayerMasterPeer(player),
-      gameState: true,
-      globalPowerUps: serializeGlobalPowerUps(globalPowerUps,onlyChangedData),
-    };
-  
-    sendData(data);
-  }
+  sendData(data);
+}
 
-  
-  //this is the full send that will only be sent on request / occasionally
-export function sendMinesUpdate(onlyChangedData=true) {
-    // Send game state to other player
-    let data = {
-      timestamp: Date.now(),
-      priority: 2,
-      fromMaster: isPlayerMasterPeer(player),
-      gameState: true,
-      mines: serializeMines(mines, onlyChangedData),
-    };
-  
-    sendData(data);
-  }
-  
+//this is the full send that will only be sent on request / occasionally
+export function sendPowerUpsUpdate(onlyChangedData = true) {
+  // Send game state to other player
+  let data = {
+    timestamp: Date.now(),
+    priority: 2,
+    fromMaster: isPlayerMasterPeer(player),
+    gameState: true,
+    globalPowerUps: serializeGlobalPowerUps(globalPowerUps, onlyChangedData),
+  };
+
+  sendData(data);
+}
+
+//this is the full send that will only be sent on request / occasionally
+export function sendMinesUpdate(onlyChangedData = true) {
+  // Send game state to other player
+  let data = {
+    timestamp: Date.now(),
+    priority: 2,
+    fromMaster: isPlayerMasterPeer(player),
+    gameState: true,
+    mines: serializeMines(mines, onlyChangedData),
+  };
+
+  sendData(data);
+}
+
+export function sendForcesUpdate(onlyChangedData = true) {
+  // Send game state to other player
+  let data = {
+    timestamp: Date.now(),
+    priority: 2,
+    fromMaster: isPlayerMasterPeer(player),
+    gameState: true,
+    forces: serializeForces(forces, onlyChangedData),
+  };
+
+  sendData(data);
+}
+
 export function sendRemoveEntityUpdate(propertyName, entitiesToRemove) {
-    // Send game state to other player
-    let data = {
-      timestamp: Date.now(),
-      priority: 2,
-      fromMaster: isPlayerMasterPeer(player),
-      gameState: true,
-    };
-  
-    // Add the specified property name and its value to the data object
-    data[propertyName] = entitiesToRemove;
-  
-    sendData(data);
-  }
+  // Send game state to other player
+  let data = {
+    timestamp: Date.now(),
+    priority: 2,
+    fromMaster: isPlayerMasterPeer(player),
+    gameState: true,
+  };
+
+  // Add the specified property name and its value to the data object
+  data[propertyName] = entitiesToRemove;
+
+  sendData(data);
+}
 
 export function sendConnectedPeers() {
   // Send game state to other player

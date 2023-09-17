@@ -1,6 +1,6 @@
 import { setGameState, GameState, player, setMines, bots, otherPlayers, mines, setGameTimer, gameTimer } from "./main.js";
 import { isPlayerMasterPeer, setTimeSinceMessageFromMaster, timeSinceMessageFromMaster } from "./connectionHandlers.js";
-import { sendPlayerStates, sendEntitiesState, sendEntitiesUpdate, sendRemoveEntityUpdate, sendMinesUpdate, sendPowerUpsUpdate } from "./sendData.js";
+import { sendPlayerStates, sendEntitiesState, sendEntitiesUpdate, sendRemoveEntityUpdate, sendMinesUpdate, sendPowerUpsUpdate,sendForcesUpdate } from "./sendData.js";
 import { forces, Mine, PowerUp, ForceType, ForceArea, Entity } from "./entities.js";
 import { Player, Bot } from "./player.js";
 
@@ -16,7 +16,7 @@ export let maxSpecialMeter = 200;
 let maxPowerups = 10;
 let maxMines = 14;
 let maxDirectionalForces = 3;
-let directionalForces = [];
+// let directionalForces = [];
 export let spawnProtectionTime = 200;
 export let endGameMessage = "";
 export let gameWon = false;
@@ -145,12 +145,21 @@ export function generatePowerups(globalPowerUps, worldWidth, worldHeight, colors
   if (addedPowerUps) {
     sendPowerUpsUpdate(true);
   }
+  // Remove excess powerUps if there are more than maxPowerups
+  while (globalPowerUps.length > maxPowerups) {
+    const removedPowerUp = globalPowerUps.pop();
+    if (isPlayerMasterPeer(player)) {
+      sendRemoveEntityUpdate("removePowerUps", [removedPowerUp]);
+    }
+    //- in futre can add effect for this
+  }
 }
 
 export function generateMines(worldWidth, worldHeight, colors) {
   if (!isPlayerMasterPeer(player)) {
     return;
   }
+  let addedMines = false;
   // Check if there are less than max powerups powerups
   while (mines.length < maxMines) {
     let hasGravity = 0;
@@ -167,6 +176,18 @@ export function generateMines(worldWidth, worldHeight, colors) {
       hasGravity
     );
     mines.push(mine);
+    addedMines = true;
+  }
+  if (addedMines) {
+    sendMinesUpdate(true);
+  }
+  // Remove excess mines if there are more than maxMines
+  while (mines.length > maxMines) {
+    const removedMine = mines.pop();
+    if (isPlayerMasterPeer(player)) {
+      sendRemoveEntityUpdate("removeMines", [removedMine]);
+    }
+    //- in futre can add effect for this
   }
 }
 
@@ -174,8 +195,9 @@ export function generateDirectionalForces(worldWidth, worldHeight, colors) {
   if (!isPlayerMasterPeer(player)) {
     return;
   }
-  // let directionalForcesToGenerate = 4;
-  // let directionalForcesGenerated = 0;
+  let addedDirectionalForces = false;
+  const directionalForces = forces.filter(force => force.type === ForceType.DIRECTIONAL);
+
   // Check if there are less than max powerups powerups
   while (directionalForces.length < maxDirectionalForces) {
     let hasGravity = 0;
@@ -203,7 +225,21 @@ export function generateDirectionalForces(worldWidth, worldHeight, colors) {
 
     forces.push(force);
     directionalForces.push(force);
-    // directionalForcesGenerated++;
+    addedDirectionalForces = true;
+  }
+  if (addedDirectionalForces) {
+    sendForcesUpdate(true);
+  }
+  // Remove excess directional forces if there are more than maxDirectionalForces
+  while (directionalForces.length > maxDirectionalForces) {
+    const removedForce = directionalForces.pop();
+    const index = forces.indexOf(removedForce);
+    if (index !== -1) {
+      if (isPlayerMasterPeer(player)) {
+        sendRemoveEntityUpdate("removeForces", [forces[index]]);
+      }
+      forces.splice(index, 1);
+    }
   }
 }
 
@@ -612,7 +648,6 @@ export function masterUpdateGame(player, globalPowerUps, otherPlayers, bots, del
         mines.splice(i, 1);
       }
     }
-    
   }
 
   // Remove PowerUps with hit frames that have expired.
@@ -631,7 +666,6 @@ export function masterUpdateGame(player, globalPowerUps, otherPlayers, bots, del
         globalPowerUps.splice(i, 1);
       }
     }
-    
   }
 
   basicAnimationTimer++;

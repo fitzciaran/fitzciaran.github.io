@@ -53,123 +53,8 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
     otherPlayer = findBotById(data.id);
   }
   if (otherPlayer) {
-    updateOtherPlayerData(otherPlayer, data);
-  }
-  // // If the player is found, update their data
-  // if (otherPlayer) {
-  //   if (data.hasOwnProperty("x")) {
-  //     otherPlayer.x = data.x;
-  //   }
-  //   if (data.hasOwnProperty("y")) {
-  //     otherPlayer.y = data.y;
-  //   }
-  //   if (data.hasOwnProperty("powerUps")) {
-  //     otherPlayer.powerUps = data.powerUps;
-  //   }
-  //   if (data.hasOwnProperty("color")) {
-  //     otherPlayer.color = data.color;
-  //   }
-  //   if (data.hasOwnProperty("angle")) {
-  //     otherPlayer.angle = data.angle;
-  //   }
-  //   if (data.hasOwnProperty("devMode")) {
-  //     otherPlayer.devMode = data.devMode;
-  //   }
-  //   if (data.hasOwnProperty("pilot")) {
-  //     otherPlayer.pilot = data.pilot;
-  //   }
-  //   if (data.hasOwnProperty("isBot")) {
-  //     otherPlayer.isBot = data.isBot;
-  //   }
-  //   if (data.hasOwnProperty("special")) {
-  //     otherPlayer.special = data.special;
-  //   }
-  //   if (data.hasOwnProperty("name")) {
-  //     if (data.name != null && data.name != "") {
-  //       otherPlayer.name = data.name;
-  //     }
-  //   }
-  //   if (data.hasOwnProperty("lives")) {
-  //     otherPlayer.lives = data.lives;
-  //   }
-  //   if (data.hasOwnProperty("isMaster")) {
-  //     otherPlayer.isMaster = data.isMaster;
-  //   }
-  //   if (data.hasOwnProperty("isDead")) {
-  //     otherPlayer.setIsDead(data.isDead);
-  //   }
-  //   if (data.hasOwnProperty("isPlaying")) {
-  //     otherPlayer.isPlaying = data.isPlaying;
-  //   }
-  //   if (data.hasOwnProperty("invincibleTimer")) {
-  //     otherPlayer.setInvincibleTimer(data.invincibleTimer);
-  //   }
-  //   if (data.hasOwnProperty("forceCoolDown")) {
-  //     otherPlayer.forceCoolDown = data.forceCoolDown;
-  //   }
-  //   if (data.hasOwnProperty("comboScaler")) {
-  //     otherPlayer.setComboScaler(data.comboScaler);
-  //   }
-  //   if (data.hasOwnProperty("kills")) {
-  //     otherPlayer.kills = data.kills;
-  //   }
-  //   if (data.hasOwnProperty("playerAngleData")) {
-  //     otherPlayer.playerAngleData = data.playerAngleData;
-  //   }
-  //   if (data.hasOwnProperty("mousePosX")) {
-  //     otherPlayer.mousePosX = data.mousePosX;
-  //   }
-  //   if (data.hasOwnProperty("mousePosY")) {
-  //     otherPlayer.mousePosY = data.mousePosY;
-  //   }
-  //   if (data.hasOwnProperty("currentSpeed")) {
-  //     otherPlayer.currentSpeed = data.currentSpeed;
-  //   }
-  //   if (data.hasOwnProperty("vel")) {
-  //     otherPlayer.vel = data.vel;
-  //   }
-  //   if (data.hasOwnProperty("distanceFactor")) {
-  //     otherPlayer.distanceFactor = data.distanceFactor;
-  //   }
-  //   if (data.hasOwnProperty("space")) {
-  //     otherPlayer.space = data.space;
-  //   }
-  //   if (data.hasOwnProperty("shift")) {
-  //     otherPlayer.shift = data.shift;
-  //   }
-  //   if (data.hasOwnProperty("resetting") && data.resetting != null) {
-  //     otherPlayer.resetting = data.resetting;
-  //   }
-  //   if (data.hasOwnProperty("ticksSincePowerUpCollection")) {
-  //     otherPlayer.ticksSincePowerUpCollection = data.ticksSincePowerUpCollection;
-  //   }
-  //   if (data.hasOwnProperty("targetedBy")) {
-  //     otherPlayer.targetedBy = data.targetedBy;
-  //   }
-  //   if (data.hasOwnProperty("timeOfLastActive")) {
-  //     otherPlayer.timeOfLastActive = data.timeOfLastActive;
-  //   }
-  //   if (data.hasOwnProperty("hitBy")) {
-  //     otherPlayer.hitBy = data.hitBy;
-  //   }
-  //   if (data.hasOwnProperty("killedBy")) {
-  //     otherPlayer.killedBy = data.killedBy;
-  //   }
-  //   if (data.hasOwnProperty("killed")) {
-  //     otherPlayer.killed = data.killed;
-  //   }
-  //   if (data.hasOwnProperty("recentScoreTicks")) {
-  //     otherPlayer.recentScoreTicks = data.recentScoreTicks;
-  //   }
-  //   if (data.hasOwnProperty("recentScoreText")) {
-  //     otherPlayer.recentScoreText = data.recentScoreText;
-  //   }
-
-  //   if (isPlayerMasterPeer(player) && otherPlayer.isMaster && !otherPlayer.isBot) {
-  //     wrappedResolveConflicts(player, otherPlayers, globalPowerUps);
-  //   }
-  // }
-  // If the player is not found, add them to the array
+    updateOtherPlayerData(otherPlayer, data,otherPlayers, globalPowerUps);
+  } // If the player is not found, add them to the array
   else if (data.id && data.id != player.id && !data.isBot) {
     let newPlayer = new Player(data.id, data.x, data.y, data.powerUps, data.color, data.angle, data.pilot, data.name, data.isPlaying, true);
     otherPlayers.push(newPlayer);
@@ -183,141 +68,29 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
     // // If this is our own data, update key properties from the master, not position, velocity, etc.
     updateOwnPlayerData(player, data);
   }
-  // if (data.hasOwnProperty("powerUps")) {
-  //   player.powerUps = data.powerUps;
-  // }
-  // if (data.hasOwnProperty("comboScaler")) {
-  //   player.setComboScaler(data.comboScaler);
-  // }
 
-  // if (data.hasOwnProperty("lives")) {
-  //   player.lives = data.lives;
-  // }
-  // if (data.hasOwnProperty("hitBy")) {
-  //   player.hitBy = data.hitBy;
-  //   // if (player.hitBy != null && player.hitBy != "") {
-  //   //   setEndGameMessage("Killed by: " + player.hitBy + "\nScore: " + player.powerUps * 100);
-  //   // } else {
-  //   //   setEndGameMessage("Score: " + player.powerUps * 100);
-  //   // }
-  //   // player.updateKilledAndKilledByLists(player.hitBy, true);
-  // }
-  // if (data.hasOwnProperty("kills")) {
-  //   player.kills = data.kills;
-  // }
-  // if (data.hasOwnProperty("killed")) {
-  //   player.killed = data.killed;
-  // }
-  // if (data.hasOwnProperty("killedBy")) {
-  //   player.killedBy = data.killedBy;
-  // }
-  // if (data.hasOwnProperty("isDead")) {
-  //   if (data.isDead && !player.isDead) {
-  //     player.updateKilledAndKilledByLists(player.hitBy, true);
-  //   }
-  //   player.setIsDead(data.isDead);
-  //   if (data.isDead) {
-  //     player.vel.x = 0;
-  //     player.vel.y = 0;
-  //   }
-  // }
-  // if (data.hasOwnProperty("invincibleTimer")) {
-  //   player.setInvincibleTimer(data.invincibleTimer);
-  // }
-  // if (data.hasOwnProperty("ticksSincePowerUpCollection")) {
-  //   player.ticksSincePowerUpCollection = data.ticksSincePowerUpCollection;
-  // }
-  // if (data.hasOwnProperty("recentScoreTicks")) {
-  //   player.recentScoreTicks = data.recentScoreTicks;
-  // }
-  // if (data.hasOwnProperty("recentScoreText")) {
-  //   player.recentScoreText = data.recentScoreText;
-  // }
-  // } else if (data.id && data.id == player.id) {
-  //   // If this is our own data, update key properties from the master, not position, velocity, etc.
-
-  //   if (data.hasOwnProperty("powerUps")) {
-  //     player.powerUps = data.powerUps;
-  //   }
-  //   if (data.hasOwnProperty("comboScaler")) {
-  //     player.setComboScaler(data.comboScaler);
-  //   }
-  //   if (data.hasOwnProperty("isDead")) {
-  //     player.setIsDead(data.isDead);
-  //     if (data.isDead) {
-  //       player.vel.x = 0;
-  //       player.vel.y = 0;
-  //     }
-  //   }
-  //   if (data.hasOwnProperty("lives")) {
-  //     player.lives = data.lives;
-  //   }
-  //   if (data.hasOwnProperty("hitBy")) {
-  //     player.hitBy = data.hitBy;
-  //     if (player.hitBy != null && player.hitBy != "") {
-  //       setEndGameMessage("Killed by: " + player.hitBy + "\nScore: " + player.powerUps * 100);
+  updateGlobalPowerUps(data, globalPowerUps);
+  // if (data.globalPowerUps && data.globalPowerUps.length > 0) {
+  //   for (const receivedPowerUp of data.globalPowerUps) {
+  //     // Find the corresponding local powerup by ID
+  //     const localPowerUp = findPowerUpById(receivedPowerUp.id);
+  //     const interpFactor = 0.2;
+  //     if (localPowerUp) {
+  //       localPowerUp.x = localPowerUp.x + (receivedPowerUp.x - localPowerUp.x) * interpFactor;
+  //       localPowerUp.y = localPowerUp.y + (receivedPowerUp.y - localPowerUp.y) * interpFactor;
+  //       localPowerUp.color = receivedPowerUp.color;
+  //       localPowerUp.isStar = receivedPowerUp.isStar;
+  //       localPowerUp.value = receivedPowerUp.value;
+  //       localPowerUp.radius = receivedPowerUp.radius;
+  //       localPowerUp.hitFrames = receivedPowerUp.hitFrames;
   //     } else {
-  //       setEndGameMessage("Score: " + player.powerUps * 100);
+  //       // If the local powerup doesn't exist, add it to the mines array
+  //       globalPowerUps.push(createPowerUpFromObject(receivedPowerUp));
   //     }
   //   }
-  //   if (data.hasOwnProperty("kills")) {
-  //     player.kills = data.kills;
-  //   }
-  //   if (data.hasOwnProperty("killed")) {
-  //     player.killed = data.killed;
-  //   }
-  //   if (data.hasOwnProperty("killedBy")) {
-  //     player.killedBy = data.killedBy;
-  //   }
-  //   if (data.hasOwnProperty("invincibleTimer")) {
-  //     player.setInvincibleTimer(data.invincibleTimer);
-  //   }
-  //   if (data.hasOwnProperty("ticksSincePowerUpCollection")) {
-  //     player.ticksSincePowerUpCollection = data.ticksSincePowerUpCollection;
-  //   }
-  //   if (data.hasOwnProperty("recentScoreTicks")) {
-  //     player.recentScoreTicks = data.recentScoreTicks;
-  //   }
-  //   if (data.hasOwnProperty("recentScoreText")) {
-  //     player.recentScoreText = data.recentScoreText;
-  //   }
   // }
-  // Only update the powerups if the received data contains different powerups
-  // if (data.globalPowerUps && JSON.stringify(globalPowerUps) !== JSON.stringify(data.globalPowerUps)) {
-  //   const powerUpInstances = data.globalPowerUps.map(createPowerUpFromObject);
-  //   setGlobalPowerUps(powerUpInstances);
-  // }
-  if (data.globalPowerUps && data.globalPowerUps.length > 0) {
-    for (const receivedPowerUp of data.globalPowerUps) {
-      // Find the corresponding local powerup by ID
-      const localPowerUp = findPowerUpById(receivedPowerUp.id);
-      const interpFactor = 0.2;
-      if (localPowerUp) {
-        localPowerUp.x = localPowerUp.x + (receivedPowerUp.x - localPowerUp.x) * interpFactor;
-        localPowerUp.y = localPowerUp.y + (receivedPowerUp.y - localPowerUp.y) * interpFactor;
-        localPowerUp.color = receivedPowerUp.color;
-        localPowerUp.isStar = receivedPowerUp.isStar;
-        localPowerUp.value = receivedPowerUp.value;
-        localPowerUp.radius = receivedPowerUp.radius;
-        localPowerUp.hitFrames = receivedPowerUp.hitFrames;
-      } else {
-        // If the local powerup doesn't exist, add it to the mines array
-        globalPowerUps.push(createPowerUpFromObject(receivedPowerUp));
-      }
-    }
-  }
-  modifyGlobalPowerUps(data, globalPowerUps);
+  removeGlobalPowerUps(data, globalPowerUps);
 
-  // if (data.removePowerUps && data.removePowerUps.length > 0) {
-  //   for (let dataPowerUp of data.removePowerUps) {
-  //     if (dataPowerUp.id != null) {
-  //       let matchingPowerUp = globalPowerUps.find((currentPowerUp) => currentPowerUp.id === dataPowerUp.id);
-  //       if (matchingPowerUp == null) {
-  //         setGlobalPowerUps(globalPowerUps.filter((powerUp) => powerUp.id !== dataPowerUp.id));
-  //       }
-  //     }
-  //   }
-  // }
   if (data.bots && data.bots.length > 0) {
     setTimeSinceMessageFromMaster(0);
 
@@ -391,83 +164,42 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
     // This ensures that local bots that have been removed on the master peer are also removed locally
     setBots(bots.filter((localBot) => data.bots.some((receivedBot) => receivedBot.id === localBot.id)));
   }
-  if (data.mines && data.mines.length > 0) {
-    setTimeSinceMessageFromMaster(0);
-
-    for (const receivedMine of data.mines) {
-      // Find the corresponding local bot by ID
-      const localMine = findMineById(receivedMine.id);
-      const interpFactor = 0.2;
-      if (localMine) {
-        localMine.x = localMine.x + (receivedMine.x - localMine.x) * interpFactor;
-        localMine.y = localMine.y + (receivedMine.y - localMine.y) * interpFactor;
-        localMine.force = receivedMine.force;
-        localMine.duration = receivedMine.duration;
-        localMine.radius = receivedMine.radius;
-        localMine.hitFrames = receivedMine.hitFrames;
-        localMine.color = receivedMine.color;
-      } else {
-        // If the local mine doesn't exist, add it to the mines array
-        mines.push(createMineFromObject(receivedMine));
-      }
-    }
-  }
-  if (data.removeMines && data.removeMines.length > 0) {
-    for (let dataMine of data.removeMines) {
-      if (dataMine.id != null) {
-        let matchingMine = mines.find((currentMine) => currentMine.id === dataMine.id);
-        if (matchingMine == null) {
-          setMines(mines.filter((mine) => mine.id !== dataMine.id));
-        }
-      }
-    }
-  }
-  updateForces(data, player, forces);
-  // if (data.forces && data.forces.length > 0) {
+  updateMines(data, mines);
+  removeMines(data, mines);
+  // if (data.mines && data.mines.length > 0) {
   //   setTimeSinceMessageFromMaster(0);
 
-  //   for (const receivedForce of data.forces) {
+  //   for (const receivedMine of data.mines) {
   //     // Find the corresponding local bot by ID
-  //     const localForce = findForceById(receivedForce.id);
+  //     const localMine = findMineById(receivedMine.id);
   //     const interpFactor = 0.2;
-  //     if (localForce) {
-  //       if (localForce.tracks == null || localForce.tracks.id != player.id) {
-  //         //if the local force is the current local players force don't need to update it
-  //         // If the local force exists, interpolate its position
-  //         localForce.x = localForce.x + (receivedForce.x - localForce.x) * interpFactor;
-  //         localForce.y = localForce.y + (receivedForce.y - localForce.y) * interpFactor;
-  //         localForce.force = receivedForce.force;
-  //         localForce.duration = receivedForce.duration;
-  //         localForce.radius = receivedForce.radius;
-  //         localForce.isAttractive = receivedForce.isAttractive;
-  //         localForce.color = receivedForce.color;
-  //         localForce.tracks = receivedForce.tracks;
-  //         localForce.coneAngle = receivedForce.coneAngle;
-  //         localForce.direction = receivedForce.direction;
-  //         localForce.type = receivedForce.type;
-  //         localForce.width = receivedForce.width;
-  //         localForce.length = receivedForce.length;
-  //         localForce.numberArrowsEachSide = receivedForce.numberArrowsEachSide;
-  //         localForce.numberArrowsDeep = receivedForce.numberArrowsDeep;
-  //       } else {
-  //         // console.log("currentplayers force");
-  //       }
-  //     } else if (receivedForce.tracks == null || receivedForce.tracks.id != player.id) {
-  //       // If the local force doesn't exist, add it to the forces array
-  //       forces.push(createForceFromObject(receivedForce));
+  //     if (localMine) {
+  //       localMine.x = localMine.x + (receivedMine.x - localMine.x) * interpFactor;
+  //       localMine.y = localMine.y + (receivedMine.y - localMine.y) * interpFactor;
+  //       localMine.force = receivedMine.force;
+  //       localMine.duration = receivedMine.duration;
+  //       localMine.radius = receivedMine.radius;
+  //       localMine.hitFrames = receivedMine.hitFrames;
+  //       localMine.color = receivedMine.color;
+  //     } else {
+  //       // If the local mine doesn't exist, add it to the mines array
+  //       mines.push(createMineFromObject(receivedMine));
   //     }
   //   }
-  //   //if there is a force in our list that isn't in the master list remove it
-  //   for (let forceToCheck of forces) {
-  //     if (forceToCheck.id != null) {
-  //       let matchingForce = data.forces.find((dataForce) => dataForce.id === forceToCheck.id);
-  //       if (matchingForce == null) {
-  //         setForces(forces.filter((force) => force.id !== forceToCheck.id));
+  // }
+  // if (data.removeMines && data.removeMines.length > 0) {
+  //   for (let dataMine of data.removeMines) {
+  //     if (dataMine.id != null) {
+  //       let matchingMine = mines.find((currentMine) => currentMine.id === dataMine.id);
+  //       if (matchingMine == null) {
+  //         setMines(mines.filter((mine) => mine.id !== dataMine.id));
   //       }
   //     }
   //   }
   // }
-  //don't curently sent this data
+  updateForces(data, player, forces,player.id);
+  removeForces(data, forces);
+  //don't curently send this data
   if (data.otherPlayers && data.otherPlayers.length > 0) {
     setTimeSinceMessageFromMaster(0);
     // const otherPlayersInstances = data.otherPlayers.map(createPlayerFromObject);
@@ -528,7 +260,7 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
   }
 }
 
-function updateOtherPlayerData(player, data) {
+function updateOtherPlayerData(player, data,otherPlayers, globalPowerUps) {
   if (!player) return;
 
   for (const key in data) {
@@ -604,23 +336,105 @@ function updateOwnPlayerData(player, data) {
   }
 }
 
-function modifyGlobalPowerUps(data, globalPowerUps) {
-  if (data.removePowerUps && data.removePowerUps.length > 0) {
-    for (let dataPowerUp of data.removePowerUps) {
-      if (dataPowerUp.id != null) {
-        let matchingPowerUpIndex = globalPowerUps.findIndex((currentPowerUp) => currentPowerUp.id === dataPowerUp.id);
-        if (matchingPowerUpIndex !== -1) {
-          globalPowerUps.splice(matchingPowerUpIndex, 1);
-        }
+function updateGlobalPowerUps(data, globalPowerUps) {
+  if (data.globalPowerUps && data.globalPowerUps.length > 0) {
+    for (const receivedPowerUp of data.globalPowerUps) {
+      // Find the corresponding local powerup by ID
+      const localPowerUp = findPowerUpById(receivedPowerUp.id);
+      const interpFactor = 0.2;
+      if (localPowerUp) {
+        localPowerUp.x = localPowerUp.x + (receivedPowerUp.x - localPowerUp.x) * interpFactor;
+        localPowerUp.y = localPowerUp.y + (receivedPowerUp.y - localPowerUp.y) * interpFactor;
+        localPowerUp.color = receivedPowerUp.color;
+        localPowerUp.isStar = receivedPowerUp.isStar;
+        localPowerUp.value = receivedPowerUp.value;
+        localPowerUp.radius = receivedPowerUp.radius;
+        localPowerUp.hitFrames = receivedPowerUp.hitFrames;
+      } else {
+        // If the local powerup doesn't exist, add it to the mines array
+        globalPowerUps.push(createPowerUpFromObject(receivedPowerUp));
       }
     }
   }
+  if (data.fullSend && data.globalPowerUps) {
+    // Create a new globalPowerUps array by filtering only the powerUps that exist in data.globalPowerUps
+    const updatedGlobalPowerUps = globalPowerUps.filter(
+      (powerUpToCheck) => powerUpToCheck.id == null || data.globalPowerUps.some((dataPowerUp) => dataPowerUp.id === powerUpToCheck.id)
+    );
+
+    // Update the globalPowerUps array once
+    setGlobalPowerUps(updatedGlobalPowerUps);
+  }
 }
 
-function updateLocalForce(localForce, receivedForce) {
+function removeGlobalPowerUps(data, globalPowerUps) {
+  if (data.removePowerUps && data.removePowerUps.length > 0) {
+    let filteredPowerUps = [...globalPowerUps]; // Create a copy of the original globalPowerUps array
+
+    for (let dataPowerUp of data.removePowerUps) {
+      if (dataPowerUp.id != null) {
+        const matchingPowerUpIndex = filteredPowerUps.findIndex((currentPowerUp) => currentPowerUp.id === dataPowerUp.id);
+        if (matchingPowerUpIndex !== -1) {
+          filteredPowerUps.splice(matchingPowerUpIndex, 1);
+        }
+      }
+    }
+
+    // Update the globalPowerUps array once after the loop
+    setGlobalPowerUps(filteredPowerUps);
+  }
+}
+
+function updateMines(data, mines) {
+  if (data.mines && data.mines.length > 0) {
+    setTimeSinceMessageFromMaster(0);
+
+    for (const receivedMine of data.mines) {
+      // Find the corresponding local bot by ID
+      const localMine = findMineById(receivedMine.id);
+      const interpFactor = 0.2;
+      if (localMine) {
+        localMine.x = localMine.x + (receivedMine.x - localMine.x) * interpFactor;
+        localMine.y = localMine.y + (receivedMine.y - localMine.y) * interpFactor;
+        localMine.force = receivedMine.force;
+        localMine.duration = receivedMine.duration;
+        localMine.radius = receivedMine.radius;
+        localMine.hitFrames = receivedMine.hitFrames;
+        localMine.color = receivedMine.color;
+      } else {
+        // If the local mine doesn't exist, add it to the mines array
+        mines.push(createMineFromObject(receivedMine));
+      }
+    }
+  }
+  if (data.fullSend && data.mines) {
+    // Create a new mines array by filtering only the mines that exist in data.mines
+    const updatedMines = mines.filter((mineToCheck) => mineToCheck.id == null || data.mines.some((dataMine) => dataMine.id === mineToCheck.id));
+
+    // Update the mines array once
+    setMines(updatedMines);
+  }
+}
+
+function removeMines(data, mines) {
+  if (data.removeMines && data.removeMines.length > 0) {
+    let filteredMines = [...mines]; // Create a copy of the original mines array
+
+    for (let dataMine of data.removeMines) {
+      if (dataMine.id != null) {
+        filteredMines = filteredMines.filter((mine) => mine.id !== dataMine.id);
+      }
+    }
+
+    // Update the mines array once after the loop
+    setMines(filteredMines);
+  }
+}
+
+function updateLocalForce(localForce, receivedForce,playerId) {
   const interpFactor = 0.2;
 
-  if (localForce.tracks == null || localForce.tracks.id != player.id) {
+  if (localForce.tracks == null || localForce.tracks.id != playerId) {
     localForce.x = localForce.x + (receivedForce.x - localForce.x) * interpFactor;
     localForce.y = localForce.y + (receivedForce.y - localForce.y) * interpFactor;
     localForce.force = receivedForce.force;
@@ -639,7 +453,7 @@ function updateLocalForce(localForce, receivedForce) {
   }
 }
 
-function updateForces(data, player, forces) {
+function updateForces(data, player, forces,playerId) {
   if (data.forces && data.forces.length > 0) {
     setTimeSinceMessageFromMaster(0);
 
@@ -647,21 +461,34 @@ function updateForces(data, player, forces) {
       // Find the corresponding local bot by ID
       const localForce = findForceById(receivedForce.id);
       if (localForce) {
-        updateLocalForce(localForce, receivedForce);
+        updateLocalForce(localForce, receivedForce,playerId);
       } else if (receivedForce.tracks == null || receivedForce.tracks.id != player.id) {
         // If the local force doesn't exist, add it to the forces array
         forces.push(createForceFromObject(receivedForce));
       }
     }
 
-    // Remove forces from the local list that are not in the master list
-    for (let forceToCheck of forces) {
-      if (forceToCheck.id != null) {
-        let matchingForce = data.forces.find((dataForce) => dataForce.id === forceToCheck.id);
-        if (matchingForce == null) {
-          setForces(forces.filter((force) => force.id !== forceToCheck.id));
-        }
+    if (data.fullSend && data.forces) {
+      // Create a new forces array by filtering only the forces that exist in data.forces
+      const updatedForces = forces.filter(
+        (forceToCheck) => forceToCheck.id == null || data.forces.some((dataForce) => dataForce.id === forceToCheck.id)
+      );
+
+      // Update the forces array once
+      setForces(updatedForces);
+    }
+  }
+}
+
+function removeForces(data, forces) {
+  if (data.removeForces && data.removeForces.length > 0) {
+    let filteredForces = [...forces];
+    for (let dataForce of data.removeForces) {
+      if (dataForce.id != null) {
+        filteredForces = filteredForces.filter((force) => force.id !== dataForce.id);
       }
     }
+    // Update the forces array once after the loop
+    setForces(filteredForces);
   }
 }
