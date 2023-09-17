@@ -25,7 +25,7 @@ import {
   initialInvincibleTime,
   botRespawnDelay,
 } from "./gameLogic.js";
-import { sendPlayerStates, sendRequestForStates } from "./sendData.js";
+import { sendPlayerStates, sendRequestForStates,requestFullUpdate } from "./sendData.js";
 
 const bounceFactor = 1.5;
 const offset = 1;
@@ -369,10 +369,17 @@ export class Player {
     if (this.isLocal && !isMaster && this.isMaster) {
       //if switching away from being master send basic ship data
       sendPlayerStates(this, false, true);
+     
     }
     if (isMaster && !this.isMaster) {
       //if switching any player to being master request basic ship data
       sendRequestForStates();
+    }
+    if(isMaster && !this == player){
+      //if switching another player to master ask master for a full update. Not sure if master will be ready as master immediately so schedule a few requests 
+      setTimeout(() => requestFullUpdate(), 20);
+      setTimeout(() => requestFullUpdate(), 500);
+      setTimeout(() => requestFullUpdate(), 2000);
     }
     this.isMaster = isMaster;
   }

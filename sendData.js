@@ -267,6 +267,19 @@ export function sendConnectedPeers() {
   });
 }
 
+//this is the full send that will only be sent on request / occasionally
+export function requestFullUpdate() {
+    // Send game state to other player
+    let data = {
+      timestamp: Date.now(),
+      priority: 2,
+      fromMaster: isPlayerMasterPeer(player),
+      requestFullUpdate: true,
+    };
+  
+    sendData(data);
+  }
+
 function sendData(data) {
   connections.forEach((conn) => {
     if (conn && conn.open) {

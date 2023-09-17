@@ -1,8 +1,9 @@
 import { chooseNewMasterPeer } from "./connectionHandlers.js";
 import { renderDebugInfo, drawPowerupLevels, drawInvincibilityGauge, drawSpecialGauge } from "./drawGameUI.js";
-import { rotateAndScalePoint, interpolate, spikeyBallPoints, drawArrow, applyGravityWarpEffect, getComplementaryColor } from "./drawingUtils.js";
+import { rotateAndScalePoint, interpolate, spikeyBallPoints, drawArrow, applyGravityWarpEffect, getComplementaryColor,nameToRGBFullFormat } from "./drawingUtils.js";
 import { ForceType, forces } from "./entities.js";
 import { shipScale, mineScale, basicAnimationTimer } from "./gameLogic.js";
+import { colors } from "./main.js";
 
 let backLayer = new Image();
 let midBackLayer = new Image();
@@ -228,17 +229,21 @@ function drawMinimap(player, otherPlayers, bots, worldWidth, worldHeight) {
   });
 }
 
-function applyGlowingEffect(ctx, transitionColor, glowColor, starTransitionStartColor, transitionDuration, elapsedTime, opacity = 1) {
+function applyGlowingEffect(ctx, glowColor, transitionColor, starTransitionStartColor, transitionDuration, elapsedTime, opacity = 1) {
   ctx.shadowBlur = 10;
   ctx.shadowColor = glowColor;
 
   const colorProgress = Math.min(1, elapsedTime / transitionDuration);
+  transitionColor = nameToRGBFullFormat(transitionColor);
+  starTransitionStartColor = nameToRGBFullFormat(starTransitionStartColor);
   const r = Math.floor(interpolate(starTransitionStartColor.r, transitionColor.r, colorProgress));
   const g = Math.floor(interpolate(starTransitionStartColor.g, transitionColor.g, colorProgress));
   const b = Math.floor(interpolate(starTransitionStartColor.b, transitionColor.b, colorProgress));
 
   // Apply opacity to the glowing effect
-  ctx.strokeStyle = `rgba(${r},${g},${b},${opacity})`;
+  const interpolatedColor = `rgba(${r},${g},${b},${opacity})`;
+  ctx.strokeStyle = interpolatedColor;
+  ctx.fillStyle = interpolatedColor;
 }
 
 function drawShip(ctx, camX, camY, player, points) {
@@ -251,25 +256,23 @@ function drawShip(ctx, camX, camY, player, points) {
   let angle = player.angle;
   let color = player.color;
   let name = player.name;
-
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
   if (player.invincibleTimer > 10 || (player.invincibleTimer > 0 && !player.isUserControlledCharacter)) {
-    const transitionDuration = 20;
+    const transitionDuration = 500;
     const currentTime = Date.now();
     const elapsedTime = currentTime - player.starTransitionStartTime;
-
+    const animatationFrame = elapsedTime % transitionDuration;
     if (!player.starTransitionStartTime || elapsedTime >= transitionDuration) {
       player.starTransitionStartTime = currentTime;
-      player.starTransitionStartColor = color;
     }
     applyGlowingEffect(
       ctx,
       "gold",
       "gold",
-      player.starTransitionStartTime,
-      player.starTransitionStartColor,
-      player.starTransitionStartColor,
+      "white",
       transitionDuration,
-      elapsedTime
+      animatationFrame
     );
   }
 
@@ -293,18 +296,9 @@ function drawShip(ctx, camX, camY, player, points) {
           player.starTransitionStartTime = currentTime;
           player.starTransitionStartColor = color;
         }
-        applyGlowingEffect(
-          ctx,
-          "white",
-          "white",
-          player.starTransitionStartTime,
-          player.starTransitionStartColor,
-          player.starTransitionStartColor,
-          transitionDuration,
-          elapsedTime
-        );
+        applyGlowingEffect(ctx, "white", "white", player.starTransitionStartColor, transitionDuration, elapsedTime);
       } else {
-        ctx.strokeStyle = color;
+        // ctx.strokeStyle = color;
       }
     } else {
       // console.log("isInSpawnProtectionTime method does not exist");
@@ -313,7 +307,7 @@ function drawShip(ctx, camX, camY, player, points) {
     console.log("An error occurred:", error);
   }
   ctx.closePath();
-  ctx.fillStyle = ctx.strokeStyle;
+  // ctx.fillStyle = ctx.strokeStyle;
   ctx.stroke();
   ctx.fill();
 
@@ -365,12 +359,13 @@ export function drawMine(ctx, camX, camY, mine, points) {
   const currentTime = Date.now();
   const elapsedTime = currentTime - mine.starTransitionStartTime;
   const transitionDuration = 50;
+  const animatationFrame = elapsedTime % transitionDuration;
   if (mine.hitFrames < -1) {
     if (!mine.starTransitionStartTime || elapsedTime >= transitionDuration) {
       mine.starTransitionStartTime = currentTime;
       mine.starTransitionStartColor = color;
     }
-    applyGlowingEffect(ctx, "white", "white", mine.starTransitionStartTime, mine.color, 0.2);
+    applyGlowingEffect(ctx, "white", mine.color, "white",mine.starTransitionStartTime, animatationFrame, 0.2);
   }
   ctx.beginPath();
   let rotatedPoint = rotateAndScalePoint(points[0].x, points[0].y, angle, mineScale);

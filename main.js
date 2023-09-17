@@ -9,6 +9,8 @@ import {
   removeClosedConnections,
   setTicksSinceLastConnectionAttempt,
   ticksSinceLastConnectionAttempt,
+  setTicksSinceLastFullSendRequestResponse,
+  ticksSinceLastFullSendRequestResponse,
   setTimeSinceAnyMessageRecieved,
   timeSinceAnyMessageRecieved,
   wrappedResolveConflicts,
@@ -156,6 +158,11 @@ function updateGame(deltaTime, playerActive) {
 
   //todo work out what to do here, do we do this for every local or not?
   if (true || playerActive || isPlayerMasterPeer(player)) {
+    //dealing with error state, not sure best approach yet
+    if(player.name == "" && player.pilot == ""){
+      setGameState(GameState.INTRO);
+      // return;
+    }
     //todo might have to uncomment the condition
     // if (isPlayerMasterPeer(player)) {
     // This peer is the master, so it runs the game logic for shared objects
@@ -177,6 +184,7 @@ function updateGame(deltaTime, playerActive) {
     //set player.isPlayer = false here?
   }
 
+  setTicksSinceLastFullSendRequestResponse(ticksSinceLastFullSendRequestResponse + 1);
   setTicksSinceLastConnectionAttempt(ticksSinceLastConnectionAttempt + 1);
   setTimeSinceAnyMessageRecieved(timeSinceAnyMessageRecieved + 1);
   if (timeSinceAnyMessageRecieved > 100 && ticksSinceLastConnectionAttempt > 3000) {
@@ -412,25 +420,25 @@ window.addEventListener("load", function () {
   setTimeout(() => attemptConnections(player, otherPlayers, globalPowerUps), 500);
   //do we need to keep doing this??
   // setInterval(() => connectToPeers(player, otherPlayers, globalPowerUps), 6000);
-  setTimeout(() => connectToPeers(player, otherPlayers, globalPowerUps), 6000);
+  setTimeout(() => connectToPeers(player, otherPlayers, globalPowerUps), 2000);
 
-  setTimeout(() => createBots(worldDimensions.width, worldDimensions.height, colors), 300);
-  setTimeout(() => generatePowerups(globalPowerUps, worldDimensions.width, worldDimensions.height, colors), 300);
-  setTimeout(() => generateMines(worldDimensions.width, worldDimensions.height, colors), 310);
+  setTimeout(() => createBots(worldDimensions.width, worldDimensions.height, colors), 250);
+  setTimeout(() => generatePowerups(globalPowerUps, worldDimensions.width, worldDimensions.height, colors), 270);
+  setTimeout(() => generateMines(worldDimensions.width, worldDimensions.height, colors), 300);
   setTimeout(() => generateDirectionalForces(worldDimensions.width, worldDimensions.height, colors), 320);
+  
+  setInterval(() => createBots(worldDimensions.width, worldDimensions.height, colors), 3000);
+  setInterval(() => generatePowerups(globalPowerUps, worldDimensions.width, worldDimensions.height, colors), 3303);
+  setInterval(() => generateMines(worldDimensions.width, worldDimensions.height, colors), 3607);
+  setInterval(() => generateDirectionalForces(worldDimensions.width, worldDimensions.height, colors), 3901);
 
-  setInterval(() => generatePowerups(globalPowerUps, worldDimensions.width, worldDimensions.height, colors), 3000);
-  setInterval(() => generateMines(worldDimensions.width, worldDimensions.height, colors), 3100);
-  setInterval(() => generateDirectionalForces(worldDimensions.width, worldDimensions.height, colors), 3120);
-
-  setInterval(() => connectToPeers(player, otherPlayers, globalPowerUps), 35000);
+  setInterval(() => connectToPeers(player, otherPlayers, globalPowerUps), 15000);
 
   setupSpikeyBallPoints();
   //don;t need to under master system
   //setInterval(() => sendPowerups(globalPowerUps), 3000);
 
-  /* END CONNECTION HANDLERS  */
-  //for now just do this at game start and transition, in future do this periodically
+  //for now just do this at game start and transition, in future do this periodically?
   updateTopScoresInfo();
   handleInputEvents(canvas, player);
   // Call setupPilotsImages once at the start of the game

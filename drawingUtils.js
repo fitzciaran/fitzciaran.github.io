@@ -254,7 +254,27 @@ function isAngleInCone(angle, startAngle, endAngle) {
   }
 }
 
-function nameToRGB(colorName) {
+export function nameToRGBFullFormat(colorName) {
+  let rgbColor = nameToRGB(colorName);
+  // Match the RGB values using a regular expression
+  const match = rgbColor.match(/\((\d+),\s*(\d+),\s*(\d+)\)/);
+
+  if (match) {
+    const r = parseInt(match[1], 10);
+    const g = parseInt(match[2], 10);
+    const b = parseInt(match[3], 10);
+
+    return {
+      r: r,
+      g: g,
+      b: b,
+    };
+  }
+
+  return null; // Return null if the input is not a valid RGB color string
+}
+
+export function nameToRGB(colorName) {
   const colorMap = {
     red: "rgb(255, 0, 0)",
     green: "rgb(0, 255, 0)",
@@ -271,7 +291,7 @@ function nameToRGB(colorName) {
     maroon: "rgb(128, 0, 0)",
     crimson: "rgb(220, 20, 60)",
     white: "rgb(255, 255, 255)",
-    // Add more color mappings here...
+    gold: "rgb(255,215,0)",
   };
 
   // Look up the color name in the map and return the corresponding RGB value

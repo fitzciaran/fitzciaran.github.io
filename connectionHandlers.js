@@ -18,6 +18,10 @@ export let ticksSinceLastConnectionAttempt = 0;
 export function setTicksSinceLastConnectionAttempt(newTime) {
   ticksSinceLastConnectionAttempt = newTime;
 }
+export let ticksSinceLastFullSendRequestResponse = 0;
+export function setTicksSinceLastFullSendRequestResponse(newTime) {
+  ticksSinceLastFullSendRequestResponse = newTime;
+}
 let masterPeerId = peerIds[0]; // start off with the first peer as the master
 export function setMasterPeerId(newID) {
   masterPeerId = newID;
@@ -311,7 +315,7 @@ function addConnectionHandlers(player, otherPlayers, conn, globalPowerUps) {
 
   conn.on("data", function (data) {
     //console.log("Received data:", data);
-    if ((data && data.id) || (data && data.gameState) || (data && data.requestForFullStates)) {
+    if ((data && data.id) || (data && data.gameState) || (data && data.requestForFullStates)|| (data && data.requestFullUpdate)) {
       handleData(player, otherPlayers, globalPowerUps, data);
     } else {
       console.log("Received unexpected data:", data);

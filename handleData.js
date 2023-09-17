@@ -13,7 +13,7 @@ import { setEndGameMessage } from "./gameLogic.js";
 import { forces, setForces, createMineFromObject, createForceFromObject, createPowerUpFromObject } from "./entities.js";
 import { createBotFromObject, Player } from "./player.js";
 import { differsFrom, findForceById, findBotById, findMineById, findPowerUpById } from "./gameUtils.js";
-import { sendPlayerStates } from "./sendData.js";
+import { sendPlayerStates ,sendEntitiesState} from "./sendData.js";
 
 export function handleData(player, otherPlayers, globalPowerUps, data) {
   setTimeSinceAnyMessageRecieved(0);
@@ -44,6 +44,11 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
   }
   if (data.requestForFullStates) {
     sendPlayerStates(player, isPlayerMasterPeer(player), true);
+    return;
+  }
+  if (data.requestFullUpdate && isPlayerMasterPeer(player) && ticksSinceLastConnectionAttempt > 200) {
+    setTicksSinceLastConnectionAttempt(0);
+    sendEntitiesState(player, isPlayerMasterPeer(player), true);
     return;
   }
 

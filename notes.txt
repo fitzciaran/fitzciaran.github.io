@@ -341,3 +341,5 @@ i think sometimes the invic loss from a mine/other collision might get synced aw
  guessing sometimes the timing works out so they send their invic value to the master and the master accepts it
 
  udpate the bot/mine/force/powerup isequalfunctions to be isEqualForUpdatePurposes and allow certain things to be different so we're not sending for everything
+
+ maybe send bot data less frequently? or a MORE frequent full update for bots only, meaning we can lean more towards skipping on standard regular updates
