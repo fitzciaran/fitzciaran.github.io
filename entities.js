@@ -93,7 +93,7 @@ export class Mine extends Enemy {
     this.duration = duration;
     this.radius = radius;
     this.color = color;
-    this.hitFrames = -85;
+    this.hitFrames = -105;
     this.force = force;
     if (force != 0) {
       this.createForce();
@@ -126,7 +126,7 @@ export class PowerUp extends Entity {
     this.isStar = isStar;
     this.radius = radius;
     this.value = value;
-    this.hitFrames = -6;
+    this.hitFrames = -56;
   }
 }
 

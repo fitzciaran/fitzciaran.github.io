@@ -1,9 +1,16 @@
 import { chooseNewMasterPeer } from "./connectionHandlers.js";
 import { renderDebugInfo, drawPowerupLevels, drawInvincibilityGauge, drawSpecialGauge } from "./drawGameUI.js";
-import { rotateAndScalePoint, interpolate, spikeyBallPoints, drawArrow, applyGravityWarpEffect, getComplementaryColor,nameToRGBFullFormat } from "./drawingUtils.js";
+import {
+  rotateAndScalePoint,
+  interpolate,
+  spikeyBallPoints,
+  drawArrow,
+  applyGravityWarpEffect,
+  getComplementaryColor,
+  nameToRGBFullFormat,
+} from "./drawingUtils.js";
 import { ForceType, forces } from "./entities.js";
 import { shipScale, mineScale, basicAnimationTimer } from "./gameLogic.js";
-import { colors } from "./main.js";
 
 let backLayer = new Image();
 let midBackLayer = new Image();
@@ -266,14 +273,7 @@ function drawShip(ctx, camX, camY, player, points) {
     if (!player.starTransitionStartTime || elapsedTime >= transitionDuration) {
       player.starTransitionStartTime = currentTime;
     }
-    applyGlowingEffect(
-      ctx,
-      "gold",
-      "gold",
-      "white",
-      transitionDuration,
-      animatationFrame
-    );
+    applyGlowingEffect(ctx, "gold", "gold", "white", transitionDuration, animatationFrame);
   }
 
   ctx.beginPath();
@@ -365,7 +365,7 @@ export function drawMine(ctx, camX, camY, mine, points) {
       mine.starTransitionStartTime = currentTime;
       mine.starTransitionStartColor = color;
     }
-    applyGlowingEffect(ctx, "white", mine.color, "white",mine.starTransitionStartTime, animatationFrame, 0.2);
+    applyGlowingEffect(ctx, "white", mine.color, "white", transitionDuration, animatationFrame, 0.2);
   }
   ctx.beginPath();
   let rotatedPoint = rotateAndScalePoint(points[0].x, points[0].y, angle, mineScale);
@@ -648,34 +648,47 @@ function drawForceLines(ctx, attractive, radius, angle, screenX, screenY) {
 export function drawPowerups(globalPowerUps, ctx, camX, camY) {
   // Draw each dot
   globalPowerUps.forEach((powerUp) => {
-    if (powerUp.isStar) {
+    const currentTime = Date.now();
+    const elapsedTime = currentTime - powerUp.starTransitionStartTime;
+    const transitionDuration = 200;
+    const animatationFrame = elapsedTime % transitionDuration;
+    if (powerUp.hitFrames < -1) {
+      if (!powerUp.starTransitionStartTime || elapsedTime >= transitionDuration) {
+        powerUp.starTransitionStartTime = currentTime;
+        // powerUp.starTransitionStartColor = powerUp.color;
+      }
+      applyGlowingEffect(ctx, "white", powerUp.color, "white", transitionDuration, animatationFrame, 0.2);
+    } else if (powerUp.isStar) {
       // Apply a glowing effect for star ships
       ctx.shadowBlur = 10;
       ctx.shadowColor = "gold"; // Adjust the glow color as needed
       ctx.strokeStyle = "gold"; // Adjust the stroke color to match the glow
 
-      // Gradually change the star ship's color
-      const transitionColor = "gold"; // Final color
-      const transitionDuration = 2000; // Transition duration in milliseconds
+      // Gradually change the star's color
+      const transitionEndColor = "gold"; // Final color
+      // const transitionDuration = 2000; // Transition duration in milliseconds
+      applyGlowingEffect(ctx, "gold", powerUp.color, transitionEndColor, transitionDuration, animatationFrame);
+      // const currentTime = Date.now();
+      // const elapsedTime = currentTime - powerUp.starTransitionStartTime;
 
-      const currentTime = Date.now();
-      const elapsedTime = currentTime - powerUp.starTransitionStartTime;
+      // if (!powerUp.starTransitionStartTime || elapsedTime >= transitionDuration) {
+      //   powerUp.starTransitionStartTime = currentTime;
+      //   powerUp.starTransitionStartColor = powerUp.color;
+      // }
 
-      if (!powerUp.starTransitionStartTime || elapsedTime >= transitionDuration) {
-        powerUp.starTransitionStartTime = currentTime;
-        powerUp.starTransitionStartColor = powerUp.color;
-      }
+      // const colorProgress = Math.min(1, elapsedTime / transitionDuration);
+      // const r = Math.floor(interpolate(powerUp.starTransitionStartColor.r, transitionColor.r, colorProgress));
+      // const g = Math.floor(interpolate(powerUp.starTransitionStartColor.g, transitionColor.g, colorProgress));
+      // const b = Math.floor(interpolate(powerUp.starTransitionStartColor.b, transitionColor.b, colorProgress));
 
-      const colorProgress = Math.min(1, elapsedTime / transitionDuration);
-      const r = Math.floor(interpolate(powerUp.starTransitionStartColor.r, transitionColor.r, colorProgress));
-      const g = Math.floor(interpolate(powerUp.starTransitionStartColor.g, transitionColor.g, colorProgress));
-      const b = Math.floor(interpolate(powerUp.starTransitionStartColor.b, transitionColor.b, colorProgress));
-
-      ctx.strokeStyle = `rgb(${r},${g},${b})`;
+      // ctx.strokeStyle = `rgb(${r},${g},${b})`;
+    } else {
+      ctx.strokeStyle = powerUp.color;
+      ctx.fillStyle = powerUp.color;
     }
     ctx.beginPath();
     ctx.arc(powerUp.x - camX, powerUp.y - camY, powerUp.radius, 0, Math.PI * 2);
-    ctx.fillStyle = powerUp.color;
+
     ctx.fill();
     ctx.shadowBlur = 0;
   });
