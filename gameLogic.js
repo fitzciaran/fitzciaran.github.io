@@ -641,7 +641,7 @@ export function masterUpdateGame(player, globalPowerUps, otherPlayers, bots, del
   if (isPlayerMasterPeer(player)) {
     if (gameTimer % 2 == 1) {
       sendEntitiesUpdate();
-    } else if (gameTimer % 29 == 1) {
+    } else if (gameTimer % 59 == 1) {
       sendEntitiesState();
     }
   }

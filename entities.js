@@ -1,4 +1,3 @@
-// import { globalPowerUps } from "./astroids.js";
 import { Player } from "./player.js";
 
 export let forces = [];
@@ -13,6 +12,7 @@ export function setForces(newForces) {
 
 let lastSentMasterMineData = [];
 let lastSentGlobalPowerUps = [];
+let lastSentForces = [];
 
 export class Entity {
   constructor(id = null, x = null, y = null) {
@@ -167,25 +167,84 @@ export function createPowerUpFromObject(obj) {
   return powerUp;
 }
 
-export function serializeForces(forces) {
-  return forces.map((force) => ({
-    id: force.id,
-    x: force.x,
-    y: force.y,
-    force: force.force,
-    duration: force.duration,
-    radius: force.radius,
-    isAttractive: force.isAttractive,
-    color: force.color,
-    tracks: force.tracks,
-    coneAngle: force.coneAngle,
-    direction: force.direction,
-    type: force.type,
-    numberArrowsEachSide: force.numberArrowsEachSide,
-    numberArrowsDeep: force.numberArrowsDeep,
-    width: force.width,
-    length: force.length,
-  }));
+export function serializeForces(forces, onlyChangedData = false) {
+  if (onlyChangedData) {
+    // Calculate the differences between the current forces and lastSentForces
+    const changedForces = forces.filter((currentForce) => {
+      const lastSentForce = lastSentForces.find((lastForce) => lastForce.id === currentForce.id);
+      return !lastSentForce || !isEqualForce(currentForce, lastSentForce);
+    });
+
+    // Update lastSentForces with the new data
+    lastSentForces = forces.slice();
+
+    // Serialize and return the changed forces
+    return changedForces.map((force) => ({
+      id: force.id,
+      x: force.x,
+      y: force.y,
+      force: force.force,
+      duration: force.duration,
+      radius: force.radius,
+      isAttractive: force.isAttractive,
+      color: force.color,
+      tracks: force.tracks,
+      coneAngle: force.coneAngle,
+      direction: force.direction,
+      type: force.type,
+      numberArrowsEachSide: force.numberArrowsEachSide,
+      numberArrowsDeep: force.numberArrowsDeep,
+      width: force.width,
+      length: force.length,
+    }));
+  } else {
+    // If onlyChangedData is false, update lastSentForces with the current forces
+    lastSentForces = forces.slice();
+
+    // Serialize and return all forces
+    return forces.map((force) => ({
+      id: force.id,
+      x: force.x,
+      y: force.y,
+      force: force.force,
+      duration: force.duration,
+      radius: force.radius,
+      isAttractive: force.isAttractive,
+      color: force.color,
+      tracks: force.tracks,
+      coneAngle: force.coneAngle,
+      direction: force.direction,
+      type: force.type,
+      numberArrowsEachSide: force.numberArrowsEachSide,
+      numberArrowsDeep: force.numberArrowsDeep,
+      width: force.width,
+      length: force.length,
+    }));
+  }
+}
+
+// Define a function to compare force objects for equality
+function isEqualForce(force1, force2) {
+  // Implement your logic for comparing force objects here
+  // For example, you can compare relevant properties to check if they are equal
+  return (
+    force1.x === force2.x &&
+    force1.y === force2.y &&
+    force1.force === force2.force &&
+    //we won't sent if only the duration is different
+    // force1.duration === force2.duration &&
+    force1.radius === force2.radius &&
+    force1.isAttractive === force2.isAttractive &&
+    force1.color === force2.color &&
+    force1.tracks === force2.tracks &&
+    force1.coneAngle === force2.coneAngle &&
+    force1.direction === force2.direction &&
+    force1.type === force2.type &&
+    force1.numberArrowsEachSide === force2.numberArrowsEachSide &&
+    force1.numberArrowsDeep === force2.numberArrowsDeep &&
+    force1.width === force2.width &&
+    force1.length === force2.length
+  );
 }
 
 export function serializeMines(mines, onlyChangedData = false) {
