@@ -115,13 +115,21 @@ export function getCanvas() {
 }
 
 export function setBots(newBots) {
-  bots = newBots;
+  if (newBots !== bots) {
+    bots.length = 0;
+    bots.push(...newBots);
+  }
 }
 
-export function setOtherPlayers(newPlayers) {
-  otherPlayers = newPlayers;
-  // Remove player from otherPlayers array
-  otherPlayers = otherPlayers.filter((otherPlayer) => otherPlayer.id !== player.id);
+function setOtherPlayers(newPlayers) {
+  if (newPlayers !== otherPlayers) {
+    //update original array
+    otherPlayers.length = 0;
+    otherPlayers.push(...newPlayers);
+
+    // Remove player from otherPlayers array
+    otherPlayers = otherPlayers.filter((otherPlayer) => otherPlayer.id !== player.id);
+  }
 }
 
 function updateCamera(playerToFollow, deltaTime) {
@@ -265,10 +273,18 @@ function updateWinState() {
 }
 
 export function setGlobalPowerUps(newPowerUps) {
-  globalPowerUps = newPowerUps;
+  if (newPowerUps !== globalPowerUps) {
+    //update original array
+    globalPowerUps.length = 0;
+    globalPowerUps.push(...newPowerUps);
+  }
 }
 export function setMines(newMines) {
-  mines = newMines;
+  if (newMines !== mines) {
+    //update original array
+    mines.length = 0;
+    mines.push(...newMines);
+  }
 }
 
 export function getGlobalPowerUps() {

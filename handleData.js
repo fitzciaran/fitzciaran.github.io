@@ -283,7 +283,7 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
   //   const powerUpInstances = data.globalPowerUps.map(createPowerUpFromObject);
   //   setGlobalPowerUps(powerUpInstances);
   // }
-  if (data.globalPowerUps) {
+  if (data.globalPowerUps && data.globalPowerUps.length > 0) {
     for (const receivedPowerUp of data.globalPowerUps) {
       // Find the corresponding local powerup by ID
       const localPowerUp = findPowerUpById(receivedPowerUp.id);
@@ -302,17 +302,19 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
       }
     }
   }
-  if (data.removePowerUps) {
-    for (let dataPowerUp of data.removePowerUps) {
-      if (dataPowerUp.id != null) {
-        let matchingPowerUp = globalPowerUps.find((currentPowerUp) => currentPowerUp.id === dataPowerUp.id);
-        if (matchingPowerUp == null) {
-          setGlobalPowerUps(globalPowerUps.filter((powerUp) => powerUp.id !== dataPowerUp.id));
-        }
-      }
-    }
-  }
-  if (data.bots) {
+  modifyGlobalPowerUps(data, globalPowerUps);
+
+  // if (data.removePowerUps && data.removePowerUps.length > 0) {
+  //   for (let dataPowerUp of data.removePowerUps) {
+  //     if (dataPowerUp.id != null) {
+  //       let matchingPowerUp = globalPowerUps.find((currentPowerUp) => currentPowerUp.id === dataPowerUp.id);
+  //       if (matchingPowerUp == null) {
+  //         setGlobalPowerUps(globalPowerUps.filter((powerUp) => powerUp.id !== dataPowerUp.id));
+  //       }
+  //     }
+  //   }
+  // }
+  if (data.bots && data.bots.length > 0) {
     setTimeSinceMessageFromMaster(0);
 
     // Iterate through botInstances received from the master peer
@@ -385,7 +387,7 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
     // This ensures that local bots that have been removed on the master peer are also removed locally
     setBots(bots.filter((localBot) => data.bots.some((receivedBot) => receivedBot.id === localBot.id)));
   }
-  if (data.mines) {
+  if (data.mines && data.mines.length > 0) {
     setTimeSinceMessageFromMaster(0);
 
     for (const receivedMine of data.mines) {
@@ -415,7 +417,7 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
     //   }
     // }
   }
-  if (data.removeMines) {
+  if (data.removeMines && data.removeMines.length > 0) {
     for (let dataMine of data.removeMines) {
       if (dataMine.id != null) {
         let matchingMine = mines.find((currentMine) => currentMine.id === dataMine.id);
@@ -425,7 +427,7 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
       }
     }
   }
-  if (data.forces) {
+  if (data.forces && data.forces.length > 0) {
     setTimeSinceMessageFromMaster(0);
 
     for (const receivedForce of data.forces) {
@@ -470,7 +472,7 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
     }
   }
   //don't curently sent this data
-  if (data.otherPlayers) {
+  if (data.otherPlayers && data.otherPlayers.length > 0) {
     setTimeSinceMessageFromMaster(0);
     // const otherPlayersInstances = data.otherPlayers.map(createPlayerFromObject);
     //setOtherPlayers(otherPlayersInstances);
@@ -506,7 +508,7 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
     }
   }
 
-  if (data.connectedPeers) {
+  if (data.connectedPeers && data.connectedPeers.length > 0) {
     //check if connectedPeers has any id's (strings) not in data.connectedPeers
     let combine = false;
     if (differsFrom(connectedPeers, data.connectedPeers)) {
@@ -526,6 +528,19 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
       // });
       setTimeout(() => attemptConnections(player, otherPlayers, globalPowerUps), 50);
       sendConnectedPeers();
+    }
+  }
+}
+
+function modifyGlobalPowerUps(data, globalPowerUps) {
+  if (data.removePowerUps && data.removePowerUps.length > 0) {
+    for (let dataPowerUp of data.removePowerUps) {
+      if (dataPowerUp.id != null) {
+        let matchingPowerUpIndex = globalPowerUps.findIndex((currentPowerUp) => currentPowerUp.id === dataPowerUp.id);
+        if (matchingPowerUpIndex !== -1) {
+          globalPowerUps.splice(matchingPowerUpIndex, 1);
+        }
+      }
     }
   }
 }

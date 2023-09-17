@@ -321,3 +321,7 @@ pilots portrait while in game? with powerup icon?
 make the score / combo text bigger and more obnoxious, whoosh at screen?
 
 mines/...stuff could randomly/sporadically change color
+
+accept master updates only if agree it's from master (add sending id to payload)
+add a "request full update" payload for when set new master peer. have master peer handle that and limit how frequently it sends those out, since many peers could request that in quick succession, perhaps exponential backoff on subsequent sends.
+maybe have basic player updates include who they consider master peer? could be used to trigger choosenewmaster

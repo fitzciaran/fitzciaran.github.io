@@ -4,11 +4,15 @@ import { Player } from "./player.js";
 export let forces = [];
 
 export function setForces(newForces) {
-  forces = newForces;
+  if (newForces !== forces) {
+    //update original array
+    forces.length = 0;
+    forces.push(...newForces);
+  }
 }
 
 let lastSentMasterMineData = [];
-let lastSentGlobalPowerUps = []; 
+let lastSentGlobalPowerUps = [];
 
 export class Entity {
   constructor(id = null, x = null, y = null) {
@@ -238,7 +242,6 @@ function isEqualMine(mine1, mine2) {
     mine1.color === mine2.color
   );
 }
-
 
 export function serializeGlobalPowerUps(globalPowerUps, onlyChangedData = false) {
   if (onlyChangedData) {

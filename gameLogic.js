@@ -258,7 +258,7 @@ export function checkMineCollision(playerToCheck, mines) {
         // mines.splice(i, 1);
       }
       // sendPowerups(globalPowerUps);
-      setMines(mines);
+      // setMines(mines);
       if (isPlayerMasterPeer(player)) {
         sendMinesUpdate(false);
       }
