@@ -13,7 +13,11 @@ import { setEndGameMessage } from "./gameLogic.js";
 import { forces, setForces, createMineFromObject, createForceFromObject, createPowerUpFromObject } from "./entities.js";
 import { createBotFromObject, Player } from "./player.js";
 import { differsFrom, findForceById, findBotById, findMineById, findPowerUpById } from "./gameUtils.js";
-import { sendPlayerStates ,sendEntitiesState} from "./sendData.js";
+import { sendPlayerStates, sendEntitiesState } from "./sendData.js";
+const interpFactor = 0.05;
+const threshold = 50;
+const velocityInterpFactor = 0.4;
+const velocityThreshold = 2;
 
 export function handleData(player, otherPlayers, globalPowerUps, data) {
   setTimeSinceAnyMessageRecieved(0);
@@ -74,10 +78,10 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
 
   updateGlobalPowerUps(data, globalPowerUps);
   removeGlobalPowerUps(data, globalPowerUps);
- 
+
   updateBots(data, bots);
   removeBots(data, bots);
- 
+
   updateMines(data, mines);
   removeMines(data, mines);
 
@@ -86,8 +90,6 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
   //don't curently send this data
   if (data.otherPlayers && data.otherPlayers.length > 0) {
     setTimeSinceMessageFromMaster(0);
-    // const otherPlayersInstances = data.otherPlayers.map(createPlayerFromObject);
-    //setOtherPlayers(otherPlayersInstances);
     const dataPlayer = data.otherPlayers.find((otherPlayer) => otherPlayer.id === player.id);
 
     if (dataPlayer != null) {
@@ -146,7 +148,7 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
 
 function updateOtherPlayerData(player, data, otherPlayers, globalPowerUps) {
   if (!player) return;
-
+ 
   for (const key in data) {
     if (data.hasOwnProperty(key)) {
       if (key === "name") {
@@ -157,12 +159,30 @@ function updateOtherPlayerData(player, data, otherPlayers, globalPowerUps) {
         if (data.pilot != null && data.pilot != "") {
           player.pilot = data.pilot;
         }
+      } else if (key === "x" || key === "y") {
+        //check if the gap is closer than the threshold
+        if (Math.abs(player[key] - data[key]) <= threshold) {
+          // Interpolate x and y values
+          player[key] += (data[key] - player[key]) * interpFactor;
+        } else {
+          // Update x and y values directly
+          player[key] = data[key];
+        }
       } else if (key === "isDead") {
         player.setIsDead(data.isDead);
       } else if (key === "invincibleTimer") {
         player.setInvincibleTimer(data.invincibleTimer);
       } else if (key === "comboScaler") {
         player.setComboScaler(data.comboScaler);
+      } else if (key === "velX" || key === "velY") {
+        // Check if velocities are further apart than the threshold
+        if (Math.abs(player[key] - data[key]) > velocityThreshold) {
+          // Interpolate velocities
+          player[key] += (data[key] - player[key]) * velocityInterpFactor;
+        } else {
+          // Update velocities directly
+          player[key] = data[key];
+        }
       } else {
         player[key] = data[key];
       }
@@ -229,10 +249,20 @@ function updateGlobalPowerUps(data, globalPowerUps) {
     for (const receivedPowerUp of data.globalPowerUps) {
       // Find the corresponding local powerup by ID
       const localPowerUp = findPowerUpById(receivedPowerUp.id);
-      const interpFactor = 0.2;
+     
       if (localPowerUp) {
-        localPowerUp.x = localPowerUp.x + (receivedPowerUp.x - localPowerUp.x) * interpFactor;
-        localPowerUp.y = localPowerUp.y + (receivedPowerUp.y - localPowerUp.y) * interpFactor;
+        const xDiff = Math.abs(receivedPowerUp.x - localPowerUp.x);
+        const yDiff = Math.abs(receivedPowerUp.y - localPowerUp.y);
+
+        if (xDiff <= threshold && yDiff <= threshold) {
+          // Interpolate x and y values
+          localPowerUp.x = localPowerUp.x + (receivedPowerUp.x - localPowerUp.x) * interpFactor;
+          localPowerUp.y = localPowerUp.y + (receivedPowerUp.y - localPowerUp.y) * interpFactor;
+        } else {
+          // Update x and y values directly
+          localPowerUp.x = receivedPowerUp.x;
+          localPowerUp.y = receivedPowerUp.y;
+        }
         localPowerUp.color = receivedPowerUp.color;
         localPowerUp.isStar = receivedPowerUp.isStar;
         localPowerUp.value = receivedPowerUp.value;
@@ -280,10 +310,20 @@ function updateMines(data, mines) {
     for (const receivedMine of data.mines) {
       // Find the corresponding local bot by ID
       const localMine = findMineById(receivedMine.id);
-      const interpFactor = 0.2;
+      
       if (localMine) {
-        localMine.x = localMine.x + (receivedMine.x - localMine.x) * interpFactor;
-        localMine.y = localMine.y + (receivedMine.y - localMine.y) * interpFactor;
+        const xDiff = Math.abs(receivedMine.x - localMine.x);
+        const yDiff = Math.abs(receivedMine.y - localMine.y);
+
+        if (xDiff <= threshold && yDiff <= threshold) {
+          // Interpolate x and y values
+          localMine.x = localMine.x + (receivedMine.x - localMine.x) * interpFactor;
+          localMine.y = localMine.y + (receivedMine.y - localMine.y) * interpFactor;
+        } else {
+          // Update x and y values directly
+          localMine.x = receivedMine.x;
+          localMine.y = receivedMine.y;
+        }
         localMine.force = receivedMine.force;
         localMine.duration = receivedMine.duration;
         localMine.radius = receivedMine.radius;
@@ -326,9 +366,8 @@ function updateBots(data, bots) {
     for (const receivedBot of data.bots) {
       // Find the corresponding local bot by ID
       const localBot = findBotById(receivedBot.id);
-      const interpFactor = 0.2;
+
       if (localBot) {
-        // If the local bot exists, interpolate its position
         if (localBot.isDead && !receivedBot.isDead) {
           //if we are getting respawn info just set the new coordinates
           localBot.x = receivedBot.x;
@@ -337,10 +376,32 @@ function updateBots(data, bots) {
           localBot.vel.y = receivedBot.vel.y;
         } else {
           // else interpolate to smooth the update
-          localBot.x = localBot.x + (receivedBot.x - localBot.x) * interpFactor;
-          localBot.y = localBot.y + (receivedBot.y - localBot.y) * interpFactor;
-          localBot.vel.x = localBot.vel.x + (receivedBot.vel.x - localBot.vel.x) * interpFactor;
-          localBot.vel.y = localBot.vel.y + (receivedBot.vel.y - localBot.vel.y) * interpFactor;
+          const xDiff = Math.abs(receivedBot.x - localBot.x);
+          const yDiff = Math.abs(receivedBot.y - localBot.y);
+
+          if (xDiff <= threshold && yDiff <= threshold) {
+            // Interpolate x and y values
+            localBot.x = localBot.x + (receivedBot.x - localBot.x) * interpFactor;
+            localBot.y = localBot.y + (receivedBot.y - localBot.y) * interpFactor;
+          } else {
+            // Update x and y values directly
+            localBot.x = receivedBot.x;
+            localBot.y = receivedBot.y;
+          }
+
+          // Check if velocities are further apart than the threshold
+          const velXDiff = Math.abs(receivedBot.vel.x - localBot.vel.x);
+          const velYDiff = Math.abs(receivedBot.vel.y - localBot.vel.y);
+
+          if (velXDiff > velocityThreshold || velYDiff > velocityThreshold) {
+            // Interpolate velocities
+            localBot.vel.x = localBot.vel.x + (receivedBot.vel.x - localBot.vel.x) * velocityInterpFactor;
+            localBot.vel.y = localBot.vel.y + (receivedBot.vel.y - localBot.vel.y) * velocityInterpFactor;
+          } else {
+            // Update velocities directly
+            localBot.vel.x = receivedBot.vel.x;
+            localBot.vel.y = receivedBot.vel.y;
+          }
         }
         localBot.setIsDead(receivedBot.isDead);
 
@@ -418,11 +479,21 @@ function removeBots(data, bots) {
 }
 
 function updateLocalForce(localForce, receivedForce, playerId) {
-  const interpFactor = 0.2;
-
+  
   if (localForce.tracks == null || localForce.tracks.id != playerId) {
-    localForce.x = localForce.x + (receivedForce.x - localForce.x) * interpFactor;
-    localForce.y = localForce.y + (receivedForce.y - localForce.y) * interpFactor;
+    const xDiff = Math.abs(receivedForce.x - localForce.x);
+    const yDiff = Math.abs(receivedForce.y - localForce.y);
+
+    if (xDiff <= threshold && yDiff <= threshold) {
+      // Interpolate x and y values
+      localForce.x = localForce.x + (receivedForce.x - localForce.x) * interpFactor;
+      localForce.y = localForce.y + (receivedForce.y - localForce.y) * interpFactor;
+    } else {
+      // Update x and y values directly
+      localForce.x = receivedForce.x;
+      localForce.y = receivedForce.y;
+    }
+
     localForce.force = receivedForce.force;
     localForce.duration = receivedForce.duration;
     localForce.radius = receivedForce.radius;

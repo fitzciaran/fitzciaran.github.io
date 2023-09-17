@@ -231,7 +231,7 @@ function camFollowPlayer(deltaTime) {
   if (playerToSpectate != null) {
     recentlyActive = playerToSpectate.howLongSinceActive() < 1000;
   }
-  if (playerToSpectate != null && inPlayersList && (recentlyActive || playerToSpectate.isBot) && !playerToSpectate.isDead) {
+  if (playerToSpectate != null && inPlayersList && (recentlyActive || playerToSpectate.isBot) && !playerToSpectate.isDead && playerToSpectate.isPlaying) {
     updateCamera(playerToSpectate, deltaTime);
   } else {
     for (let candidate of allPlayers) {
@@ -432,7 +432,7 @@ window.addEventListener("load", function () {
   setInterval(() => generateMines(worldDimensions.width, worldDimensions.height, colors), 3607);
   setInterval(() => generateDirectionalForces(worldDimensions.width, worldDimensions.height, colors), 3901);
 
-  setInterval(() => connectToPeers(player, otherPlayers, globalPowerUps), 15000);
+  //setInterval(() => connectToPeers(player, otherPlayers, globalPowerUps), 15000);
 
   setupSpikeyBallPoints();
   //don;t need to under master system

@@ -343,3 +343,12 @@ i think sometimes the invic loss from a mine/other collision might get synced aw
  udpate the bot/mine/force/powerup isequalfunctions to be isEqualForUpdatePurposes and allow certain things to be different so we're not sending for everything
 
  maybe send bot data less frequently? or a MORE frequent full update for bots only, meaning we can lean more towards skipping on standard regular updates
+
+ the game somewhat encourages clicks near the edge of the window - annoying
+
+ could have enemy spawning in over player, tracks until a certain time at which point it could stop or have limited movement speed, could use extract bot ai?
+    could be like an astroid or something (finally using astroids)
+
+    follow "killed by" first - may need to have a non player local game var for keeping track of that
+
+sometimes collision can just effect one of the players, possible property override idk
