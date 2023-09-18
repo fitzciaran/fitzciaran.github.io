@@ -1067,20 +1067,22 @@ export class Bot extends Player {
 export function serializeBots(bots, onlyChangedData = false) {
   if (onlyChangedData) {
     // Serialize and return only the changed bots
-    const changedBotData = bots.map((currentBot) => {
-      const lastSentBotData = lastSentBots.find((lastBotData) => lastBotData.id === currentBot.id);
-      const serializedBot = serializeBot(currentBot);
+    const changedBotData = bots
+      .map((currentBot) => {
+        const lastSentBotData = lastSentBots.find((lastBotData) => lastBotData.id === currentBot.id);
+        const serializedBot = serializeBot(currentBot);
 
-      // Compare the serialized data of the current bot with the last sent data
-      if (!lastSentBotData || !areUpdateCriticalValuesSameBot(serializedBot, lastSentBotData)) {
-        // Update lastSentBots with the new serialized data if changed
-        lastSentBots = lastSentBots.map((bot) => (bot.id === currentBot.id ? serializedBot : bot));
-        return serializedBot;
-      }
+        // Compare the serialized data of the current bot with the last sent data
+        if (!lastSentBotData || !areUpdateCriticalValuesSameBot(serializedBot, lastSentBotData)) {
+          // Update lastSentBots with the new serialized data if changed
+          lastSentBots = lastSentBots.map((bot) => (bot.id === currentBot.id ? serializedBot : bot));
+          return serializedBot;
+        }
 
-      // Return null for bots that haven't changed
-      return null;
-    }).filter((changedData) => changedData !== null);
+        // Return null for bots that haven't changed
+        return null;
+      })
+      .filter((changedData) => changedData !== null);
 
     return changedBotData;
   } else {
@@ -1151,7 +1153,11 @@ function areUpdateCriticalValuesSameBot(bot1, bot2) {
 }
 
 function isEqualBot(bot1, bot2) {
+  const tolerance = 1e-4;
+
   let isSame =
+    Math.abs(bot1.x - bot2.x) < tolerance &&
+    Math.abs(bot1.y - bot2.y) < tolerance &&
     bot1.x === bot2.x &&
     bot1.y === bot2.y &&
     bot1.vel === bot2.vel &&

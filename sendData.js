@@ -16,7 +16,7 @@ export function sendRequestForStates() {
   sendData(data);
 }
 // Send player state to other connected players
-export function sendPlayerStates(playerToSend, masterSending, sendFullerData = false,playerReseting=false) {
+export function sendPlayerStates(playerToSend, masterSending, sendFullerData = false, playerReseting = false) {
   if (Math.random() > 0.99) {
     //every so often we will send the full data just to be sure master is in sync with important properties which don't often change
     sendFullerData = true;
@@ -75,7 +75,7 @@ export function sendPlayerStates(playerToSend, masterSending, sendFullerData = f
       data.isDead = playerToSend.isDead;
       lastSentPlayerData.isDead = playerToSend.isDead;
     }
-    if (masterSending  || playerReseting) {
+    if (masterSending || playerReseting) {
       newDataToSend = addProperty(playerToSend, data, "invincibleTimer", "invincibleTimer", sendFullerData) || newDataToSend;
       newDataToSend = addProperty(playerToSend, data, "powerUps", "powerUps", sendFullerData) || newDataToSend;
       newDataToSend = addProperty(playerToSend, data, "ticksSincePowerUpCollection", "ticksSincePowerUpCollection", sendFullerData) || newDataToSend;
@@ -132,11 +132,10 @@ export function sendEntitiesState() {
     // connectedPeers: connectedPeers,
     //enemies and stuff here
   };
-
   sendData(data);
 }
 
-//this is the full send that will only be sent on request / occasionally
+//this is the partial send that will be sent regually
 export function sendEntitiesUpdate() {
   // Send game state to other player
   let data = {
@@ -150,7 +149,19 @@ export function sendEntitiesUpdate() {
     forces: serializeForces(forces, true),
     // connectedPeers: connectedPeers,
   };
+  sendData(data);
+}
 
+//this is the bot send that will be sent most frequently
+export function sendBotEntitiesUpdate() {
+  // Send game state to other player
+  let data = {
+    timestamp: Date.now(),
+    priority: 2,
+    fromMaster: isPlayerMasterPeer(player),
+    gameState: true,
+    bots: serializeBots(bots, true),
+  };
   sendData(data);
 }
 
@@ -164,7 +175,6 @@ export function sendPowerUpsUpdate(onlyChangedData = true) {
     gameState: true,
     globalPowerUps: serializeGlobalPowerUps(globalPowerUps, onlyChangedData),
   };
-
   sendData(data);
 }
 

@@ -228,9 +228,10 @@ function serializeForce(force) {
 
 // compare force objects for equality
 function isEqualForce(force1, force2) {
+  const tolerance = 1e-4;
   return (
-    force1.x === force2.x &&
-    force1.y === force2.y &&
+    Math.abs(force1.x - force2.x) < tolerance &&
+    Math.abs(force1.y - force2.y) < tolerance &&
     force1.force === force2.force &&
     //we won't sent if only the duration is different
     // force1.duration === force2.duration &&
@@ -292,9 +293,10 @@ function serializeMine(mine) {
 
 // Define a function to compare mine objects for equality
 function isEqualMine(mine1, mine2) {
+  const tolerance = 1e-4;
   return (
-    mine1.x === mine2.x &&
-    mine1.y === mine2.y &&
+    Math.abs(mine1.x - mine2.x) < tolerance &&
+    Math.abs(mine1.y - mine2.y) < tolerance &&
     mine1.force === mine2.force &&
     mine1.duration === mine2.duration &&
     mine1.radius === mine2.radius &&

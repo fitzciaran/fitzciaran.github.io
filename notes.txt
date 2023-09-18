@@ -361,3 +361,5 @@ rocket/flame thrust indicator (with size tied to force size - including special)
 warp black holes
 
 Kill text is kinda gone, just combo score, could have the kill text (+flavor) above that.
+
+random events - angle lock, offset angle- could 180 could be just a weird amount,engine stuck on, slower,faster, special stuck on, bounty, long inincible time

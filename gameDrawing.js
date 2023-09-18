@@ -267,40 +267,56 @@ function drawShip(ctx, camX, camY, player, points) {
   ctx.fillStyle = color;
   const flameTransitionDuration = 50;
   const currentTime = Date.now();
-  const elapsedTime = currentTime - player.starTransitionStartTime;
+  let elapsedTime = currentTime - player.starTransitionStartTime;
+  if(isNaN(elapsedTime)){
+    elapsedTime = 0;
+  }
   let flameAnimatationFrame = elapsedTime % flameTransitionDuration;
   if (!player.flameTransitionStartTime || elapsedTime >= flameTransitionDuration) {
     player.flameTransitionStartTime = currentTime;
   }
   if (player.space || true) {
-    // // Draw the flame effect
-    // let offsetAngle = angle - Math.PI / 2 - 0.55;
-    // const flameSize = 10 + player.distanceFactor * 20;
-    // let rotatedFlamePoint = rotateAndScalePoint((-15 * 2) / 4, (-9 * 2) / 4, offsetAngle, shipScale);
+    const angleOffset = 0.38;
 
-    // ctx.beginPath();
-    // ctx.moveTo(centerX - camX + rotatedFlamePoint.x, centerY - camY + rotatedFlamePoint.y);
+    // Adjust the orientation of the flame
+    const flameOffsetAngle = angle - Math.PI / 2 - 0.38; // Adjust the orientation as needed
 
-    // // Calculate the flame points relative to the ship's last point
-    // for (let i = 0; i < 3; i++) {
-    //   const angleOffset = (Math.PI / 5) * i;
-    //   const flameX = rotatedFlamePoint.x - Math.cos(offsetAngle + angleOffset) * flameSize;
-    //   const flameY = rotatedFlamePoint.y - Math.sin(offsetAngle + angleOffset) * flameSize;
-    //   ctx.lineTo(centerX - camX + flameX, centerY - camY + flameY);
-    // }
+    const flameSize = 16 + player.distanceFactor * (30 + (flameAnimatationFrame % 10));
 
-    // ctx.closePath();
+    let offsetAngle = angle - Math.PI / 2 - 0.55;
+    let rotatedFlamePoint = rotateAndScalePoint((-2 * 2) / 2, (-9 * 2) / 2, offsetAngle, shipScale);
 
+    // Calculate the position for the flame relative to the ship's center
+    const flameOffsetX = -Math.sin(flameOffsetAngle) * 15; // Adjust the offset as needed
+    const flameOffsetY = Math.cos(flameOffsetAngle) * 15; // Adjust the offset as needed
+    const flameX = centerX - camX + rotatedFlamePoint.x + flameOffsetX;
+    const flameY = centerY - camY + rotatedFlamePoint.y + flameOffsetY;
+
+    ctx.beginPath();
+    ctx.moveTo(flameX, flameY);
+
+    // Calculate the flame points relative to the flame position
+    for (let i = 0; i < 3; i++) {
+      const adjustedAngle = flameOffsetAngle + i * angleOffset; // Adjust the angle of the flame
+      const flameEndX = flameX - Math.cos(adjustedAngle) * flameSize;
+      const flameEndY = flameY - Math.sin(adjustedAngle) * flameSize;
+      ctx.lineTo(flameEndX, flameEndY);
+    }
+
+    ctx.closePath();
+    // Create a radial gradient for the flame effect
+    const gradient = ctx.createRadialGradient(flameX, flameY, 0, flameX, flameY, flameSize);
+    gradient.addColorStop(0, "rgba(255, 165, 0, 1)"); // Adjust color and transparency
+    gradient.addColorStop(1, "rgba(255, 0, 0, 0)"); // Adjust color and transparency
+
+    // Use the gradient as the fill style for the flame
+    ctx.fillStyle = gradient;
     // applyGlowingEffect(ctx, "orange", "orange", "red", flameTransitionDuration, flameAnimatationFrame);
-    // ctx.fill();
-
-    
+    ctx.fill();
   }
-
   ctx.strokeStyle = color;
   ctx.fillStyle = color;
   ctx.shadowBlur = 0;
-
   if (player.invincibleTimer > 10 || (player.invincibleTimer > 0 && !player.isUserControlledCharacter)) {
     let transitionDuration = 500;
     let animatationFrame = elapsedTime % transitionDuration;

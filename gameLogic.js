@@ -1,6 +1,6 @@
 import { setGameState, GameState, player, setMines, bots, otherPlayers, mines, setGameTimer, gameTimer } from "./main.js";
 import { isPlayerMasterPeer, setTimeSinceMessageFromMaster, timeSinceMessageFromMaster } from "./connectionHandlers.js";
-import { sendPlayerStates, sendEntitiesState, sendEntitiesUpdate, sendRemoveEntityUpdate, sendMinesUpdate, sendPowerUpsUpdate,sendForcesUpdate,sendBotsUpdate } from "./sendData.js";
+import { sendPlayerStates, sendEntitiesState, sendEntitiesUpdate, sendBotEntitiesUpdate, sendRemoveEntityUpdate, sendMinesUpdate, sendPowerUpsUpdate,sendForcesUpdate,sendBotsUpdate } from "./sendData.js";
 import { forces, Mine, PowerUp, ForceType, ForceArea, Entity } from "./entities.js";
 import { Player, Bot } from "./player.js";
 
@@ -712,6 +712,8 @@ export function masterUpdateGame(player, globalPowerUps, otherPlayers, bots, del
   //trying out not sending updates every frame
   if (isPlayerMasterPeer(player)) {
     if (gameTimer % 2 == 1) {
+      sendBotEntitiesUpdate();
+    } else if (gameTimer % 11 == 1) {
       sendEntitiesUpdate();
     } else if (gameTimer % 59 == 1) {
       sendEntitiesState();
