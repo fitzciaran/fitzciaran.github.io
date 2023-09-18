@@ -265,11 +265,45 @@ function drawShip(ctx, camX, camY, player, points) {
   let name = player.name;
   ctx.strokeStyle = color;
   ctx.fillStyle = color;
+  const flameTransitionDuration = 50;
+  const currentTime = Date.now();
+  const elapsedTime = currentTime - player.starTransitionStartTime;
+  let flameAnimatationFrame = elapsedTime % flameTransitionDuration;
+  if (!player.flameTransitionStartTime || elapsedTime >= flameTransitionDuration) {
+    player.flameTransitionStartTime = currentTime;
+  }
+  if (player.space || true) {
+    // // Draw the flame effect
+    // let offsetAngle = angle - Math.PI / 2 - 0.55;
+    // const flameSize = 10 + player.distanceFactor * 20;
+    // let rotatedFlamePoint = rotateAndScalePoint((-15 * 2) / 4, (-9 * 2) / 4, offsetAngle, shipScale);
+
+    // ctx.beginPath();
+    // ctx.moveTo(centerX - camX + rotatedFlamePoint.x, centerY - camY + rotatedFlamePoint.y);
+
+    // // Calculate the flame points relative to the ship's last point
+    // for (let i = 0; i < 3; i++) {
+    //   const angleOffset = (Math.PI / 5) * i;
+    //   const flameX = rotatedFlamePoint.x - Math.cos(offsetAngle + angleOffset) * flameSize;
+    //   const flameY = rotatedFlamePoint.y - Math.sin(offsetAngle + angleOffset) * flameSize;
+    //   ctx.lineTo(centerX - camX + flameX, centerY - camY + flameY);
+    // }
+
+    // ctx.closePath();
+
+    // applyGlowingEffect(ctx, "orange", "orange", "red", flameTransitionDuration, flameAnimatationFrame);
+    // ctx.fill();
+
+    
+  }
+
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.shadowBlur = 0;
+
   if (player.invincibleTimer > 10 || (player.invincibleTimer > 0 && !player.isUserControlledCharacter)) {
-    const transitionDuration = 500;
-    const currentTime = Date.now();
-    const elapsedTime = currentTime - player.starTransitionStartTime;
-    const animatationFrame = elapsedTime % transitionDuration;
+    let transitionDuration = 500;
+    let animatationFrame = elapsedTime % transitionDuration;
     if (!player.starTransitionStartTime || elapsedTime >= transitionDuration) {
       player.starTransitionStartTime = currentTime;
     }

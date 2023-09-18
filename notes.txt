@@ -352,3 +352,12 @@ i think sometimes the invic loss from a mine/other collision might get synced aw
     follow "killed by" first - may need to have a non player local game var for keeping track of that
 
 sometimes collision can just effect one of the players, possible property override idk
+
+rocket/flame thrust indicator (with size tied to force size - including special) particles left behind.
+
+ "set piece" combninations of mines,forces, powerups etc
+    implement more valuable powerups within these curations
+
+warp black holes
+
+Kill text is kinda gone, just combo score, could have the kill text (+flavor) above that.

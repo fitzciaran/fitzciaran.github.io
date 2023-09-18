@@ -717,7 +717,7 @@ export function masterUpdateGame(player, globalPowerUps, otherPlayers, bots, del
       sendEntitiesState();
     }
   }
-  if (!player.isDead && gameTimer % 2 == 1) {
+  if (!player.isDead && gameTimer % 1 == 0) {
     sendPlayerStates(player, isPlayerMasterPeer(player));
   }
 }

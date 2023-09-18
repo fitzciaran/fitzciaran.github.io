@@ -16,6 +16,7 @@ import {
   wrappedResolveConflicts,
   timeSinceMessageFromMaster,
   setTimeSinceMessageFromMaster,
+  setMasterPeerId,chooseNewMasterPeer
 } from "./connectionHandlers.js";
 import { sendPlayerStates } from "./sendData.js";
 import { setupCanvas, setupSpikeyBallPoints } from "./drawingUtils.js";
@@ -64,7 +65,6 @@ export const colors = [
   "violet",
   "maroon",
   "crimson",
-  "white",
 ];
 
 export const acceleration = 0.25;
@@ -72,7 +72,6 @@ export const acceleration = 0.25;
 // let lastTime = Date.now();
 let lastTime = performance.now();
 export let executionTime = 0;
-
 export const GameState = {
   PILOT_SELECT: "pilotSelect",
   INTRO: "intro",
@@ -188,7 +187,7 @@ function updateGame(deltaTime, playerActive) {
   setTicksSinceLastConnectionAttempt(ticksSinceLastConnectionAttempt + 1);
   setTimeSinceAnyMessageRecieved(timeSinceAnyMessageRecieved + 1);
   if (timeSinceAnyMessageRecieved > 100 && ticksSinceLastConnectionAttempt > 3000) {
-    wrappedResolveConflicts(player, otherPlayers, globalPowerUps);
+    // wrappedResolveConflicts(player, otherPlayers, globalPowerUps);
     //todo do we need to attemptConnections here?
   }
   if (timeSinceMessageFromMaster > 60 * 15 && !isPlayerMasterPeer(player)) {
@@ -201,8 +200,10 @@ function updateGame(deltaTime, playerActive) {
     // connectedPeers.splice(0, 1);
     // setTimeout(() => attemptConnections(player, otherPlayers, globalPowerUps), 50);
     // //what about "connections" how is connections and connectedPeers synced?
-    // masterPeerId = chooseNewMasterPeer(player, otherPlayers);
-    wrappedResolveConflicts(player, otherPlayers, globalPowerUps);
+    setMasterPeerId(chooseNewMasterPeer(player, otherPlayers));
+   
+   
+    // wrappedResolveConflicts(player, otherPlayers, globalPowerUps);
   }
 }
 
@@ -340,12 +341,13 @@ export function setGameState(newState) {
     setupWinStateEventListeners(window, canvas);
     if (isPlayerMasterPeer(player)) {
       //do we need this special send?
-      sendPlayerStates(player, true, true);
+      sendPlayerStates(player, true, true,true);
     }
   }
 
   if (newState !== GameState.FINISHED && prevGameState === GameState.FINISHED) {
-    resetPowerLevels(player, otherPlayers, globalPowerUps);
+    //do we need resetPowerLevels anymore?
+    // resetPowerLevels(player, otherPlayers, globalPowerUps);
     setGameWon(false);
     removeWinStateEventListeners(window, canvas);
   }
@@ -358,7 +360,7 @@ export function setGameState(newState) {
     player.resetState(true, true);
     player.isPlaying = true;
     player.setIsDead(false);
-    sendPlayerStates(player, isPlayerMasterPeer(player), true);
+    sendPlayerStates(player, isPlayerMasterPeer(player), true,true);
 
     // setTimeout(() => connectToPeers(player, otherPlayers, globalPowerUps), 1000);
     removePilotsEventListeners(canvas);

@@ -1,17 +1,31 @@
 import { shuffleArray } from "./gameLogic.js";
 import { handleData } from "./handleData.js";
+
 import { Player } from "./player.js";
 export let everConnected = false;
 export let connections = [];
+export const compression = false;
+
 export let peerIds = [
-  "a7ef962d-14a8-40e4-8a1e-226a438a3321",
-  "b7ef962d-14a8-40e4-8a1e-226a438a3321",
-  "c7ef962d-14a8-40e4-8a1e-226a438a3321",
-  "d7ef962d-14a8-40e4-8a1e-226a438a3321",
-  "e7ef962d-14a8-40e4-8a1e-226a438a3321",
-  "a6ef962d-14a8-40e4-8a1e-226a438a3321",
-  "b6ef962d-14a8-40e4-8a1e-226a438a3321",
+  "a7ef962d-14a8-40e4-8a1e-226c438a3321",
+  "b7ef962d-14a8-40e4-8a1e-226c438a3321",
+  "c7ef962d-14a8-40e4-8a1e-226c438a3321",
+  "d7ef962d-14a8-40e4-8a1e-226c438a3321",
+  "e7ef962d-14a8-40e4-8a1e-226c438a3321",
+  "a6ef962d-14a8-40e4-8a1e-226c438a3321",
+  "b6ef962d-14a8-40e4-8a1e-226c438a3321",
 ];
+if (!compression) {
+  peerIds = [
+    "a7ef962d-14a8-40e4-8a1e-226d438a3321",
+    "b7ef962d-14a8-40e4-8a1e-226d438a3321",
+    "c7ef962d-14a8-40e4-8a1e-226d438a3321",
+    "d7ef962d-14a8-40e4-8a1e-226d438a3321",
+    "e7ef962d-14a8-40e4-8a1e-226d438a3321",
+    "a6ef962d-14a8-40e4-8a1e-226d438a3321",
+    "b6ef962d-14a8-40e4-8a1e-226d438a3321",
+  ];
+}
 let reconnectionAttempts = 0;
 shuffleArray(peerIds);
 export let ticksSinceLastConnectionAttempt = 0;
@@ -46,9 +60,9 @@ export function setConnectedPeers(newConnectedPeers) {
 let connectionBackOffTime = 0;
 
 // Wait for a short delay to allow time for the connections to be attempted
-export function attemptConnections(player, otherPlayers, globalPowerUps) {
+export function attemptConnections(player, otherPlayers, globalPowerUps, addHandlers = true, connectPeers = true) {
   if (player.id === null) {
-    console.log("in attemptConnections PLayer id is null");
+    console.log("in attemptConnections Player id is null");
     connectionBackOffTime = (connectionBackOffTime + 500) * 2;
     setTimeout(() => createPeer(player, otherPlayers, globalPowerUps), connectionBackOffTime);
     return;
@@ -57,8 +71,10 @@ export function attemptConnections(player, otherPlayers, globalPowerUps) {
   peer.on("connection", function (conn) {
     console.log("Connection made with peer:", conn.peer);
     everConnected = true;
-    //todo not sure if we need to move out this below line
-    addConnectionHandlers(player, otherPlayers, conn, globalPowerUps);
+
+    if (addHandlers) {
+      addConnectionHandlers(player, otherPlayers, conn, globalPowerUps);
+    }
     if (!connectedPeers.includes(conn.peer)) {
       connectedPeers.push(conn.peer);
     }
@@ -86,8 +102,9 @@ export function attemptConnections(player, otherPlayers, globalPowerUps) {
     createPeer(player, otherPlayers, globalPowerUps);
     //  }
   });
-
-  connectToPeers(player, otherPlayers, globalPowerUps);
+  if (connectPeers) {
+    connectToPeers(player, otherPlayers, globalPowerUps);
+  }
 }
 
 export function isPlayerMasterPeer(player) {
@@ -314,8 +331,18 @@ function addConnectionHandlers(player, otherPlayers, conn, globalPowerUps) {
   });
 
   conn.on("data", function (data) {
+    if (!data) {
+      return;
+    }
+    if (compression) {
+      // Decompress the data using Pako
+      const inflatedData = pako.inflate(data);
+
+      // Convert the decompressed Uint8Array directly to a JavaScript object
+      data = JSON.parse(new TextDecoder().decode(inflatedData));
+    }
     //console.log("Received data:", data);
-    if ((data && data.id) || (data && data.gameState) || (data && data.requestForFullStates)|| (data && data.requestFullUpdate)) {
+    if ((data && data.id) || (data && data.gameState) || (data && data.requestForFullStates) || (data && data.requestFullUpdate)) {
       handleData(player, otherPlayers, globalPowerUps, data);
     } else {
       console.log("Received unexpected data:", data);
@@ -437,10 +464,10 @@ function resolveConflicts(player, otherPlayers, globalPowerUps) {
   if (player.id == null) {
     createPeer(player, otherPlayers, globalPowerUps);
   }
-  resolveConnectionConflicts(player, otherPlayers, globalPowerUps);
+  resolveConnectionConflicts(player, otherPlayers, globalPowerUps,true);
 }
 
-function resolveConnectionConflicts(player, otherPlayers, globalPowerUps) {
+function resolveConnectionConflicts(player, otherPlayers, globalPowerUps, tryToRedoConnections = false) {
   // If there is a conflict between the local game state and the received game state,
 
   //not sure about the below might need to keep it in mind but I think it was causing major issues.
@@ -449,8 +476,9 @@ function resolveConnectionConflicts(player, otherPlayers, globalPowerUps) {
   // connections = connections.filter((connection) => connection.peer !== connectedPeers[0]);
   // connectedPeers.splice(0, 1);
   //might not be able to attempt connections again without issues
-  if (timeSinceAnyMessageRecieved > 1000) {
-    setTimeout(() => attemptConnections(player, otherPlayers, globalPowerUps), 50);
+  if (timeSinceAnyMessageRecieved > 1000 && tryToRedoConnections == true) {
+    console.log("attempting resolveConnections");
+    setTimeout(() => attemptConnections(player, otherPlayers, globalPowerUps,true,false), 50);
   }
   masterPeerId = chooseNewMasterPeer(player, otherPlayers);
 }

@@ -1,5 +1,5 @@
 import { player, bots, mines, globalPowerUps } from "./main.js";
-import { connections, isPlayerMasterPeer } from "./connectionHandlers.js";
+import { connections, isPlayerMasterPeer, compression } from "./connectionHandlers.js";
 import { forces, serializeForces, serializeMines, serializeGlobalPowerUps } from "./entities.js";
 import { serializeBots } from "./player.js";
 
@@ -16,7 +16,7 @@ export function sendRequestForStates() {
   sendData(data);
 }
 // Send player state to other connected players
-export function sendPlayerStates(playerToSend, isMaster, sendFullerData = false) {
+export function sendPlayerStates(playerToSend, masterSending, sendFullerData = false,playerReseting=false) {
   if (Math.random() > 0.99) {
     //every so often we will send the full data just to be sure master is in sync with important properties which don't often change
     sendFullerData = true;
@@ -37,59 +37,30 @@ export function sendPlayerStates(playerToSend, isMaster, sendFullerData = false)
   newDataToSend = addProperty(playerToSend, data, "x", "x") || newDataToSend;
   newDataToSend = addProperty(playerToSend, data, "y", "y") || newDataToSend;
   // newDataToSend = addProperty(playerToSend, data, "powerUps", "powerUps") || newDataToSend;
-  newDataToSend = addProperty(playerToSend, data, "invincibleTimer", "invincibleTimer") || newDataToSend;
-  if (sendFullerData) {
-    newDataToSend = addProperty(playerToSend, data, "color", "color", true) || newDataToSend;
-    newDataToSend = addProperty(playerToSend, data, "pilot", "pilot", true) || newDataToSend;
-    newDataToSend = addProperty(playerToSend, data, "name", "name", true) || newDataToSend;
-    newDataToSend = addProperty(playerToSend, data, "lives", "lives", true) || newDataToSend;
-    newDataToSend = addProperty(playerToSend, data, "isMaster", "isMaster", true) || newDataToSend;
-    // newDataToSend = addProperty(playerToSend, data, "ticksSincePowerUpCollection", "ticksSincePowerUpCollection") || newDataToSend;
-    newDataToSend = addProperty(playerToSend, data, "targetedBy", "targetedBy", true) || newDataToSend;
-    newDataToSend = addProperty(playerToSend, data, "timeOfLastActive", "timeOfLastActive", true) || newDataToSend;
-    newDataToSend = addProperty(playerToSend, data, "hitBy", "hitBy", true) || newDataToSend;
-    newDataToSend = addProperty(playerToSend, data, "recentScoreTicks", "recentScoreTicks", true) || newDataToSend;
-    newDataToSend = addProperty(playerToSend, data, "recentScoreText", "recentScoreText", true) || newDataToSend;
-    newDataToSend = addProperty(playerToSend, data, "kills", "kills", true) || newDataToSend;
-    newDataToSend = addProperty(playerToSend, data, "angle", "angle", true) || newDataToSend;
-    newDataToSend = addProperty(playerToSend, data, "isBot", "isBot", true) || newDataToSend;
-    newDataToSend = addProperty(playerToSend, data, "special", "special", true) || newDataToSend;
-    newDataToSend = addProperty(playerToSend, data, "devMode", "devMode", true) || newDataToSend;
-    newDataToSend = addProperty(playerToSend, data, "killed", "killed", true) || newDataToSend;
-    newDataToSend = addProperty(playerToSend, data, "killedBy", "killedBy", true) || newDataToSend;
-    newDataToSend = addProperty(playerToSend, data, "isPlaying", "isPlaying", true) || newDataToSend;
-    newDataToSend = addProperty(playerToSend, data, "space", "space", true) || newDataToSend;
-    newDataToSend = addProperty(playerToSend, data, "shift", "shift", true) || newDataToSend;
-    newDataToSend = addProperty(playerToSend, data, "resetting", "resetting", true) || newDataToSend;
-  } else {
-    newDataToSend = addProperty(playerToSend, data, "color", "color") || newDataToSend;
-    newDataToSend = addProperty(playerToSend, data, "pilot", "pilot") || newDataToSend;
-    newDataToSend = addProperty(playerToSend, data, "name", "name") || newDataToSend;
-    newDataToSend = addProperty(playerToSend, data, "lives", "lives") || newDataToSend;
-    newDataToSend = addProperty(playerToSend, data, "isMaster", "isMaster") || newDataToSend;
-    // newDataToSend = addProperty(playerToSend, data, "ticksSincePowerUpCollection", "ticksSincePowerUpCollection") || newDataToSend;
-    newDataToSend = addProperty(playerToSend, data, "targetedBy", "targetedBy") || newDataToSend;
-    newDataToSend = addProperty(playerToSend, data, "timeOfLastActive", "timeOfLastActive") || newDataToSend;
-    newDataToSend = addProperty(playerToSend, data, "hitBy", "hitBy") || newDataToSend;
-    newDataToSend = addProperty(playerToSend, data, "recentScoreTicks", "recentScoreTicks") || newDataToSend;
-    newDataToSend = addProperty(playerToSend, data, "recentScoreText", "recentScoreText") || newDataToSend;
-    newDataToSend = addProperty(playerToSend, data, "kills", "kills") || newDataToSend;
-    newDataToSend = addProperty(playerToSend, data, "angle", "angle") || newDataToSend;
-    newDataToSend = addProperty(playerToSend, data, "isBot", "isBot") || newDataToSend;
-    newDataToSend = addProperty(playerToSend, data, "special", "special") || newDataToSend;
-    newDataToSend = addProperty(playerToSend, data, "devMode", "devMode") || newDataToSend;
-    newDataToSend = addProperty(playerToSend, data, "killed", "killed") || newDataToSend;
-    newDataToSend = addProperty(playerToSend, data, "killedBy", "killedBy") || newDataToSend;
-    newDataToSend = addProperty(playerToSend, data, "isPlaying", "isPlaying") || newDataToSend;
-    newDataToSend = addProperty(playerToSend, data, "space", "space") || newDataToSend;
-    newDataToSend = addProperty(playerToSend, data, "shift", "shift") || newDataToSend;
-    newDataToSend = addProperty(playerToSend, data, "resetting", "resetting") || newDataToSend;
-  }
+  //   newDataToSend = addProperty(playerToSend, data, "invincibleTimer", "invincibleTimer") || newDataToSend;
+
+  newDataToSend = addProperty(playerToSend, data, "color", "color", sendFullerData) || newDataToSend;
+  newDataToSend = addProperty(playerToSend, data, "pilot", "pilot", sendFullerData) || newDataToSend;
+  newDataToSend = addProperty(playerToSend, data, "name", "name", sendFullerData) || newDataToSend;
+  newDataToSend = addProperty(playerToSend, data, "isMaster", "isMaster", sendFullerData) || newDataToSend;
+  // newDataToSend = addProperty(playerToSend, data, "ticksSincePowerUpCollection", "ticksSincePowerUpCollection", sendFullerData) || newDataToSend;
+  newDataToSend = addProperty(playerToSend, data, "targetedBy", "targetedBy", sendFullerData) || newDataToSend;
+  newDataToSend = addProperty(playerToSend, data, "timeOfLastActive", "timeOfLastActive", sendFullerData) || newDataToSend;
+  // newDataToSend = addProperty(playerToSend, data, "recentScoreTicks", "recentScoreTicks", sendFullerData) || newDataToSend;
+  // newDataToSend = addProperty(playerToSend, data, "recentScoreText", "recentScoreText", sendFullerData) || newDataToSend;
+  // newDataToSend = addProperty(playerToSend, data, "kills", "kills", sendFullerData) || newDataToSend;
+  newDataToSend = addProperty(playerToSend, data, "angle", "angle", sendFullerData) || newDataToSend;
+  newDataToSend = addProperty(playerToSend, data, "isBot", "isBot", sendFullerData) || newDataToSend;
+  newDataToSend = addProperty(playerToSend, data, "special", "special", sendFullerData) || newDataToSend;
+  newDataToSend = addProperty(playerToSend, data, "devMode", "devMode", sendFullerData) || newDataToSend;
+  newDataToSend = addProperty(playerToSend, data, "isPlaying", "isPlaying", sendFullerData) || newDataToSend;
+  newDataToSend = addProperty(playerToSend, data, "space", "space", sendFullerData) || newDataToSend;
+  newDataToSend = addProperty(playerToSend, data, "shift", "shift", sendFullerData) || newDataToSend;
+  newDataToSend = addProperty(playerToSend, data, "resetting", "resetting", sendFullerData) || newDataToSend;
 
   // newDataToSend = addProperty(playerToSend, data, "invincibleTimer", "invincibleTimer") || newDataToSend;
 
   newDataToSend = addProperty(playerToSend, data, "forceCoolDown", "forceCoolDown") || newDataToSend;
-  newDataToSend = addProperty(playerToSend, data, "comboScaler", "comboScaler") || newDataToSend;
   newDataToSend = addProperty(playerToSend, data, "playerAngleData", "playerAngleData") || newDataToSend;
   newDataToSend = addProperty(playerToSend, data, "mousePosX", "mousePosX") || newDataToSend;
   newDataToSend = addProperty(playerToSend, data, "mousePosY", "mousePosY") || newDataToSend;
@@ -97,17 +68,28 @@ export function sendPlayerStates(playerToSend, isMaster, sendFullerData = false)
   newDataToSend = addProperty(playerToSend, data, "vel", "vel") || newDataToSend;
   newDataToSend = addProperty(playerToSend, data, "distanceFactor", "distanceFactor") || newDataToSend;
 
-  if (isMaster || sendFullerData) {
+  if (masterSending || sendFullerData) {
     //only master sends is dead message since it is the abibter of collisions, apart from sendFullerData
     if (lastSentPlayerData.isDead != playerToSend.isDead || sendFullerData) {
       newDataToSend = true;
       data.isDead = playerToSend.isDead;
       lastSentPlayerData.isDead = playerToSend.isDead;
     }
-    newDataToSend = addProperty(playerToSend, data, "powerUps", "powerUps") || newDataToSend;
-    newDataToSend = addProperty(playerToSend, data, "ticksSincePowerUpCollection", "ticksSincePowerUpCollection", true) || newDataToSend;
+    if (masterSending  || playerReseting) {
+      newDataToSend = addProperty(playerToSend, data, "invincibleTimer", "invincibleTimer", sendFullerData) || newDataToSend;
+      newDataToSend = addProperty(playerToSend, data, "powerUps", "powerUps", sendFullerData) || newDataToSend;
+      newDataToSend = addProperty(playerToSend, data, "ticksSincePowerUpCollection", "ticksSincePowerUpCollection", sendFullerData) || newDataToSend;
+      newDataToSend = addProperty(playerToSend, data, "recentScoreTicks", "recentScoreTicks", sendFullerData) || newDataToSend;
+      newDataToSend = addProperty(playerToSend, data, "recentScoreText", "recentScoreText", sendFullerData) || newDataToSend;
+      newDataToSend = addProperty(playerToSend, data, "kills", "kills", sendFullerData) || newDataToSend;
+      newDataToSend = addProperty(playerToSend, data, "comboScaler", "comboScaler", sendFullerData) || newDataToSend;
+      newDataToSend = addProperty(playerToSend, data, "killed", "killed", sendFullerData) || newDataToSend;
+      newDataToSend = addProperty(playerToSend, data, "killedBy", "killedBy", sendFullerData) || newDataToSend;
+      newDataToSend = addProperty(playerToSend, data, "hitBy", "hitBy", sendFullerData) || newDataToSend;
+      newDataToSend = addProperty(playerToSend, data, "lives", "lives", sendFullerData) || newDataToSend;
+    }
   }
-  if (!isMaster) {
+  if (!masterSending) {
     //only player sends timeSinceSpawned because it knows when it has reset
     if (newDataToSend) {
       data.timeSinceSpawned = playerToSend.timeSinceSpawned;
@@ -163,7 +145,7 @@ export function sendEntitiesUpdate() {
     fromMaster: isPlayerMasterPeer(player),
     gameState: true,
     globalPowerUps: serializeGlobalPowerUps(globalPowerUps, true),
-    bots: serializeBots(bots,true),
+    bots: serializeBots(bots, true),
     mines: serializeMines(mines, true),
     forces: serializeForces(forces, true),
     // connectedPeers: connectedPeers,
@@ -269,31 +251,39 @@ export function sendConnectedPeers() {
 
 //this is the full send that will only be sent on request / occasionally
 export function requestFullUpdate() {
-    // Send game state to other player
-    let data = {
-      timestamp: Date.now(),
-      priority: 2,
-      fromMaster: isPlayerMasterPeer(player),
-      requestFullUpdate: true,
-    };
-  
-    sendData(data);
-  }
+  // Send game state to other player
+  let data = {
+    timestamp: Date.now(),
+    priority: 2,
+    fromMaster: isPlayerMasterPeer(player),
+    requestFullUpdate: true,
+  };
+
+  sendData(data);
+}
 
 function sendData(data) {
-  connections.forEach((conn) => {
-    if (conn && conn.open) {
-      try {
-        conn.send(data);
-        // sendCounter++;
-        // // Log the data every 1000 calls
-        // if (sendCounter === 5000) {
-        //   // console.log("sending data:", data);
-        //   sendCounter = 0; // reset the counter
-        // }
-      } catch (error) {
-        console.error("Error sending data:", error);
-      }
+  if (data) {
+    if (compression) {
+      const jsonString = JSON.stringify(data);
+
+      // Encode the JSON string as Uint8Array
+      const encoder = new TextEncoder();
+      const dataArray = encoder.encode(jsonString);
+
+      // Compress the data using Pako
+      data = pako.deflate(dataArray);
     }
-  });
+    connections.forEach((conn) => {
+      if (conn && conn.open) {
+        try {
+          conn.send(data);
+        } catch (error) {
+          console.error("Error sending data:", error);
+        }
+      }
+    });
+  } else {
+    console.log("nothing to send in sendData");
+  }
 }

@@ -190,9 +190,9 @@ export function serializeForces(forces, onlyChangedData = false) {
         return serializedForce;
       }
 
-      // Return the last sent data for forces that haven't changed
-      return lastSentForceData;
-    });
+       // Return null for forces that haven't changed
+       return null;
+      }).filter((changedData) => changedData !== null);
 
     return changedForceData;
   } else {
@@ -262,9 +262,9 @@ export function serializeMines(mines, onlyChangedData = false) {
         return serializedMine;
       }
 
-      // Return the last sent data for mines that haven't changed
-      return lastSentMineData;
-    });
+      // Return null for mines that haven't changed
+      return null;
+    }).filter((changedData) => changedData !== null);
 
     return changedMineData;
   } else {
@@ -305,24 +305,25 @@ function isEqualMine(mine1, mine2) {
 
 export function serializeGlobalPowerUps(globalPowerUps, onlyChangedData = false) {
   if (onlyChangedData) {
+    const ogLastSentGlobalPowerUps = lastSentGlobalPowerUps.map((powerUp) => powerUp);
     // Serialize and return only the changed globalPowerUps
-    const changedGlobalPowerUpData = globalPowerUps.map((currentPowerUp) => {
-      const lastSentPowerUpData = lastSentGlobalPowerUps.find((lastPowerUpData) => lastPowerUpData.id === currentPowerUp.id);
-      const serializedPowerUp = serializeGlobalPowerUp(currentPowerUp);
+    let changedGlobalPowerUpData = globalPowerUps
+      .map((currentPowerUp) => {
+        const lastSentPowerUpData = lastSentGlobalPowerUps.find((lastPowerUpData) => lastPowerUpData.id === currentPowerUp.id);
+        const serializedPowerUp = serializeGlobalPowerUp(currentPowerUp);
 
-      // Compare the serialized data of the current globalPowerUp with the last sent data
-      if (!lastSentPowerUpData || !isEqualGlobalPowerUp(serializedPowerUp, lastSentPowerUpData)) {
-        // Update lastSentGlobalPowerUps with the new serialized data if changed
-        lastSentGlobalPowerUps = lastSentGlobalPowerUps.map((powerUp) =>
-          powerUp.id === currentPowerUp.id ? serializedPowerUp : powerUp
-        );
-        return serializedPowerUp;
-      }
+        // Compare the serialized data of the current globalPowerUp with the last sent data
+        if (!lastSentPowerUpData || !isEqualGlobalPowerUp(serializedPowerUp, lastSentPowerUpData)) {
+          // Update lastSentGlobalPowerUps with the new serialized data if changed
+          lastSentGlobalPowerUps = lastSentGlobalPowerUps.map((powerUp) => (powerUp.id === currentPowerUp.id ? serializedPowerUp : powerUp));
+          return serializedPowerUp;
+        }
 
-      // Return the last sent data for globalPowerUps that haven't changed
-      return lastSentPowerUpData;
-    });
-
+        // Return null for globalPowerUps that haven't changed
+        return null;
+      })
+      .filter((changedData) => changedData !== null);
+    let dertr = 1;
     return changedGlobalPowerUpData;
   } else {
     // If onlyChangedData is false, update lastSentGlobalPowerUps with the current serialized data
@@ -349,9 +350,10 @@ function serializeGlobalPowerUp(powerUp) {
 
 // Define a function to compare globalPowerUp objects for equality
 function isEqualGlobalPowerUp(powerUp1, powerUp2) {
+  const tolerance = 1e-4;
   return (
-    powerUp1.x === powerUp2.x &&
-    powerUp1.y === powerUp2.y &&
+    Math.abs(powerUp1.x - powerUp2.x) < tolerance &&
+    Math.abs(powerUp1.y - powerUp2.y) < tolerance &&
     powerUp1.color === powerUp2.color &&
     powerUp1.isStar === powerUp2.isStar &&
     powerUp1.radius === powerUp2.radius &&

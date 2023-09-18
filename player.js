@@ -25,7 +25,7 @@ import {
   initialInvincibleTime,
   botRespawnDelay,
 } from "./gameLogic.js";
-import { sendPlayerStates, sendRequestForStates,requestFullUpdate } from "./sendData.js";
+import { sendPlayerStates, sendRequestForStates, requestFullUpdate } from "./sendData.js";
 
 const bounceFactor = 1.5;
 const offset = 1;
@@ -369,14 +369,13 @@ export class Player {
     if (this.isLocal && !isMaster && this.isMaster) {
       //if switching away from being master send basic ship data
       sendPlayerStates(this, false, true);
-     
     }
     if (isMaster && !this.isMaster) {
       //if switching any player to being master request basic ship data
       sendRequestForStates();
     }
-    if(isMaster && !this == player){
-      //if switching another player to master ask master for a full update. Not sure if master will be ready as master immediately so schedule a few requests 
+    if (isMaster && !this == player) {
+      //if switching another player to master ask master for a full update. Not sure if master will be ready as master immediately so schedule a few requests
       setTimeout(() => requestFullUpdate(), 20);
       setTimeout(() => requestFullUpdate(), 500);
       setTimeout(() => requestFullUpdate(), 2000);
@@ -1073,17 +1072,15 @@ export function serializeBots(bots, onlyChangedData = false) {
       const serializedBot = serializeBot(currentBot);
 
       // Compare the serialized data of the current bot with the last sent data
-      if (!lastSentBotData || !isEqualBot(serializedBot, lastSentBotData)) {
+      if (!lastSentBotData || !areUpdateCriticalValuesSameBot(serializedBot, lastSentBotData)) {
         // Update lastSentBots with the new serialized data if changed
-        lastSentBots = lastSentBots.map((bot) =>
-          bot.id === currentBot.id ? serializedBot : bot
-        );
+        lastSentBots = lastSentBots.map((bot) => (bot.id === currentBot.id ? serializedBot : bot));
         return serializedBot;
       }
 
-      // Return the last sent data for bots that haven't changed
-      return lastSentBotData;
-    });
+      // Return null for bots that haven't changed
+      return null;
+    }).filter((changedData) => changedData !== null);
 
     return changedBotData;
   } else {
@@ -1094,7 +1091,6 @@ export function serializeBots(bots, onlyChangedData = false) {
     return lastSentBots;
   }
 }
-
 
 // Define a function to serialize a bot's data
 function serializeBot(bot) {
@@ -1134,9 +1130,28 @@ function serializeBot(bot) {
 }
 
 // Define a function to compare bot objects for equality
-function isEqualBot(bot1, bot2) {
+function areUpdateCriticalValuesSameBot(bot1, bot2) {
+  let isSame =
+    bot1.isDead === bot2.isDead &&
+    bot1.angle === bot2.angle &&
+    bot1.isPlaying === bot2.isPlaying &&
+    bot1.distanceFactor === bot2.distanceFactor &&
+    bot1.lives === bot2.lives &&
+    bot1.space === bot2.space &&
+    bot1.shift === bot2.shift &&
+    bot1.u === bot2.u &&
+    bot1.comboScaler === bot2.comboScaler &&
+    bot1.kills === bot2.kills &&
+    bot1.botState === bot2.botState &&
+    bot1.randomTarget === bot2.randomTarget &&
+    bot1.followingPlayerID === bot2.followingPlayerID &&
+    bot1.name === bot2.name &&
+    bot1.inForce === bot2.inForce;
+  return isSame;
+}
 
-  let isSame =  (
+function isEqualBot(bot1, bot2) {
+  let isSame =
     bot1.x === bot2.x &&
     bot1.y === bot2.y &&
     bot1.vel === bot2.vel &&
@@ -1166,7 +1181,6 @@ function isEqualBot(bot1, bot2) {
     bot1.previousTurnDirection === bot2.previousTurnDirection &&
     bot1.invincibleTimer === bot2.invincibleTimer &&
     bot1.name === bot2.name &&
-    bot1.inForce === bot2.inForce
-  );
+    bot1.inForce === bot2.inForce;
   return isSame;
 }

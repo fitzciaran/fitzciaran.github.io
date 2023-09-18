@@ -42,7 +42,7 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
     otherPlayer.timeSinceSentMessageThatWasRecieved = 0;
   }
   if (isPlayerMasterPeer(player) && data.isMaster) {
-    wrappedResolveConflicts(player, otherPlayers, globalPowerUps);
+    wrappedResolveConflicts(player, otherPlayers, globalPowerUps, true);
     console.log("master conflict");
     return;
   }
@@ -60,7 +60,7 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
     otherPlayer = findBotById(data.id);
   }
   if (otherPlayer) {
-    updateOtherPlayerData(otherPlayer, data, otherPlayers, globalPowerUps);
+    updateOtherPlayerData(otherPlayer, data, otherPlayers, globalPowerUps, player);
   } // If the player is not found, add them to the array
   else if (data.id && data.id != player.id && !data.isBot) {
     let newPlayer = new Player(data.id, data.x, data.y, data.powerUps, data.color, data.angle, data.pilot, data.name, data.isPlaying, true);
@@ -87,7 +87,7 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
 
   updateForces(data, player, forces, player.id);
   removeForces(data, forces);
-  //don't curently send this data
+  //don't curently send this data could be used for master to send out key properties of otherplayers (score,kills etc.. not pos,vel etc)
   if (data.otherPlayers && data.otherPlayers.length > 0) {
     setTimeSinceMessageFromMaster(0);
     const dataPlayer = data.otherPlayers.find((otherPlayer) => otherPlayer.id === player.id);
@@ -123,6 +123,7 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
   }
 
   if (data.connectedPeers && data.connectedPeers.length > 0) {
+    //we don't currently send peer data, need to review this if we add peer sharing back, particually attemptConnections
     //check if connectedPeers has any id's (strings) not in data.connectedPeers
     let combine = false;
     if (differsFrom(connectedPeers, data.connectedPeers)) {
@@ -146,51 +147,57 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
   }
 }
 
-function updateOtherPlayerData(player, data, otherPlayers, globalPowerUps) {
-  if (!player) return;
- 
+function updateOtherPlayerData(otherPlayer, data, otherPlayers, globalPowerUps, player) {
+  if (!otherPlayer) return;
+
   for (const key in data) {
     if (data.hasOwnProperty(key)) {
       if (key === "name") {
         if (data.name != null && data.name != "") {
-          player.name = data.name;
+          otherPlayer.name = data.name;
         }
       } else if (key === "pilot") {
         if (data.pilot != null && data.pilot != "") {
-          player.pilot = data.pilot;
+          otherPlayer.pilot = data.pilot;
         }
       } else if (key === "x" || key === "y") {
         //check if the gap is closer than the threshold
-        if (Math.abs(player[key] - data[key]) <= threshold) {
+        if (Math.abs(otherPlayer[key] - data[key]) <= threshold) {
           // Interpolate x and y values
-          player[key] += (data[key] - player[key]) * interpFactor;
+          otherPlayer[key] += (data[key] - otherPlayer[key]) * interpFactor;
         } else {
           // Update x and y values directly
-          player[key] = data[key];
+          otherPlayer[key] = data[key];
+        }
+      } else if (key === "powerUps") {
+        if (otherPlayer.ticksSincePowerUpCollection > -1 && otherPlayer.powerUps < data.powerUps) {
+          console.log("possible double powerup collection attempt?");
+        } else {
+          otherPlayer[key] = data[key];
         }
       } else if (key === "isDead") {
-        player.setIsDead(data.isDead);
+        otherPlayer.setIsDead(data.isDead);
       } else if (key === "invincibleTimer") {
-        player.setInvincibleTimer(data.invincibleTimer);
+        otherPlayer.setInvincibleTimer(data.invincibleTimer);
       } else if (key === "comboScaler") {
-        player.setComboScaler(data.comboScaler);
+        otherPlayer.setComboScaler(data.comboScaler);
       } else if (key === "velX" || key === "velY") {
         // Check if velocities are further apart than the threshold
-        if (Math.abs(player[key] - data[key]) > velocityThreshold) {
+        if (Math.abs(otherPlayer[key] - data[key]) > velocityThreshold) {
           // Interpolate velocities
-          player[key] += (data[key] - player[key]) * velocityInterpFactor;
+          otherPlayer[key] += (data[key] - otherPlayer[key]) * velocityInterpFactor;
         } else {
           // Update velocities directly
-          player[key] = data[key];
+          otherPlayer[key] = data[key];
         }
       } else {
-        player[key] = data[key];
+        otherPlayer[key] = data[key];
       }
     }
   }
 
-  if (isPlayerMasterPeer(player) && player.isMaster && !player.isBot) {
-    wrappedResolveConflicts(player, otherPlayers, globalPowerUps);
+  if (isPlayerMasterPeer(player) && isPlayerMasterPeer(otherPlayer) && !otherPlayer.isBot) {
+    wrappedResolveConflicts(player, otherPlayers, globalPowerUps, true);
   }
 }
 
@@ -198,7 +205,14 @@ function updateOwnPlayerData(player, data) {
   if (!player || !data.id || data.id !== player.id) return;
 
   if (data.hasOwnProperty("powerUps")) {
-    player.powerUps = data.powerUps;
+    if (player.ticksSincePowerUpCollection > -1 && player.powerUps < data.powerUps) {
+      console.log("possible double powerup collection attempt? (own data)");
+    } else {
+      player.powerUps = data.powerUps;
+    }
+    // setGameOverText(player);
+    player.updateKilledAndKilledByLists(player.hitBy);
+   
   }
   if (data.hasOwnProperty("comboScaler")) {
     player.setComboScaler(data.comboScaler);
@@ -215,20 +229,21 @@ function updateOwnPlayerData(player, data) {
   }
   if (data.hasOwnProperty("hitBy")) {
     player.hitBy = data.hitBy;
-    if (player.hitBy != null && player.hitBy != "") {
-      setEndGameMessage("Killed by: " + player.hitBy + "\nScore: " + player.powerUps * 100);
-    } else {
-      setEndGameMessage("Score: " + player.powerUps * 100);
-    }
+    player.updateKilledAndKilledByLists(player.hitBy);
+    // setGameOverText(player);
   }
   if (data.hasOwnProperty("kills")) {
     player.kills = data.kills;
   }
   if (data.hasOwnProperty("killed")) {
     player.killed = data.killed;
+    player.updateKilledAndKilledByLists(player.hitBy);
+   
   }
   if (data.hasOwnProperty("killedBy")) {
     player.killedBy = data.killedBy;
+    player.updateKilledAndKilledByLists(player.hitBy);
+   
   }
   if (data.hasOwnProperty("invincibleTimer")) {
     player.setInvincibleTimer(data.invincibleTimer);
@@ -244,12 +259,19 @@ function updateOwnPlayerData(player, data) {
   }
 }
 
+function setGameOverText(player) {
+  if (player.hitBy != null && player.hitBy != "") {
+    setEndGameMessage("Killed by: " + player.hitBy + "\nScore: " + player.powerUps * 100);
+  } else {
+    setEndGameMessage("Score: " + player.powerUps * 100);
+  }
+}
 function updateGlobalPowerUps(data, globalPowerUps) {
   if (data.globalPowerUps && data.globalPowerUps.length > 0) {
     for (const receivedPowerUp of data.globalPowerUps) {
       // Find the corresponding local powerup by ID
       const localPowerUp = findPowerUpById(receivedPowerUp.id);
-     
+
       if (localPowerUp) {
         const xDiff = Math.abs(receivedPowerUp.x - localPowerUp.x);
         const yDiff = Math.abs(receivedPowerUp.y - localPowerUp.y);
@@ -310,7 +332,7 @@ function updateMines(data, mines) {
     for (const receivedMine of data.mines) {
       // Find the corresponding local bot by ID
       const localMine = findMineById(receivedMine.id);
-      
+
       if (localMine) {
         const xDiff = Math.abs(receivedMine.x - localMine.x);
         const yDiff = Math.abs(receivedMine.y - localMine.y);
@@ -479,7 +501,6 @@ function removeBots(data, bots) {
 }
 
 function updateLocalForce(localForce, receivedForce, playerId) {
-  
   if (localForce.tracks == null || localForce.tracks.id != playerId) {
     const xDiff = Math.abs(receivedForce.x - localForce.x);
     const yDiff = Math.abs(receivedForce.y - localForce.y);
