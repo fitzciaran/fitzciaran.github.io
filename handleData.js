@@ -10,9 +10,9 @@ import {
   setMasterPeerId,
 } from "./connectionHandlers.js";
 import { setEndGameMessage } from "./gameLogic.js";
-import { forces, setForces, createMineFromObject, createForceFromObject, createPowerUpFromObject } from "./entities.js";
+import { forces, setForces, createMineFromObject, createForceFromObject, createPowerUpFromObject,createEffectFromObject, effects, setEffects } from "./entities.js";
 import { createBotFromObject, Player } from "./player.js";
-import { differsFrom, findForceById, findBotById, findMineById, findPowerUpById } from "./gameUtils.js";
+import { differsFrom, findForceById, findBotById, findMineById, findPowerUpById,findEffectById } from "./gameUtils.js";
 import { sendPlayerStates, sendEntitiesState } from "./sendData.js";
 const interpFactor = 0.05;
 const threshold = 50;
@@ -84,6 +84,9 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
 
   updateMines(data, mines);
   removeMines(data, mines);
+  
+  updateEffects(data, effects);
+  removeEffects(data, effects);
 
   updateForces(data, player, forces, player.id);
   removeForces(data, forces);
@@ -381,6 +384,62 @@ function removeMines(data, mines) {
 
     // Update the mines array once after the loop
     setMines(filteredMines);
+  }
+}
+
+function updateEffects(data, effects) {
+  if (data.effects && data.effects.length > 0) {
+    setTimeSinceMessageFromMaster(0);
+
+    for (const receivedEffect of data.effects) {
+      // Find the corresponding local bot by ID
+      const localEffect = findEffectById(receivedEffect.id);
+
+      if (localEffect) {
+        const xDiff = Math.abs(receivedEffect.x - localEffect.x);
+        const yDiff = Math.abs(receivedEffect.y - localEffect.y);
+
+        if (xDiff <= threshold && yDiff <= threshold) {
+          // Interpolate x and y values
+          localEffect.x = localEffect.x + (receivedEffect.x - localEffect.x) * interpFactor;
+          localEffect.y = localEffect.y + (receivedEffect.y - localEffect.y) * interpFactor;
+        } else {
+          // Update x and y values directly
+          localEffect.x = receivedEffect.x;
+          localEffect.y = receivedEffect.y;
+        }
+        localEffect.radius = receivedEffect.radius;
+        localEffect.duration = receivedEffect.duration;
+        localEffect.color = receivedEffect.color;
+        localEffect.type = receivedEffect.type;
+      } else {
+        // If the local mine doesn't exist, add it to the mines array
+        effects.push(createEffectFromObject(receivedEffect));
+      }
+    }
+  }
+  if (data.fullSend && data.effects) {
+    // Create a new mines array by filtering only the mines that exist in data.mines
+    const updatedEffects = effects.filter((effectToCheck) => effectToCheck.id == null || data.effects.some((dataEffect) => dataEffect.id === effectToCheck.id));
+
+    // Update the mines array once
+    setEffects(updatedEffects);
+  }
+}
+
+
+function removeEffects(data, effects) {
+  if (data.removeEffects && data.removeEffects.length > 0) {
+    let filteredEffects = [...effects]; // Create a copy of the original mines array
+
+    for (let dataEffect of data.removeEffects) {
+      if (dataEffect.id != null) {
+        filteredEffects = filteredEffects.filter((effect) => effect.id !== dataEffect.id);
+      }
+    }
+
+    // Update the mines array once after the loop
+    setEffects(filteredEffects);
   }
 }
 

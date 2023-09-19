@@ -224,10 +224,6 @@ way to throw away peerjs messages?
 
 spawn position check that itterates through all current objects and gives space (could just keep rerolling rng until a valid spot? should be fine as long as there's more valid spots than invalid)
 
-power up could have a push point force? (Might have issue with bots getting them?)
-
-if anotherplayer leaves we should remove their character after no message for x time
-
 check getting hit by idle/left (and non drawn otherplayer) check general connection
 
 maybe point forces should have very strong grav right at center...but dont to make slingshot worse.. maybe an actual pos move when near center?
@@ -239,8 +235,6 @@ if new player joins and becomes master it takes over the gamestate - bots, mines
 
 in transition of master collision detection allows multiple collections...
 cover the master switching with some kind of in game lore event / effect? storm activating or something? No interactions during the "event" when event is done could push startStorm and frameOfStorm, so all could finish at the same time
-
-animation for pre spawn? play for 30 frames before object?
 
 send only changed data in standard master send, new slave peers need to request full update
 
@@ -270,12 +264,10 @@ might be able to try ignoring old messages again once optimised
 
 i think sometimes the invic loss from a mine/other collision might get synced away for slave peers.
  guessing sometimes the timing works out so they send their invic value to the master and the master accepts it
+wards skipping on standard regular updates
 
- udpate the bot/mine/force/powerup isequalfunctions to be isEqualForUpdatePurposes and allow certain things to be different so we're not sending for everything
 
- maybe send bot data less frequently? or a MORE frequent full update for bots only, meaning we can lean more towards skipping on standard regular updates
-
- the game somewhat encourages clicks near the edge of the window - annoying
+ the game somewhat encourages clicks near the edge of the window - annoying, expecially when uses don't know/understand they should bounce off it. Do I need more of a border?
 
  could have enemy spawning in over player, tracks until a certain time at which point it could stop or have limited movement speed, could use extract bot ai?
     could be like an astroid or something (finally using astroids)

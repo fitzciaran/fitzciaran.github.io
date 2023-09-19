@@ -1,6 +1,6 @@
 import { player, bots, mines, globalPowerUps } from "./main.js";
 import { connections, isPlayerMasterPeer, compression } from "./connectionHandlers.js";
-import { forces, serializeForces, serializeMines, serializeGlobalPowerUps } from "./entities.js";
+import { forces, effects, serializeForces, serializeMines, serializeGlobalPowerUps, serializeEffects } from "./entities.js";
 import { serializeBots } from "./player.js";
 
 let sendCounter = 0;
@@ -53,8 +53,7 @@ export function sendPlayerStates(playerToSend, masterSending, sendFullerData = f
   newDataToSend = addProperty(playerToSend, data, "isBot", "isBot", sendFullerData) || newDataToSend;
   newDataToSend = addProperty(playerToSend, data, "special", "special", sendFullerData) || newDataToSend;
   newDataToSend = addProperty(playerToSend, data, "devMode", "devMode", sendFullerData) || newDataToSend;
-  newDataToSend = addProperty(playerToSend, data, "isPlaying", "isPlaying", sendFullerData) || newDataToSend;
-  newDataToSend = addProperty(playerToSend, data, "space", "space", sendFullerData) || newDataToSend;
+   newDataToSend = addProperty(playerToSend, data, "space", "space", sendFullerData) || newDataToSend;
   newDataToSend = addProperty(playerToSend, data, "shift", "shift", sendFullerData) || newDataToSend;
   newDataToSend = addProperty(playerToSend, data, "resetting", "resetting", sendFullerData) || newDataToSend;
 
@@ -88,6 +87,7 @@ export function sendPlayerStates(playerToSend, masterSending, sendFullerData = f
       newDataToSend = addProperty(playerToSend, data, "killedBy", "killedBy", sendFullerData) || newDataToSend;
       newDataToSend = addProperty(playerToSend, data, "hitBy", "hitBy", sendFullerData) || newDataToSend;
       newDataToSend = addProperty(playerToSend, data, "lives", "lives", sendFullerData) || newDataToSend;
+      newDataToSend = addProperty(playerToSend, data, "isPlaying", "isPlaying", sendFullerData) || newDataToSend;
     }
   }
   if (!masterSending) {
@@ -117,7 +117,7 @@ function addProperty(playerToSend, data, propertyKey, playerKey, sendAnyway = fa
 }
 
 //this is the full send that will only be sent on request / occasionally
-export function sendEntitiesState() {
+export function sendEntitiesState(specificPeerId = "") {
   // Send game state to other player
   let data = {
     timestamp: Date.now(),
@@ -126,14 +126,20 @@ export function sendEntitiesState() {
     gameState: true,
     fullSend: true,
     globalPowerUps: serializeGlobalPowerUps(globalPowerUps),
+    effects: serializeEffects(effects),
     bots: serializeBots(bots),
     mines: serializeMines(mines),
+    effects: serializeEffects(effects),
     // otherPlayers: otherPlayers,
     forces: serializeForces(forces),
     // connectedPeers: connectedPeers,
     //enemies and stuff here
   };
-  sendData(data);
+  if (specificPeerId && specificPeerId != "") {
+    sendData(data, specificPeerId);
+  } else {
+    sendData(data);
+  }
 }
 
 //this is the partial send that will be sent regually
@@ -145,6 +151,7 @@ export function sendEntitiesUpdate() {
     fromMaster: isPlayerMasterPeer(player),
     gameState: true,
     globalPowerUps: serializeGlobalPowerUps(globalPowerUps, true),
+    effects: serializeEffects(effects, true),
     bots: serializeBots(bots, true),
     mines: serializeMines(mines, true),
     forces: serializeForces(forces, true),
@@ -166,7 +173,7 @@ export function sendBotEntitiesUpdate() {
   sendData(data);
 }
 
-//this is the full send that will only be sent on request / occasionally
+//this is the powerup update that will only be sent on request / occasionally
 export function sendPowerUpsUpdate(onlyChangedData = true) {
   // Send game state to other player
   let data = {
@@ -179,7 +186,7 @@ export function sendPowerUpsUpdate(onlyChangedData = true) {
   sendData(data);
 }
 
-//this is the full send that will only be sent on request / occasionally
+//this is the mines only update  will only be sent on request / occasionally
 export function sendMinesUpdate(onlyChangedData = true) {
   // Send game state to other player
   let data = {
@@ -188,6 +195,20 @@ export function sendMinesUpdate(onlyChangedData = true) {
     fromMaster: isPlayerMasterPeer(player),
     gameState: true,
     mines: serializeMines(mines, onlyChangedData),
+  };
+
+  sendData(data);
+}
+
+//this is the effects only update that will only be sent on request / occasionally
+export function sendEffectsUpdate(onlyChangedData = true) {
+  // Send game state to other player
+  let data = {
+    timestamp: Date.now(),
+    priority: 2,
+    fromMaster: isPlayerMasterPeer(player),
+    gameState: true,
+    effects: serializeEffects(effects, onlyChangedData),
   };
 
   sendData(data);
@@ -273,7 +294,7 @@ export function requestFullUpdate() {
   sendData(data);
 }
 
-function sendData(data) {
+function sendData(data, specificPeerId) {
   if (data) {
     if (compression) {
       const jsonString = JSON.stringify(data);
@@ -287,6 +308,9 @@ function sendData(data) {
     }
     connections.forEach((conn) => {
       if (conn && conn.open) {
+        if (specificPeerId && specificPeerId != "" && specificPeerId != conn.peer) {
+          return;
+        }
         try {
           conn.send(data);
         } catch (error) {

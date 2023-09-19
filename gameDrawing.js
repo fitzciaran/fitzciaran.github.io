@@ -9,7 +9,7 @@ import {
   getComplementaryColor,
   nameToRGBFullFormat,
 } from "./drawingUtils.js";
-import { ForceType, forces } from "./entities.js";
+import { ForceType, forces, effects, EffectType } from "./entities.js";
 import { shipScale, mineScale, basicAnimationTimer } from "./gameLogic.js";
 
 let backLayer = new Image();
@@ -40,6 +40,7 @@ export function drawScene(player, otherPlayers, bots, mines, ctx, camX, camY, wo
   drawPowerups(globalPowerUps, ctx, camX, camY);
   mines.forEach((mine) => drawMine(ctx, camX, camY, mine, spikeyBallPoints));
   forces.forEach((force) => drawForce(ctx, camX, camY, force));
+  effects.forEach((effect) => drawEffect(ctx, camX, camY, effect));
   drawMinimap(player, otherPlayers, bots, worldDimensions.width, worldDimensions.height);
   drawMinimapPowerups(globalPowerUps, worldDimensions.width, worldDimensions.height);
   if (player != null) {
@@ -275,7 +276,7 @@ function drawShip(ctx, camX, camY, player, points) {
   if (!player.flameTransitionStartTime || elapsedTime >= flameTransitionDuration) {
     player.flameTransitionStartTime = currentTime;
   }
-  if (player.space || true) {
+  if (player.space) {
     const angleOffset = 0.38;
 
     // Adjust the orientation of the flame
@@ -755,6 +756,56 @@ export function drawPowerups(globalPowerUps, ctx, camX, camY) {
     ctx.shadowBlur = 0;
     ctx.shadowColor = "transparent";
   });
+}
+
+export function drawEffect(ctx, camX, camY, effect) {
+  const currentTime = Date.now();
+  const elapsedTime = currentTime - effect.starTransitionStartTime;
+  const transitionDuration = 80;
+  const animatationFrame = elapsedTime % transitionDuration;
+   if (effect.duration >= 0) {
+    if (!effect.starTransitionStartTime || elapsedTime >= transitionDuration) {
+      effect.starTransitionStartTime = currentTime;
+    }
+    applyGlowingEffect(ctx, "white", effect.color, "white", transitionDuration, animatationFrame, 0.2);
+  } else {
+    ctx.strokeStyle = effect.color;
+    ctx.fillStyle = effect.color;
+  }
+  if (!effect.type || effect.type == "") {
+    ctx.beginPath();
+    ctx.arc(effect.x - camX, effect.y - camY, effect.radius, 0, Math.PI * 2);
+
+    ctx.fill();
+  } else if (effect.type == "temp") {
+    const animationDuration = 120;
+    const animatationFrame = elapsedTime % animationDuration;
+  
+  }else if (effect.type === EffectType.EXPLOSION) {
+    const animationDuration = 120;
+    const numFrames = 10; // Number of frames for the explosion
+    const frameDuration = animationDuration / numFrames;
+    const frameIndex = Math.floor(elapsedTime / frameDuration);
+    const maxRadius = effect.radius * 3; // Maximum explosion radius
+
+    if (frameIndex < numFrames) {
+      // Calculate the current radius for the explosion
+      const currentRadius = (frameIndex / numFrames) * maxRadius;
+
+      // Draw the expanding circle
+      ctx.beginPath();
+      ctx.arc(effect.x - camX, effect.y - camY, currentRadius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Optionally, add a stroke for an outline effect
+      ctx.strokeStyle = "rgba(255, 0, 0, 0.5)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+  }
+
+  ctx.shadowBlur = 0;
+  ctx.shadowColor = "transparent";
 }
 
 export function drawMinimapPowerups(globalPowerUps, worldWidth, worldHeight) {

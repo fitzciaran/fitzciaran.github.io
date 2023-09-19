@@ -4,6 +4,7 @@ import { isPlayerMasterPeer } from "./connectionHandlers.js";
 import { sendRemoveEntityUpdate } from "./sendData.js";
 
 export let forces = [];
+export let effects = [];
 
 export function setForces(newForces) {
   if (newForces !== forces) {
@@ -16,6 +17,11 @@ export function setForces(newForces) {
 let lastSentMasterMineData = [];
 let lastSentGlobalPowerUps = [];
 let lastSentForces = [];
+let lastSentEffects = [];
+
+export const EffectType = {
+  EXPLOSION: "explosion",
+};
 
 export class Entity {
   constructor(id = null, x = null, y = null) {
@@ -84,6 +90,16 @@ export class ForceArea extends Entity {
 export class Enemy extends Entity {
   constructor(id = null, x = null, y = null, duration = -1, radius = 20, color = "red") {
     super(id, x, y);
+  }
+}
+
+export class Effect extends Enemy {
+  constructor(id = null, x = null, y = null, duration = -1, radius = 20, color = "red", type = "") {
+    super(id, x, y, duration, radius, color);
+    this.duration = duration;
+    this.radius = radius;
+    this.color = color;
+    this.type = type;
   }
 }
 
@@ -196,6 +212,10 @@ export function createMineFromObject(obj) {
 export function createPowerUpFromObject(obj) {
   let powerUp = new PowerUp(obj.id, obj.x, obj.y, obj.color, obj.isStar, obj.radius, obj.value);
   return powerUp;
+}
+export function createEffectFromObject(obj) {
+  let effect = new Effect(obj.id, obj.x, obj.y, obj.duration, obj.radius, obj.color, obj.type);
+  return effect;
 }
 
 export function serializeForces(forces, onlyChangedData = false) {
@@ -333,7 +353,6 @@ function isEqualMine(mine1, mine2) {
 
 export function serializeGlobalPowerUps(globalPowerUps, onlyChangedData = false) {
   if (onlyChangedData) {
-    const ogLastSentGlobalPowerUps = lastSentGlobalPowerUps.map((powerUp) => powerUp);
     // Serialize and return only the changed globalPowerUps
     let changedGlobalPowerUpData = globalPowerUps
       .map((currentPowerUp) => {
@@ -351,7 +370,6 @@ export function serializeGlobalPowerUps(globalPowerUps, onlyChangedData = false)
         return null;
       })
       .filter((changedData) => changedData !== null);
-    let dertr = 1;
     return changedGlobalPowerUpData;
   } else {
     // If onlyChangedData is false, update lastSentGlobalPowerUps with the current serialized data
@@ -388,4 +406,67 @@ function isEqualGlobalPowerUp(powerUp1, powerUp2) {
     powerUp1.value === powerUp2.value &&
     powerUp1.hitFrames === powerUp2.hitFrames
   );
+}
+
+export function serializeEffects(effects, onlyChangedData = false) {
+  if (onlyChangedData) {
+    // Serialize and return only the changed globalPowerUps
+    let changedEffectsData = effects
+      .map((currentEffect) => {
+        const lastSentEffectData = lastSentEffects.find((lastPowerUpData) => lastPowerUpData.id === currentEffect.id);
+        const serializedEffect = serializeEffect(currentEffect);
+
+        // Compare the serialized data of the current globalPowerUp with the last sent data
+        if (!lastSentEffectData || !isEqualEffect(serializedEffect, lastSentEffectData)) {
+          // Update lastSentEffects with the new serialized data if changed
+          lastSentEffects = lastSentEffects.map((effect) => (effect.id === currentEffect.id ? serializedEffect : effect));
+          return serializedEffect;
+        }
+
+        // Return null for effects that haven't changed
+        return null;
+      })
+      .filter((changedData) => changedData !== null);
+    return changedEffectsData;
+  } else {
+    // If onlyChangedData is false, update lastSentEffects with the current serialized data
+    lastSentEffects = effects.map(serializeEffect);
+
+    // Serialize and return all effects
+    return lastSentEffects;
+  }
+}
+
+// Define a function to serialize a globalPowerUp's data
+function serializeEffect(effect) {
+  return {
+    id: effect.id,
+    x: effect.x,
+    y: effect.y,
+    color: effect.color,
+    duration: effect.isStar,
+    radius: effect.radius,
+    type: effect.type,
+  };
+}
+
+// Define a function to compare globalPowerUp objects for equality
+function isEqualEffect(effect1, effect2) {
+  const tolerance = 1e-4;
+  return (
+    Math.abs(effect1.x - effect2.x) < tolerance &&
+    Math.abs(effect1.y - effect2.y) < tolerance &&
+    effect1.color === effect2.color &&
+    effect1.duration === effect2.duration &&
+    effect1.type === effect2.type &&
+    effect1.radius === effect2.radius
+  );
+}
+
+export function setEffects(newEffects) {
+  if (newEffects !== effects) {
+    //update original array while keeping the reference
+    effects.length = 0;
+    effects.push(...newEffects);
+  }
 }

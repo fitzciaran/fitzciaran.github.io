@@ -1,4 +1,4 @@
-import { forces } from "./entities.js";
+import { forces,effects } from "./entities.js";
 import { bots, globalPowerUps, mines } from "./main.js";
 // Function to find a bot by ID in the bots array
 export function findBotById(id) {
@@ -11,6 +11,10 @@ export function findForceById(id) {
 
 export function findMineById(id) {
   return mines.find((mine) => mine.id === id);
+}
+
+export function findEffectById(id) {
+  return effects.find((effect) => effect.id === id);
 }
 
 export function findPowerUpById(id) {

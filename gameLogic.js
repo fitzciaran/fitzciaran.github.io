@@ -11,7 +11,7 @@ import {
   sendForcesUpdate,
   sendBotsUpdate,
 } from "./sendData.js";
-import { forces, Mine, PowerUp, ForceType, ForceArea, Entity } from "./entities.js";
+import { forces, Mine, PowerUp, ForceType, ForceArea, Entity, effects } from "./entities.js";
 import { Player, Bot } from "./player.js";
 
 //if mess with these need to change the collision detection - factor these in
@@ -157,6 +157,13 @@ export function generatePowerups(globalPowerUps, worldWidth, worldHeight, colors
       if (Math.random() > 0.2) {
         //push force
         hasGravity = -1;
+        if (isStar) {
+          value = 2;
+          radius = 15;
+        } else {
+          value = 5;
+          radius = 30;
+        }
       } else {
         hasGravity = 1;
       }
@@ -541,7 +548,7 @@ export function checkForcesCollision(playerToCheck, forces) {
   }
 }
 
-export function resetPowerLevels(player, otherPlayers, globalPowerUps) {
+function resetPowerLevels(player, otherPlayers, globalPowerUps) {
   // Reset my powerUps
   player.powerUps = 0;
 
@@ -729,6 +736,20 @@ export function masterUpdateGame(player, globalPowerUps, otherPlayers, bots, del
           sendRemoveEntityUpdate("removePowerUps", [globalPowerUps[i]]);
         }
         globalPowerUps.splice(i, 1);
+      }
+    }
+  }
+
+  // Remove effects with durations that have expired.
+  for (let i = effects.length - 1; i >= 0; i--) {
+    if (effects[i].duration >= 0) {
+      effects[i].duration--;
+      if (effects[i].duration < 0) {
+        //remove effect
+        if (isPlayerMasterPeer(player)) {
+          sendRemoveEntityUpdate("removeEffect", [effects[i]]);
+        }
+        effects.splice(i, 1);
       }
     }
   }

@@ -15,7 +15,7 @@ import {
   setGlobalPowerUps,
 } from "./main.js";
 import { isPlayerMasterPeer } from "./connectionHandlers.js";
-import { forces, ForceArea, ForceType } from "./entities.js";
+import { forces, ForceArea, ForceType, Effect, effects, EffectType } from "./entities.js";
 import { checkFirstLetterSpace } from "./gameUtils.js";
 import {
   setEndGameMessage,
@@ -24,9 +24,10 @@ import {
   maxSpecialMeter,
   PilotName,
   initialInvincibleTime,
-  botRespawnDelay,pilots
+  botRespawnDelay,
+  pilots,
 } from "./gameLogic.js";
-import { sendPlayerStates, sendRequestForStates, requestFullUpdate } from "./sendData.js";
+import { sendPlayerStates, sendRequestForStates, requestFullUpdate, sendEffectsUpdate } from "./sendData.js";
 
 const bounceFactor = 1.5;
 const offset = 1;
@@ -195,9 +196,14 @@ export class Player {
     if (!this.killedBy.includes(hitBy) && hitBy != "a mine") {
       this.killedBy.push(hitBy);
     }
-    // if (isPlayerMasterPeer(player) && !isPlayerMasterPeer(this)) {
+    let effectID = Math.floor(Math.random() * 10000);
+
+    let effect = new Effect(effectID, this.x, this.y, 100, 50, "orange", EffectType.EXPLOSION);
+    effects.push(effect);
+    // sendEffectsUpdate(true)
     if (isPlayerMasterPeer(player)) {
       sendPlayerStates(this, true, true);
+      sendEffectsUpdate(true);
     }
   }
 
@@ -375,16 +381,16 @@ export class Player {
     }
   }
 
-  isInvincible(){
+  isInvincible() {
     return this.invincibleTimer > 0;
   }
-  isVulnerable(){
-    return (!this.isInvincible() && !this.isInSpawnProtectionTime());
+  isVulnerable() {
+    return !this.isInvincible() && !this.isInSpawnProtectionTime();
   }
-  isTangible(){
-    return (!this.isInSpawnProtectionTime() || this.isInvincible());
+  isTangible() {
+    return !this.isInSpawnProtectionTime() || this.isInvincible();
   }
-  
+
   isInSpawnProtectionTime() {
     return this.timeSinceSpawned <= spawnProtectionTime;
   }
@@ -397,7 +403,7 @@ export class Player {
         break;
       }
     }
-    
+
     this.invincibleTimer = Math.min(newTime, invcibilityTime);
     this.invincibleTimer = Math.max(this.invincibleTimer, 0);
   }
@@ -534,8 +540,6 @@ export class Player {
           }
           let forceType = ForceType.POINT;
           // Create the ForceArea with the cone properties
-          // let force = new ForceArea(null, this.x, this.y, forcePower, 5, radius, attractive, "red", this, coneAngle, coneDirection);
-          // forces.push(force);
           this.createForce(this.x, this.y, forcePower, 5, radius, attractive, this.color, this, coneAngle, coneDirection, forceType);
         } else if (this.special == Special.BOOST) {
           //give a bit of meter back for the boost so it works out cheaper than force.

@@ -27,7 +27,6 @@ import {
   generateDirectionalForces,
   endGameMessage,
   setGameWon,
-  resetPowerLevels,
   pilots,
   masterUpdateGame,
   shuffleArray,

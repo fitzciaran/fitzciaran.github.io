@@ -1,5 +1,6 @@
 import { shuffleArray } from "./gameLogic.js";
 import { handleData } from "./handleData.js";
+import { sendEntitiesState } from "./sendData.js";
 
 import { Player } from "./player.js";
 export let everConnected = false;
@@ -311,12 +312,9 @@ function addConnectionHandlers(player, otherPlayers, conn, globalPowerUps) {
       connectedPeers.sort();
     }
 
-    // Reset all powerUps when a new peer connects : don't do this anymore ongoing game
-    //resetPowerLevels(player, otherPlayers);
-
-    // Send the current powerups to the new peer
-    //don't need to under master peer system
-    //sendPowerups(globalPowerUps);
+    if (isPlayerMasterPeer(player)) {
+      sendEntitiesState(conn.peer);
+    }
   });
 
   conn.on("error", function (err) {
@@ -361,12 +359,6 @@ export function getPeer() {
 function setPeer(newPeer) {
   peer = newPeer;
 }
-
-// export function updateConnections(player, globalPowerUps) {
-//   if (everConnected || true) {
-//     sendPlayerStates(player, isPlayerMasterPeer(player));
-//   }
-// }
 
 export function removeClosedConnections(otherPlayers) {
   connections.forEach((conn, index) => {
@@ -464,7 +456,7 @@ function resolveConflicts(player, otherPlayers, globalPowerUps) {
   if (player.id == null) {
     createPeer(player, otherPlayers, globalPowerUps);
   }
-  resolveConnectionConflicts(player, otherPlayers, globalPowerUps,true);
+  resolveConnectionConflicts(player, otherPlayers, globalPowerUps, true);
 }
 
 function resolveConnectionConflicts(player, otherPlayers, globalPowerUps, tryToRedoConnections = false) {
@@ -478,7 +470,7 @@ function resolveConnectionConflicts(player, otherPlayers, globalPowerUps, tryToR
   //might not be able to attempt connections again without issues
   if (timeSinceAnyMessageRecieved > 1000 && tryToRedoConnections == true) {
     console.log("attempting resolveConnections");
-    setTimeout(() => attemptConnections(player, otherPlayers, globalPowerUps,true,false), 50);
+    setTimeout(() => attemptConnections(player, otherPlayers, globalPowerUps, true, false), 50);
   }
   masterPeerId = chooseNewMasterPeer(player, otherPlayers);
 }
