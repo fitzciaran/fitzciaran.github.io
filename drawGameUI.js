@@ -1,4 +1,4 @@
-import { maxInvincibilityTime, maxSpecialMeter } from "./gameLogic.js";
+import { maxInvincibilityTime, maxSpecialMeter,pilots } from "./gameLogic.js";
 import { isPlayerMasterPeer, timeSinceAnyMessageRecieved, timeSinceMessageFromMaster } from "./connectionHandlers.js";
 import { BotState, Player } from "./player.js";
 import { executionTime } from "./main.js";
@@ -49,7 +49,15 @@ export function drawFilledGauge(ctx, centerX, bottomY, gaugeWidth = 200, gaugeHe
 }
 
 export function drawInvincibilityGauge(ctx, player, centerX, bottomY, gaugeWidth = 200, gaugeHeight = 50, borderWidth = 7) {
-  const fillPercent = player.invincibleTimer / maxInvincibilityTime;
+  let pilotMaxInvcibilityTime = maxInvincibilityTime;
+  for (let pilot of pilots) {
+    if (player.pilot == pilot.name) {
+      pilotMaxInvcibilityTime = pilot.invincibilityTime;
+      break;
+    }
+  }
+  const fillPercent = player.invincibleTimer / pilotMaxInvcibilityTime;
+  // const fillPercent = player.invincibleTimer / maxInvincibilityTime;
   drawGauge(ctx, centerX, bottomY, fillPercent, "#ff9900", gaugeWidth, gaugeHeight, borderWidth);
 }
 

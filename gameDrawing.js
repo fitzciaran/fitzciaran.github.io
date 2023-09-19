@@ -268,7 +268,7 @@ function drawShip(ctx, camX, camY, player, points) {
   const flameTransitionDuration = 50;
   const currentTime = Date.now();
   let elapsedTime = currentTime - player.starTransitionStartTime;
-  if(isNaN(elapsedTime)){
+  if (isNaN(elapsedTime)) {
     elapsedTime = 0;
   }
   let flameAnimatationFrame = elapsedTime % flameTransitionDuration;
@@ -317,6 +317,8 @@ function drawShip(ctx, camX, camY, player, points) {
   ctx.strokeStyle = color;
   ctx.fillStyle = color;
   ctx.shadowBlur = 0;
+  ctx.shadowColor = "transparent";
+
   if (player.invincibleTimer > 10 || (player.invincibleTimer > 0 && !player.isUserControlledCharacter)) {
     let transitionDuration = 500;
     let animatationFrame = elapsedTime % transitionDuration;
@@ -374,6 +376,8 @@ function drawShip(ctx, camX, camY, player, points) {
   //   ctx.stroke();
 
   ctx.globalAlpha = 1;
+  ctx.shadowBlur = 0;
+  ctx.shadowColor = "transparent";
 
   const namePositionX = centerX - camX;
   const namePositionY = centerY - camY - 15;
@@ -391,6 +395,9 @@ function drawShip(ctx, camX, camY, player, points) {
   }
 
   ctx.shadowBlur = 0;
+  ctx.globalAlpha = 1;
+  ctx.shadowColor = "transparent";
+
   if (player.recentScoreTicks > 0) {
     let scoreInfoYAdjust = 0;
     if (player.invincibleTimer > 0) {
@@ -406,7 +413,10 @@ export function drawMine(ctx, camX, camY, mine, points) {
   let centerY = mine.y;
   let color = mine.color;
   let angle = 0;
-
+  ctx.strokeStyle = color;
+  ctx.shadowBlur = 0;
+  ctx.shadowColor = "transparent";
+  ctx.globalAlpha = 1;
   const currentTime = Date.now();
   const elapsedTime = currentTime - mine.starTransitionStartTime;
   const transitionDuration = 50;
@@ -431,7 +441,8 @@ export function drawMine(ctx, camX, camY, mine, points) {
   ctx.closePath();
   ctx.strokeStyle = color;
   ctx.shadowBlur = 0;
-  ctx.shadowColor = color;
+  ctx.shadowColor = "transparent";
+  ctx.globalAlpha = 1;
 }
 
 function drawForce(ctx, camX, camY, force) {
@@ -712,7 +723,7 @@ export function drawPowerups(globalPowerUps, ctx, camX, camY) {
     } else if (powerUp.isStar) {
       // Apply a glowing effect for star ships
       ctx.shadowBlur = 10;
-      ctx.shadowColor = "gold"; // Adjust the glow color as needed
+      // ctx.shadowColor = "gold"; // Adjust the glow color as needed
       ctx.strokeStyle = "gold"; // Adjust the stroke color to match the glow
 
       // Gradually change the star's color
@@ -742,6 +753,7 @@ export function drawPowerups(globalPowerUps, ctx, camX, camY) {
 
     ctx.fill();
     ctx.shadowBlur = 0;
+    ctx.shadowColor = "transparent";
   });
 }
 
@@ -765,11 +777,11 @@ function drawScoreInfo(ctx, player, score, camX, camY) {
   let centerY = player.y;
   // Calculate position for the score (above the unrotated center of the ship)
   const scorePositionX = centerX - camX;
-  const scorePositionY = centerY - camY - 35; 
+  const scorePositionY = centerY - camY - 35;
 
   // Draw the score
   ctx.fillStyle = getComplementaryColor(player.color);
-  ctx.font = "25px Arial"; 
+  ctx.font = "25px Arial";
   ctx.textAlign = "center";
   ctx.fillText(score, scorePositionX, scorePositionY);
 }
@@ -782,7 +794,7 @@ function drawKillInfo(ctx, player, killText, camX, camY) {
 
   // Draw the score
   ctx.fillStyle = getComplementaryColor(player.color);
-  ctx.font = "25px Arial"; 
+  ctx.font = "25px Arial";
   ctx.textAlign = "center";
   ctx.fillText(killText, scorePositionX, scorePositionY);
 }

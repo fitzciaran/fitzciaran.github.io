@@ -120,13 +120,35 @@ export class Mine extends Enemy {
 }
 
 export class PowerUp extends Entity {
-  constructor(id = null, x = null, y = null, color = null, isStar = false, radius = 5, value = 1) {
+  constructor(id = null, x = null, y = null, color = null, isStar = false, radius = 5, value = 1, force = 0) {
     super(id, x, y);
     this.color = color;
     this.isStar = isStar;
     this.radius = radius;
     this.value = value;
     this.hitFrames = -56;
+    this.force = force;
+    if (force != 0) {
+      this.createForce();
+    }
+  }
+
+  createForce() {
+    // Check if there is already a force with the same id
+    const existingForce = forces.find((force) => force.id === "powerUp-" + this.id);
+
+    if (!existingForce) {
+      // If no force with the same id exists, create a new one
+      if (this.force !== 0) {
+        let powerUpForce = new ForceArea("powerUp-" + this.id, this.x, this.y, 0.3, 10, 200, this.force == 1, "yellow", this);
+        forces.push(powerUpForce);
+      }
+    } else {
+      existingForce.duration = 10;
+      existingForce.x = this.x;
+      existingForce.y = this.y;
+      //may need to update other properties in future if mine/ mine force behaviour change
+    }
   }
 }
 
@@ -179,20 +201,22 @@ export function createPowerUpFromObject(obj) {
 export function serializeForces(forces, onlyChangedData = false) {
   if (onlyChangedData) {
     // Serialize and return only the changed forces
-    const changedForceData = forces.map((currentForce) => {
-      const lastSentForceData = lastSentForces.find((lastForceData) => lastForceData.id === currentForce.id);
-      const serializedForce = serializeForce(currentForce);
+    const changedForceData = forces
+      .map((currentForce) => {
+        const lastSentForceData = lastSentForces.find((lastForceData) => lastForceData.id === currentForce.id);
+        const serializedForce = serializeForce(currentForce);
 
-      // Compare the serialized data of the current force with the last sent data
-      if (!lastSentForceData || !isEqualForce(serializedForce, lastSentForceData)) {
-        // Update lastSentForces with the new serialized data if changed
-        lastSentForces = lastSentForces.map((force) => (force.id === currentForce.id ? serializedForce : force));
-        return serializedForce;
-      }
+        // Compare the serialized data of the current force with the last sent data
+        if (!lastSentForceData || !isEqualForce(serializedForce, lastSentForceData)) {
+          // Update lastSentForces with the new serialized data if changed
+          lastSentForces = lastSentForces.map((force) => (force.id === currentForce.id ? serializedForce : force));
+          return serializedForce;
+        }
 
-       // Return null for forces that haven't changed
-       return null;
-      }).filter((changedData) => changedData !== null);
+        // Return null for forces that haven't changed
+        return null;
+      })
+      .filter((changedData) => changedData !== null);
 
     return changedForceData;
   } else {
@@ -252,20 +276,22 @@ function isEqualForce(force1, force2) {
 export function serializeMines(mines, onlyChangedData = false) {
   if (onlyChangedData) {
     // Serialize and return only the changed mines
-    const changedMineData = mines.map((currentMine) => {
-      const lastSentMineData = lastSentMasterMineData.find((lastMineData) => lastMineData.id === currentMine.id);
-      const serializedMine = serializeMine(currentMine);
+    const changedMineData = mines
+      .map((currentMine) => {
+        const lastSentMineData = lastSentMasterMineData.find((lastMineData) => lastMineData.id === currentMine.id);
+        const serializedMine = serializeMine(currentMine);
 
-      // Compare the serialized data of the current mine with the last sent data
-      if (!lastSentMineData || !isEqualMine(serializedMine, lastSentMineData)) {
-        // Update lastSentMasterMineData with the new serialized data if changed
-        lastSentMasterMineData = lastSentMasterMineData.map((mine) => (mine.id === currentMine.id ? serializedMine : mine));
-        return serializedMine;
-      }
+        // Compare the serialized data of the current mine with the last sent data
+        if (!lastSentMineData || !isEqualMine(serializedMine, lastSentMineData)) {
+          // Update lastSentMasterMineData with the new serialized data if changed
+          lastSentMasterMineData = lastSentMasterMineData.map((mine) => (mine.id === currentMine.id ? serializedMine : mine));
+          return serializedMine;
+        }
 
-      // Return null for mines that haven't changed
-      return null;
-    }).filter((changedData) => changedData !== null);
+        // Return null for mines that haven't changed
+        return null;
+      })
+      .filter((changedData) => changedData !== null);
 
     return changedMineData;
   } else {

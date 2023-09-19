@@ -1,9 +1,11 @@
 pilot select should be one image and click through options
-    should be able to select color and....other stuff?
+    should be able to select color and....other stuff?..maybe have an image of the ship on intro scene to click.. or arrows.
+    .or a Color: section on intro that randomly choose something on game load, doesn't look like you click to change it but you can.
+    maybe other easter eggs where if you keep clicking something that does something little and occasionally reacts to having been clicked a lot, finally does something like boosts stats. (or nerfs them) 
 powerups shouldn't spawn too close to ships (not super important for now)
 
 start building test suite for this project
-shooting stars effect
+shooting stars effect in the background
 gravity black hole - reappear warp
 powerups and black holes disappear after time, blinking out at the end.
 moving powerUps
@@ -12,38 +14,35 @@ lobby selection
     simple lobby system could just be selecting from a list of lobbies and that sets which array of id's you use - from there it works the same p2p as now
 
 1 player mode select?
-select ship - different stats - different... special?
-    specials... invicible, knock away in radius,mines?
+
+specials... invicible?, drop mines, get bigger?
 
 char select effects/ design
 music
 sound effects
 
-need some forground objects to get sense of speed
-
-When a ship collides with one of these the ship should get slightly bigger. 
-    We'll need to keep track of all ships size
-    When ships collide with each other the biggest should "win" and the smaller should be removed from the game for 3 seconds before respawning at a random location 
-or the front of the ship stabs?
+invince ships could be bigger?
+    can we easily scale the drawing? and of course the text around the ship would need scaling too... and not sure it's a good feature...
 
 shrinking level - could be all around or could be left to right to require progress
 
 some kind of share option - a la wordle 
 
-enemies - lose point if touched
-different types ^
+different types of enemies/powerups, moving.
+    some kind of object we collide with. So far either kill, get killed, or it's the world boundary, harder to deal with a collision
+     first an unmovable wall.... then an object that would bounce... if we have bouncing then the ships could bounce off each other... back to sumo style...would need better hitbox for ships I think.        
+        basic carfootball style game?
 PvE?
 general racing 
     like this - power up could be speed boost, or have separate boosts and power ups are mk style
     drafting mechanic?
-    "jumps?"
+    "jumps?" - in air would need drawing effect, and could then not interact with entities and future objects like walls while "airborn" though what that mean in space idk... setting could change 
     lap records
-    daily/all time leaderboards
+    weekly/all time leaderboards
 
     gates
 procedural level generation?
 
-basic carfootball style game?
 
 some kind of starting state whether for ^ or other
 
@@ -51,37 +50,17 @@ new challenger approaches when connect to someone
 some kind of run game with the mouse / ship mechanic/physics we have
 sumo mechanic? - with static kill obstacles? or just for non star interactions?
 how to p2p with run style game
-maybe colliding just kills both players?
-maybe other things to avoid too - like not "fake players" but general enviroment obstacle
 
-secret button to become master or to give up master status for testing - might be unneccesary
-might have to do a proper server for master game state - daily leaderboards
-on screen arrow to direct to offscreen oppoents
-update UI of drawn oppoents name on craft in the world
-color select on craft select
-style table of current leaders
-make ships bigger
-maybe always provide thrust at low level - with limited click boost - need rechargable boost meter. - lean into these for char differences
+on screen arrow to direct to offscreen opponents
+    could be useful feature for "bounty" event or other key collectable event 
+    
+maybe always provide thrust at low level -
 
-share connection list so everyone matches - master only shares list of connected id's - if master shares an id not in list add it, if master is missing one maybe need a push to master.
-issue when master disconnects.. or not quite disconnects but stops being active, maybe some kind of timer and if no message disconnect... might need to send a message to others to disconnect from it too...?
-or at least check connections/otherPlayers list for one's that should be removed (how to check "inactive" - could maintain a "ticks since last message" variable or maybe better to timestamp the last update sent)
-
-deal with null id (peers not working) better, probably make master, maybe more.
-a new challenger approaches  screen when someone joins?
-getting pulled in the direction of a few different types of games currently ... thats fine for now tho
-rollback prediction for other players? or even for ai that master is processing?
-
-camera follow host before the game starts? - try out following the bots see how it is.
-
-move player processing logic into the player object so can use for bots.
-maybe move player inputs into player logic for same reason
-
-bots can appear jittery on non-master peers
+master could send connection list in full update? -not seen an issue with mismatched connections in a long time though
 
 need to introduce the idea of ongoing game so lose state for one is only local for them
 maybe you lose health as time goes by and you have to keep up with picking up power ups to restore?
-neaten current scores text - maybe put in a box too? 
+
 some visual effect when ships hit
 draw shadows
 leader mark drawn - bonus for killing
@@ -95,31 +74,24 @@ level ups? more gauges?
 worldDimensions maybe don't let Player know about this an have to always pass in a parameter to methods?
 camera shake
 
-bots should "run" from players with powerups?
+bots should "run" from players with invicible time?
 
 faster when star??
-gauge to show invicibletime? or use audio? - stop flashing slightly before? - for local player only?
+
 display combo multiplier in ui (when above 1)?
-spawn protection?
-something to make text more visible in general
+
 update "powerups" verbage to "score" throughout
-update follow code to take into acount velocity of ship following. - maybe consider how far away to determine how far ahead to look
+
 include kills tracking in leaderboard/score report?
+
 notion of lives 3,2,1 GO if hit and have lives left - animation showing life icon being removed.
-keep track of killed by and show on screen
-keep track of historical kills? - revenge kill bonus/acknowledgement? 
+
 - unique messaging if killed by multiple times? rival?
 
 background on name entry like on the leaderboards/lore
 refactor box drawing?
-check this probably doesn't work but have put something in: timer for how long since heard from master... kick master from connections and otherplayers if 
-issue with non-master peer sometimes powerups/enemies get restored (presumably by the master) as soon as we hits them, resulting in multiple hits/collection/kills
-wait to see if will connect to a master before creating bots/powerups ourselves. - hopefully before playing ourselves... maybe hold off on showing game??
+
 consider better options for right click. 
-    - push away
-         - could apply force to anything within a range? force could be uniform or based on how close but should be directed away from ship - uses stocks?
-         - could suck in when star mode?
-     -mines
      -warp? why? escape?
 
 another, closer, "inRangeticks variable for botstate?
@@ -127,10 +99,8 @@ r2d2 sound for bumble boost?
 seems too random to get hit, no prolonged engagement either get hit or don't and not engaged anymore...
 2nd (3rd, 4th) state for after something.. is collectively achieved, opens worm hole etc, opens part of the edge .. boss?
 
-as masterpeer need to process otherplayers' movement based on prev velocity and mouse position and space press might improve detection of collisions 
-as nonmaster peer need to process otherplayers' and bots movement based on.....
 instead/as well as power ups we have gates.... which maybe are also portals?.. randomly?
-gates could be curated or iteligently generated in sets to allow for mini circuits/building up flowgates could blinks before for "gate" I'm thinking   |----|     so 2 lines marking the frame and a 'large" opening you go through in a particular direction (2 choices of direction, but could have directional ones.)
+gates could be curated or intelligently generated in sets to allow for mini circuits/building up flowgates could blinks before for "gate" I'm thinking   |----|     so 2 lines marking the frame and a 'large" opening you go through in a particular direction (2 choices of direction, but could have directional ones.)
 
 idea of a crash? hitting a gate  edge too fast? need to at least deal with collision... unless hitting edge kills always
 faster you go through a gate the more points/ more stuff?
@@ -140,13 +110,10 @@ speed being a factor in normal kills? your velocity or relative impact velocity?
 as combo (or some kinda of gate combo) builds could enter state of more difficult generated gate patterns.
 
 notion of health?health could decrease and gating could increase, like arcade checkpoint race system
+    maybe not health but a TIMEOUT, so still death as before, but an extra death condition.
+
 botstate to try to traverse the gates
 
-make bot an inherited calss from player?
-bots don't seem to be colliding with each other
-
-instead of lore do pilot stats.
-instead of hover over 1 or 2 have a 
 safe starting/respawning area? forcefielded off?
 separate p2p connection and db connection
 
@@ -170,15 +137,10 @@ more pilot stats e.g.
     speed,boost speed, invicible time,push/pull strength
 
 
-when observing a bot and they die, should switch to a different one.
-sometimes non-master can not get credited for powerup collection (even when connection seems good otherwise)
-
-timesince last message from master check shouldn't be in handledata since if no data to handle we don't get there to fix the connection issue
-bot should give up on target following if target is dead!
+sometimes non-master can not get credited for powerup collection or double collected, done a work on this, but still need more, it's not common now. (even when connection seems good otherwise)
 
 apply less pull if they are star?
-pull into front rather than full circle around? - maybe as different power?
-drain their force power if in the pull range?
+drain their force power if in the pull range? sepearate special "drain" could just take points, or also drain invic, maybe drain "power" which would nerf speed for a time
 
 collision should be based on actual hitbox, 
 bot targeting could be based on distance - if the bot "sees" a target it will go for it.... periodically could check it's "sight"
@@ -197,55 +159,31 @@ a control style switch? (follow mouse?)
 circles you have to stop in / stay in for x seconds for ... something? power up? charging in there?
 mines need to spawn away from ships and ships need to spawn away from mines
 
-
-still the issue where a collision is clearly detect (e.g. go over mine and mine disappears) but the hit doesn't register for non-master peer.
-
 for fast speeds might need to calculate movement in half or quater frames to check for collision.
 
-might have to rethink the force having as reference to tracks player
+might have to rethink the force having a reference to tracks player
 
 player property for still in initial setup?
 
 credit "pushed" kills?
 
-could put a collectedby property on powerups then schedule removal for a few frames time, but during that time only the "collectedby" player will have acknowledgement of collection (also don't draw while scheduled removal)
-    more hacks to combat the big issue of p2p tho isnt it?
-
-
 if implement full hitboxes could have the front bit be invincible.
 
 give bots specials and make them use them on defense / offence
-
-mine could have an attractive force (or repellent? )
-
-deal with stack of messages (like when have been paused in debgger) better
 
 deal with non-master drawing of forces (interpolate like with players should do it)
 
 Be more selective about what data send? currently sending everything for bots/forces and not using everything, could speed up data transfer.
 
-Don't convert all bot (and forces/mines etc) to proper class since we don't them in most cases anyway. - optimise
-
-spawn warning for mines for example
-
-still issue with the interpoloation of position of crafts/forces
-
-boost areas are just forces now... well current forces are point based maybe need direction based variant 
-
 //gotHit and addScore are both doing an additional key function of sending the playerstates as master. 
 //Need to unpick this, maybe there should be events for gotHit and addscore and masterpeer responds to such events with sending player state for the given player
 
-look into performance maybe only stroke/ closepath/open path at end/beginning of all force draws?
-
-animate the force arrows?
 only need to draw if drawing would be onscreen! How is this optimised by default?
 
-if make directional forces bigger after creation need to reset numberArrowsEachSide so it's recalculated
+if make directional forces bigger after creation need to reset numberArrowsEachSide so it's recalculated -could just create new force instead- have to be careful about overlapping times?
 
-  bots detect if stuck on forces? 
-    advanced: use predicted forces to determine where should aim
-
-points on screen when powerup collection
+  bots detect if stuck on forces?  done
+    advanced: use predicted forces to determine where should aim based on forces ahead
 
 direction forcepads should not spawn too close to a wall if facing that wall
 
@@ -260,9 +198,7 @@ speicals should pull / push mines/powerups?
 should "combo score" shown be the total score throughout the combo?
     differnt sound effect for extent of score in combo.. probably not.
 
-invicible could keep combo going even outside of normal tick time?
 
-random effects - stuck with special on for a period of time.
 
 add favicon.ico to source
 
@@ -272,26 +208,21 @@ scores of the week?(last 7 days?)
     All time scores?
 
 other unique properties for pilots?size? 
-    max invincible time personal to pilot
-
+  
 completely different graphic for star/invic timer?.
 
 some kind of background warping / blurring for the point gravity wells
 
 screenshake
 
-don't draw offscreen stuff!!
-
-
 character whose special changes between all the specials
 
 force refresh if fall behind in execution time?
 
 way to throw away peerjs messages?
-    maybe disconnect is delayed message? can reconnect later and not add to the backlog?
+    have timestamps, but when message fell behind they never caught up, might be worth reenabling now I've cut down on message load.
 
-
-spawn check that itterates through all current objects and gives space (could just keep rerolling rng until a valid spot? should be fine as long as there's more valid spots than invalid)
+spawn position check that itterates through all current objects and gives space (could just keep rerolling rng until a valid spot? should be fine as long as there's more valid spots than invalid)
 
 power up could have a push point force? (Might have issue with bots getting them?)
 
@@ -358,8 +289,7 @@ rocket/flame thrust indicator (with size tied to force size - including special)
  "set piece" combninations of mines,forces, powerups etc
     implement more valuable powerups within these curations
 
-warp black holes
-
-Kill text is kinda gone, just combo score, could have the kill text (+flavor) above that.
-
 random events - angle lock, offset angle- could 180 could be just a weird amount,engine stuck on, slower,faster, special stuck on, bounty, long inincible time
+    special event camera messes up in various ways, are screenshake.. which maybe is just a camera thing?
+
+game replay.. what would we need to maintain in gamestate to be able to replay

@@ -24,7 +24,7 @@ import {
   maxSpecialMeter,
   PilotName,
   initialInvincibleTime,
-  botRespawnDelay,
+  botRespawnDelay,pilots
 } from "./gameLogic.js";
 import { sendPlayerStates, sendRequestForStates, requestFullUpdate } from "./sendData.js";
 
@@ -248,7 +248,14 @@ export class Player {
   gotPowerUp(isStar, scoreToAdd, powerUpIndex) {
     this.ticksSincePowerUpCollection = 0;
     if (isStar) {
-      this.setInvincibleTimer(initialInvincibleTime);
+      let invcibilityTime = initialInvincibleTime;
+      for (let pilot of pilots) {
+        if (this.pilot == pilot.name) {
+          invcibilityTime = pilot.invincibilityTime;
+          break;
+        }
+      }
+      this.setInvincibleTimer(invcibilityTime);
     }
 
     scoreToAdd *= this.comboScaler;
@@ -368,8 +375,30 @@ export class Player {
     }
   }
 
+  isInvincible(){
+    return this.invincibleTimer > 0;
+  }
+  isVulnerable(){
+    return (!this.isInvincible() && !this.isInSpawnProtectionTime());
+  }
+  isTangible(){
+    return (!this.isInSpawnProtectionTime() || this.isInvincible());
+  }
+  
+  isInSpawnProtectionTime() {
+    return this.timeSinceSpawned <= spawnProtectionTime;
+  }
+
   setInvincibleTimer(newTime) {
-    this.invincibleTimer = Math.min(newTime, maxInvincibilityTime);
+    let invcibilityTime = maxInvincibilityTime;
+    for (let pilot of pilots) {
+      if (this.pilot == pilot.name) {
+        invcibilityTime = pilot.invincibilityTime;
+        break;
+      }
+    }
+    
+    this.invincibleTimer = Math.min(newTime, invcibilityTime);
     this.invincibleTimer = Math.max(this.invincibleTimer, 0);
   }
 
@@ -399,10 +428,6 @@ export class Player {
 
   setPlayerName(newName) {
     this.name = newName;
-  }
-
-  isInSpawnProtectionTime() {
-    return this.timeSinceSpawned <= spawnProtectionTime;
   }
 
   setPlayerIsMaster(isMaster) {
@@ -688,8 +713,7 @@ export class Player {
       if (this.invincibleTimer > 0 && !this.devMode) {
         this.setInvincibleTimer(this.invincibleTimer - 1);
         if (this.invincibleTimer == 0) {
-          //trying out different comboScaler end
-          //  this.setComboScaler(1);
+          //can react to ending this state here, maybe animation/effect
         }
       }
       if (this.specialMeter < maxSpecialMeter) {

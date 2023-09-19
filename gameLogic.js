@@ -1,6 +1,16 @@
-import { setGameState, GameState, player, setMines, bots, otherPlayers, mines, setGameTimer, gameTimer } from "./main.js";
+import { setGameState, GameState, player, setMines, bots, otherPlayers, mines, setGameTimer, gameTimer, globalPowerUps } from "./main.js";
 import { isPlayerMasterPeer, setTimeSinceMessageFromMaster, timeSinceMessageFromMaster } from "./connectionHandlers.js";
-import { sendPlayerStates, sendEntitiesState, sendEntitiesUpdate, sendBotEntitiesUpdate, sendRemoveEntityUpdate, sendMinesUpdate, sendPowerUpsUpdate,sendForcesUpdate,sendBotsUpdate } from "./sendData.js";
+import {
+  sendPlayerStates,
+  sendEntitiesState,
+  sendEntitiesUpdate,
+  sendBotEntitiesUpdate,
+  sendRemoveEntityUpdate,
+  sendMinesUpdate,
+  sendPowerUpsUpdate,
+  sendForcesUpdate,
+  sendBotsUpdate,
+} from "./sendData.js";
 import { forces, Mine, PowerUp, ForceType, ForceArea, Entity } from "./entities.js";
 import { Player, Bot } from "./player.js";
 
@@ -35,7 +45,18 @@ export const PilotName = {
 };
 
 export class Pilot extends Entity {
-  constructor(id = null, x = null, y = null, width = 100, height = 100, lore = "", name = "", src = "", selected = false, pilotAnimationFrame = 0) {
+  constructor(
+    id = null,
+    x = null,
+    y = null,
+    width = 100,
+    height = 100,
+    lore = "",
+    name = "",
+    src = "",
+    pilotInvincibilityTime = 600,
+    selected = false
+  ) {
     super(id, x, y);
     this.image = new Image();
     this.width = width;
@@ -44,7 +65,9 @@ export class Pilot extends Entity {
     this.name = name;
     this.src = src;
     this.selected = selected;
-    this.pilotAnimationFrame = pilotAnimationFrame;
+    this.pilotAnimationFrame = 0;
+    //deafult 600 is 10 seconds
+    this.invincibilityTime = pilotInvincibilityTime;
   }
   setSelected(newSelectedValue) {
     if (newSelectedValue && !this.selected) {
@@ -59,9 +82,10 @@ export const pilot1 = new Pilot(
   0,
   100,
   100,
-  "Orion, Speed: 4, Special: Gravity Attract, Agressive - likes to get powered up and use Gravity Attract to get kills",
+  "Orion, Speed: 4, Invicible Time: 10,Special: Gravity Attract, Agressive - likes to get powered up and use Gravity Attract to get kills",
   PilotName.PILOT_1,
-  "images/wolf.webp"
+  "images/wolf.webp",
+  600
 );
 export const pilot2 = new Pilot(
   PilotName.PILOT_2,
@@ -69,9 +93,10 @@ export const pilot2 = new Pilot(
   0,
   100,
   100,
-  "Bumble, Speed: 2, Special: Gravity Repel, Defensive - not so fast but can use Gravity Repel to keep attackers away ",
+  "Bumble, Speed: 2, Invicible Time: 15,Special: Gravity Repel, Defensive - not so fast but can use Gravity Repel to keep attackers away ",
   PilotName.PILOT_2,
-  "images/slippy.webp"
+  "images/slippy.webp",
+  900
 );
 export const pilot3 = new Pilot(
   PilotName.PILOT_3,
@@ -79,9 +104,10 @@ export const pilot3 = new Pilot(
   0,
   100,
   100,
-  "Zippy, Speed: 5, Special: Speed Boost, Speedy - tricky to control. Not for scrubs! ",
+  "Zippy, Speed: 5, Invicible Time: 10, Special: Speed Boost, Speedy - tricky to control. Not for scrubs! ",
   PilotName.PILOT_3,
-  "images/mouse.webp"
+  "images/mouse.webp",
+  600
 );
 export const pilot4 = new Pilot(
   PilotName.PILOT_4,
@@ -89,9 +115,10 @@ export const pilot4 = new Pilot(
   0,
   100,
   100,
-  "Snaffle, Speed: 3, Special: Tractor Beam, Sneaky! Powerful long range narrow tractor beam can cause havok from afar!",
+  "Snaffle, Speed: 3, Invicible Time: 12, Special: Tractor Beam, Sneaky! Powerful long range narrow tractor beam can cause havok from afar!",
   PilotName.PILOT_4,
-  "images/bore612.webp"
+  "images/bore612.webp",
+  700
 );
 
 export let pilots = [pilot1, pilot2, pilot3, pilot4];
@@ -125,6 +152,15 @@ export function generatePowerups(globalPowerUps, worldWidth, worldHeight, colors
       radius = 15;
       value = 1;
     }
+    let hasGravity = 0;
+    if (Math.random() > 0.9) {
+      if (Math.random() > 0.2) {
+        //push force
+        hasGravity = -1;
+      } else {
+        hasGravity = 1;
+      }
+    }
 
     let powerUp = new PowerUp(
       Math.floor(Math.random() * 10000),
@@ -133,7 +169,8 @@ export function generatePowerups(globalPowerUps, worldWidth, worldHeight, colors
       colors[Math.floor(Math.random() * colors.length)],
       isStar,
       radius,
-      value
+      value,
+      hasGravity
     );
     addedPowerUps = true;
     globalPowerUps.push(powerUp);
@@ -156,7 +193,7 @@ export function generatePowerups(globalPowerUps, worldWidth, worldHeight, colors
   }
 }
 
-export function createBots(worldWidth, worldHeight,colors) {
+export function createBots(worldWidth, worldHeight, colors) {
   if (!isPlayerMasterPeer(player)) {
     return;
   }
@@ -202,7 +239,12 @@ export function generateMines(worldWidth, worldHeight, colors) {
   while (mines.length < maxMines) {
     let hasGravity = 0;
     if (Math.random() > 0.8) {
-      hasGravity = 1;
+      if (Math.random() > 0.9) {
+        //test out push force even though it doesn't really make sense for a mine
+        hasGravity = -1;
+      } else {
+        hasGravity = 1;
+      }
     }
     let mine = new Mine(
       Math.floor(Math.random() * 10000),
@@ -234,7 +276,7 @@ export function generateDirectionalForces(worldWidth, worldHeight, colors) {
     return;
   }
   let addedDirectionalForces = false;
-  const directionalForces = forces.filter(force => force.type === ForceType.DIRECTIONAL);
+  const directionalForces = forces.filter((force) => force.type === ForceType.DIRECTIONAL);
 
   // Check if there are less than max powerups powerups
   while (directionalForces.length < maxDirectionalForces) {
@@ -317,16 +359,19 @@ export function checkMineCollision(playerToCheck, mines) {
 
     if (distance < 10 * shipScale + mines[i].radius) {
       // assuming the radius of ship is 10 - todo update for better hitbox on ship
-      if (playerToCheck.invincibleTimer == 0 && playerToCheck.timeSinceSpawned > spawnProtectionTime && mines[i].hitFrames == -1) {
+      if (playerToCheck.isVulnerable() && mines[i].hitFrames == -1) {
         playerToCheck.gotHit("a mine");
         mines[i].hitFrames = 2;
         // mines.splice(i, 1);
       }
-      if (playerToCheck.invincibleTimer > 0 && playerToCheck.timeSinceSpawned > spawnProtectionTime && mines[i].hitFrames == -1) {
+      // if (playerToCheck.invincibleTimer > 0 && !playerToCheck.isInSpawnProtectionTime() && mines[i].hitFrames == -1) {
+      //if invincible ignore spawn protection
+      if (playerToCheck.isInvincible() && mines[i].hitFrames == -1) {
         if (playerToCheck.invincibleTimer > 115) {
           playerToCheck.setInvincibleTimer(playerToCheck.invincibleTimer - 100);
         } else {
-          playerToCheck.setInvincibleTimer(15);
+          //always leave a little bit of time to tick away (but don't increase if time already ticked nearly away)
+          playerToCheck.setInvincibleTimer(Math.min(playerToCheck.invincibleTimer, 15));
         }
         mines[i].hitFrames = 2;
         // mines.splice(i, 1);
@@ -345,7 +390,8 @@ export function checkMineCollision(playerToCheck, mines) {
 
 export function checkPlayerCollision(playerToCheck, allPlayers) {
   for (let i = 0; i < allPlayers.length; i++) {
-    if (playerToCheck.id == allPlayers[i].id) {
+    let hitCandidate = allPlayers[i];
+    if (playerToCheck.id == hitCandidate.id) {
       //don't check collision against self
       continue;
     }
@@ -353,58 +399,36 @@ export function checkPlayerCollision(playerToCheck, allPlayers) {
       //don't check collision against idle player
       continue;
     }
-    let dx = playerToCheck.x - allPlayers[i].x;
-    let dy = playerToCheck.y - allPlayers[i].y;
+    let dx = playerToCheck.x - hitCandidate.x;
+    let dy = playerToCheck.y - hitCandidate.y;
     let distance = Math.sqrt(dx * dx + dy * dy);
 
+    // treating hitbox/hurtbox of both ships as simple radius for now
     if (
       distance < 20 * shipScale &&
       playerToCheck.isPlaying == true &&
-      allPlayers[i].isPlaying == true &&
+      hitCandidate.isPlaying == true &&
       !playerToCheck.isDead &&
-      !allPlayers[i].isDead &&
-      !allPlayers[i].timeSinceSentMessageThatWasRecieved <= 120 &&
-      playerToCheck.timeSinceSpawned > spawnProtectionTime &&
-      allPlayers[i].timeSinceSpawned > spawnProtectionTime
+      !hitCandidate.isDead &&
+      !hitCandidate.timeSinceSentMessageThatWasRecieved <= 120
     ) {
-      // assuming hitbox  of both ships is simple radius
-      //for now just reset player if a crash
-
-      if (playerToCheck.invincibleTimer == 0) {
-        if (
-          playerToCheck.timeSinceSpawned > spawnProtectionTime &&
-          (allPlayers[i].timeSinceSpawned > spawnProtectionTime || allPlayers[i].invincibleTimer > 0)
-        ) {
-          playerToCheck.gotHit(allPlayers[i].name);
-        } //spawn protection todo show an effect to illustrate the protection during this period
-      }
-      if (playerToCheck.invincibleTimer > 0 && allPlayers[i].invincibleTimer == 0 && allPlayers[i].timeSinceSpawned > spawnProtectionTime) {
-        playerToCheck.hitOtherPlayer(allPlayers[i]);
-      }
-      if (playerToCheck.isBot && playerToCheck.invincibleTimer == 0 && playerToCheck.timeSinceSpawned > spawnProtectionTime) {
-        // playerToCheck.resetState(true, true);
-        playerToCheck.delayReset(botRespawnDelay, true, true);
-      }
-      if (allPlayers[i] instanceof Player) {
-        if (allPlayers[i].invincibleTimer == 0) {
-          if (
-            allPlayers[i].timeSinceSpawned > spawnProtectionTime &&
-            (playerToCheck.timeSinceSpawned > spawnProtectionTime || playerToCheck.invincibleTimer > 0)
-          ) {
-            allPlayers[i].gotHit(playerToCheck.name);
-          }
-        }
-        if (allPlayers[i].invincibleTimer > 0 && playerToCheck.invincibleTimer == 0 && playerToCheck.timeSinceSpawned > spawnProtectionTime) {
-          allPlayers[i].hitOtherPlayer(playerToCheck);
-        }
-        if (allPlayers[i].isBot && allPlayers[i].invincibleTimer == 0 && allPlayers[i].timeSinceSpawned > spawnProtectionTime) {
-          // allPlayers[i].resetState(true, true);
-          allPlayers[i].delayReset(botRespawnDelay, true, true);
-        }
-      } else {
-        console.log("non player in players array");
-      }
+      handlePlayerHit(playerToCheck, hitCandidate);
+      handlePlayerHit(hitCandidate, playerToCheck);
     }
+  }
+}
+
+function handlePlayerHit(playerOne, playerTwo) {
+  if (playerTwo.isVulnerable()) {
+    if (playerOne.isTangible()) {
+      playerTwo.gotHit(playerOne.name);
+    }
+    if (playerTwo.isBot) {
+      playerTwo.delayReset(botRespawnDelay, true, true);
+    }
+  }
+  if (playerTwo.isInvincible() && playerOne.isVulnerable()) {
+    playerTwo.hitOtherPlayer(playerOne);
   }
 }
 
@@ -544,6 +568,9 @@ export function updateEnemies(deltaTime) {
   //or could we get away with only creating new force if old one doesn't exist?
   for (let mine of mines) {
     mine.createForce();
+  }
+  for (let powerUp of globalPowerUps) {
+    powerUp.createForce();
   }
 
   for (let force of forces) {
@@ -760,6 +787,8 @@ export function getRandomName() {
     "Kevin",
     "Jiggly",
     "Pork",
+    "Battle",
+    "Flexy",
   ];
   const suffixes = [
     "Rider",
@@ -790,6 +819,7 @@ export function getRandomName() {
     "stein",
     "Freedom",
     "Pup",
+    "Beast",
   ];
 
   // Generate random indexes for prefix and suffix

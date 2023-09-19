@@ -224,22 +224,18 @@ function renderInfoText(ctx, lore, x, y, maxWidth, animationFrame) {
     ctx.fillStyle = "coral";
 
     if (i === 1 && section.startsWith("Speed:")) {
-      // Check if it's the "Speed:" section
       const speedValue = parseInt(section.split(":")[1].trim());
       if (!isNaN(speedValue)) {
-        // Draw the "Speed:" label
-        ctx.fillText("Speed:", x, currentY);
+        currentY = drawSectionGauge(ctx, animationFrame, fontSize, lineHeight, "Speed:", speedValue, 5, "blue", x, currentY);
+        continue;
+      }
+    }
 
-        let percentOfFilledAnimatedTo = Math.min(animationFrame / 30, 1);
-        // Draw the gauge next to it
-        const centerX = x + ctx.measureText("Speed:").width + 50; // Adjust the offset as needed
-        const gaugeWidth = 100; // Adjust the gauge width as needed
-        const gaugeHeight = fontSize; // Match the height with the font size
-        const filled = speedValue * percentOfFilledAnimatedTo;
-        const total = 5; // Assuming the total is always 5
-        drawFilledGauge(ctx, centerX, currentY + 15, gaugeWidth, gaugeHeight, 3, filled, total, "blue");
-        currentY += lineHeight; // Move to the next line
-        continue; // Skip the rest of the loop for this section
+    if (i === 2 && section.startsWith("Invicible Time:")) {
+      const invincibleValue = parseInt(section.split(":")[1].trim());
+      if (!isNaN(invincibleValue)) {
+        currentY = drawSectionGauge(ctx, animationFrame, fontSize, lineHeight, "Invicible Time:", invincibleValue, 15, "green", x, currentY);
+        continue;
       }
     }
 
@@ -263,6 +259,21 @@ function renderInfoText(ctx, lore, x, y, maxWidth, animationFrame) {
     ctx.fillText(line, x, currentY);
     currentY += lineHeight; // Move to the next section
   }
+}
+
+function drawSectionGauge(ctx, animationFrame, fontSize, lineHeight, label, value, max, color, x, currentY) {
+  const percentOfFilledAnimatedTo = Math.min(animationFrame / 30, 1);
+
+  ctx.fillText(label, x, currentY);
+
+  const centerX = x + ctx.measureText(label).width + 50;
+  const gaugeWidth = 100;
+  const gaugeHeight = fontSize;
+  const filled = value * percentOfFilledAnimatedTo;
+
+  drawFilledGauge(ctx, centerX, currentY + 15, gaugeWidth, gaugeHeight, 3, filled, max, color);
+  currentY += lineHeight;
+  return currentY;
 }
 
 //wip
