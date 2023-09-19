@@ -81,6 +81,7 @@ export function sendPlayerStates(playerToSend, masterSending, sendFullerData = f
       newDataToSend = addProperty(playerToSend, data, "ticksSincePowerUpCollection", "ticksSincePowerUpCollection", sendFullerData) || newDataToSend;
       newDataToSend = addProperty(playerToSend, data, "recentScoreTicks", "recentScoreTicks", sendFullerData) || newDataToSend;
       newDataToSend = addProperty(playerToSend, data, "recentScoreText", "recentScoreText", sendFullerData) || newDataToSend;
+      newDataToSend = addProperty(playerToSend, data, "recentKillScoreText", "recentKillScoreText", sendFullerData) || newDataToSend;
       newDataToSend = addProperty(playerToSend, data, "kills", "kills", sendFullerData) || newDataToSend;
       newDataToSend = addProperty(playerToSend, data, "comboScaler", "comboScaler", sendFullerData) || newDataToSend;
       newDataToSend = addProperty(playerToSend, data, "killed", "killed", sendFullerData) || newDataToSend;

@@ -397,6 +397,7 @@ function drawShip(ctx, camX, camY, player, points) {
       scoreInfoYAdjust = 20;
     }
     drawScoreInfo(ctx, player, player.recentScoreText, camX, camY + scoreInfoYAdjust);
+    drawKillInfo(ctx, player, player.recentKillScoreText, camX, camY + scoreInfoYAdjust);
   }
 }
 
@@ -764,11 +765,24 @@ function drawScoreInfo(ctx, player, score, camX, camY) {
   let centerY = player.y;
   // Calculate position for the score (above the unrotated center of the ship)
   const scorePositionX = centerX - camX;
-  const scorePositionY = centerY - camY - 35; // You can adjust this value for the desired distance
+  const scorePositionY = centerY - camY - 35; 
 
   // Draw the score
   ctx.fillStyle = getComplementaryColor(player.color);
-  ctx.font = "25px Arial"; // Adjust font size and family as needed
+  ctx.font = "25px Arial"; 
   ctx.textAlign = "center";
   ctx.fillText(score, scorePositionX, scorePositionY);
+}
+function drawKillInfo(ctx, player, killText, camX, camY) {
+  let centerX = player.x;
+  let centerY = player.y;
+  // Calculate position for the score (above the unrotated center of the ship)
+  const scorePositionX = centerX - camX;
+  const scorePositionY = centerY - camY - 55;
+
+  // Draw the score
+  ctx.fillStyle = getComplementaryColor(player.color);
+  ctx.font = "25px Arial"; 
+  ctx.textAlign = "center";
+  ctx.fillText(killText, scorePositionX, scorePositionY);
 }

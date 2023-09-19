@@ -16,6 +16,7 @@ import {
 } from "./main.js";
 import { isPlayerMasterPeer } from "./connectionHandlers.js";
 import { forces, ForceArea, ForceType } from "./entities.js";
+import { checkFirstLetterSpace } from "./gameUtils.js";
 import {
   setEndGameMessage,
   maxInvincibilityTime,
@@ -100,7 +101,8 @@ export class Player {
     this.recentScoreTicks = 0;
     this.isLocal = false;
     this.timeOfLastActive = "";
-    this.recentScoreText = 0;
+    this.recentScoreText = "";
+    this.recentKillScoreText = "";
     this.devMode = false;
     this.killed = [];
     this.killedBy = [];
@@ -138,7 +140,8 @@ export class Player {
     this.timeSinceSpawned = 0;
     this.hitBy = "";
     this.recentScoreTicks = 0;
-    this.recentScoreText = 0;
+    this.recentScoreText = "";
+    this.recentKillScoreText = "";
     this.resetting = false;
     this.inForce = 0;
   }
@@ -263,6 +266,7 @@ export class Player {
     //   setGlobalPowerUps(globalPowerUps);
     // }
     this.addScore(scoreToAdd);
+    this.recentKillScoreText = "";
   }
 
   setComboScaler(newValue) {
@@ -303,14 +307,50 @@ export class Player {
     return comboName + " " + textScore;
   }
 
+  setRecentKillText(playerThatGotHitName, revenge = true) {
+    const killFlavorText = ["KILL!", "GOTTEM!", "SMASH!"];
+
+    const revengeFlavorText = ["Got Revenge on ", " gets served with payback", " won't mess with you again"];
+
+    const dominatingFlavorText = ["Dominating poor ", " dies again", " bites the dust again"];
+
+    // Generate random index, can split this out if want to have different number of options for each text
+    const textIndex = Math.floor(Math.random() * killFlavorText.length);
+    if (playerThatGotHitName != null && playerThatGotHitName != "") {
+      if (revenge) {
+        if (checkFirstLetterSpace(revengeFlavorText[textIndex])) {
+          this.recentKillScoreText = playerThatGotHitName + revengeFlavorText[textIndex];
+        } else {
+          this.recentKillScoreText = revengeFlavorText[textIndex] + playerThatGotHitName;
+        }
+      } else {
+        //if not revenge then dominating
+        if (checkFirstLetterSpace(dominatingFlavorText[textIndex])) {
+          this.recentKillScoreText = playerThatGotHitName + dominatingFlavorText[textIndex];
+        } else {
+          this.recentKillScoreText = dominatingFlavorText[textIndex] + playerThatGotHitName;
+        }
+      }
+    } else {
+      //if no name passed then set regular flavour text
+      this.recentKillScoreText = killFlavorText[textIndex];
+    }
+  }
+
   hitOtherPlayer(playerThatGotHit) {
     this.kills += 1;
+    if (this.killedBy.includes(playerThatGotHit.name)) {
+      this.killedBy = this.killedBy.filter((item) => item !== playerThatGotHit.name);
+      this.setRecentKillText(playerThatGotHit.name, true);
+    } else if (this.killed.includes(playerThatGotHit.name)) {
+      this.setRecentKillText(playerThatGotHit.name, false);
+    } else {
+      this.setRecentKillText("");
+    }
     if (!this.killed.includes(playerThatGotHit.name)) {
       this.killed.push(playerThatGotHit.name);
     }
-    if (this.killedBy.includes(playerThatGotHit.name)) {
-      this.killedBy = this.killedBy.filter((item) => item !== playerThatGotHit.name);
-    }
+
     let score = 2 * this.comboScaler;
     score += Math.round(playerThatGotHit.powerUps / 3);
     this.recentScoreTicks = 250;
@@ -668,6 +708,7 @@ export class Player {
         this.recentScoreTicks = Math.max(this.recentScoreTicks - 1, 0);
         if (this.recentScoreTicks == 0) {
           this.setComboScaler(1);
+          this.recentKillScoreText = "";
         }
       }
     }

@@ -29,3 +29,8 @@ export function differsFrom(firstArray, secondArray) {
   }
   return false; // All values in the first array are also in the second array
 }
+
+//check if the first letter of the string is a space
+export function checkFirstLetterSpace(string) {
+  return /^\s/.test(string);
+}

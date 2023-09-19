@@ -257,6 +257,9 @@ function updateOwnPlayerData(player, data) {
   if (data.hasOwnProperty("recentScoreText")) {
     player.recentScoreText = data.recentScoreText;
   }
+  if (data.hasOwnProperty("recentKillScoreText")) {
+    player.recentKillScoreText = data.recentKillScoreText;
+  }
 }
 
 function setGameOverText(player) {
