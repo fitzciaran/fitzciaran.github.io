@@ -417,7 +417,8 @@ export function checkPlayerCollision(playerToCheck, allPlayers) {
       hitCandidate.isPlaying == true &&
       !playerToCheck.isDead &&
       !hitCandidate.isDead &&
-      !hitCandidate.timeSinceSentMessageThatWasRecieved <= 120
+      !hitCandidate.timeSinceSentMessageThatWasRecieved <= 120 &&
+      !(player.name == "" && player.pilot == "")
     ) {
       handlePlayerHit(playerToCheck, hitCandidate);
       handlePlayerHit(hitCandidate, playerToCheck);

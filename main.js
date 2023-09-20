@@ -370,6 +370,8 @@ export function setGameState(newState) {
     player.resetState(true, true);
 
     player.isPlaying = false;
+    player.x = -600;
+    player.y = -600;
     player.centerCameraOnPlayer(canvas.width, canvas.height);
 
     //todo addback in if there was a good reason for this

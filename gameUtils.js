@@ -1,4 +1,4 @@
-import { forces,effects } from "./entities.js";
+import { forces, effects } from "./entities.js";
 import { bots, globalPowerUps, mines } from "./main.js";
 // Function to find a bot by ID in the bots array
 export function findBotById(id) {
@@ -37,4 +37,35 @@ export function differsFrom(firstArray, secondArray) {
 //check if the first letter of the string is a space
 export function checkFirstLetterSpace(string) {
   return /^\s/.test(string);
+}
+
+export function screenShake(canvas, intensity, duration) {
+  const originalX = canvas.style.left || "0px";
+  const originalY = canvas.style.top || "0px";
+
+  const startTime = Date.now();
+
+  function shake() {
+    const currentTime = Date.now();
+    const elapsedTime = currentTime - startTime;
+
+    if (elapsedTime < duration) {
+      // Generate random displacement within the intensity range
+      const deltaX = (Math.random() - 0.5) * intensity * 2;
+      const deltaY = (Math.random() - 0.5) * intensity * 2;
+
+      canvas.style.left = `${parseFloat(originalX) + deltaX}px`;
+      canvas.style.top = `${parseFloat(originalY) + deltaY}px`;
+
+      // Request the next frame
+      requestAnimationFrame(shake);
+    } else {
+      // Reset the canvas position after the duration
+      canvas.style.left = originalX;
+      canvas.style.top = originalY;
+    }
+  }
+
+  // Start the shake effect
+  shake();
 }

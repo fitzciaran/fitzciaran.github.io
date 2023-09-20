@@ -17,7 +17,7 @@ let midBackLayer = new Image();
 let middleLayer = new Image();
 let midFrontLayer = new Image();
 let frontLayer = new Image();
-backLayer.src = "images/parallax-space-backgound.png";
+backLayer.src = "images/parallax-space-background.png";
 midBackLayer.src = "images/parallax-space-stars.png";
 middleLayer.src = "images/parallax-space-far-planets.png";
 midFrontLayer.src = "images/parallax-space-ring-planet.png";
@@ -53,7 +53,7 @@ export function drawScene(player, otherPlayers, bots, mines, ctx, camX, camY, wo
 }
 
 // Export a Basic function that takes the canvas context as an argument as well as camera position
-export function drawBasicBackground(ctx, camX, camY, canvas) {
+function drawBasicBackground(ctx, camX, camY, canvas) {
   ctx.fillStyle = "#999";
   ctx.fillRect(camX, camY, canvas.width, canvas.height);
 
@@ -255,7 +255,7 @@ function applyGlowingEffect(ctx, glowColor, transitionColor, starTransitionStart
 }
 
 function drawShip(ctx, camX, camY, player, points) {
-  if (!player.isPlaying || player.isDead || (!player.isLocal && !player.isBot && player.timeSinceSentMessageThatWasRecieved > 120)) {
+  if (!player.isPlaying || player.isDead || (!player.isLocal && !player.isBot && player.timeSinceSentMessageThatWasRecieved > 120) || (player.name == "" && player.pilot == "")) {
     return;
   }
 

@@ -13,6 +13,7 @@ import {
   GameState,
   globalPowerUps,
   setGlobalPowerUps,
+  canvas,
 } from "./main.js";
 import { isPlayerMasterPeer } from "./connectionHandlers.js";
 import { forces, ForceArea, ForceType, Effect, effects, EffectType } from "./entities.js";
@@ -27,6 +28,7 @@ import {
   botRespawnDelay,
   pilots,
 } from "./gameLogic.js";
+import { screenShake } from "./gameUtils.js";
 import { sendPlayerStates, sendRequestForStates, requestFullUpdate, sendEffectsUpdate } from "./sendData.js";
 
 const bounceFactor = 1.5;
@@ -205,6 +207,9 @@ export class Player {
       sendPlayerStates(this, true, true);
       sendEffectsUpdate(true);
     }
+    if (this.isLocal) {
+      screenShake(canvas, 30, 1000);
+    }
   }
 
   updateKilledAndKilledByLists(hitBy, isPlayer) {
@@ -280,6 +285,9 @@ export class Player {
     // }
     this.addScore(scoreToAdd);
     this.recentKillScoreText = "";
+    if (this.isLocal) {
+      // screenShake(canvas, 2, 200);
+    }
   }
 
   setComboScaler(newValue) {
@@ -378,6 +386,9 @@ export class Player {
     this.addScore(score);
     if (this.comboScaler < 10) {
       this.setComboScaler(this.comboScaler + 0.5);
+    }
+    if (this.isLocal) {
+      screenShake(canvas, 30, 500);
     }
   }
 
