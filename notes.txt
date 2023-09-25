@@ -43,9 +43,6 @@ general racing
     gates
 procedural level generation?
 
-
-some kind of starting state whether for ^ or other
-
 new challenger approaches when connect to someone
 some kind of run game with the mouse / ship mechanic/physics we have
 sumo mechanic? - with static kill obstacles? or just for non star interactions?
@@ -157,6 +154,15 @@ a brake?
 a control style switch? (follow mouse?)
 
 circles you have to stop in / stay in for x seconds for ... something? power up? charging in there?
+or some kind of king of the hill thing.
+
+mark significant score with awards, bait user to complete for more just a bit higher score.
+    some grind awards - more than x points 10 times - more than 4 kills etc....
+
+simple login to handle awards / progression
+
+how to tutorial?
+
 mines need to spawn away from ships and ships need to spawn away from mines
 
 for fast speeds might need to calculate movement in half or quater frames to check for collision.
@@ -187,9 +193,6 @@ if make directional forces bigger after creation need to reset numberArrowsEachS
 
 direction forcepads should not spawn too close to a wall if facing that wall
 
-general collision visual effect (sound later)
-    just write "BOOM!" for now? mix it up with "CRASH!!"
-
 should remove/move boost / forcepads after a time... maybe just give them an actual expiry?
 
 speicals should pull / push mines/powerups?
@@ -198,11 +201,9 @@ speicals should pull / push mines/powerups?
 should "combo score" shown be the total score throughout the combo?
     differnt sound effect for extent of score in combo.. probably not.
 
-
-
 add favicon.ico to source
 
-still sometimes get a blank "killed by" .. could at least put ??? to cover case?.. or make sure not to inlcude "killed by" line
+still sometimes don't get the  "killed by" name tracked, I omit the line in that case, but not ideal.- maybe even a generic kill line would be better.
 
 scores of the week?(last 7 days?)
     All time scores?
@@ -213,8 +214,6 @@ completely different graphic for star/invic timer?.
 
 some kind of background warping / blurring for the point gravity wells
 
-screenshake
-
 character whose special changes between all the specials
 
 force refresh if fall behind in execution time?
@@ -224,9 +223,9 @@ way to throw away peerjs messages?
 
 spawn position check that itterates through all current objects and gives space (could just keep rerolling rng until a valid spot? should be fine as long as there's more valid spots than invalid)
 
-check getting hit by idle/left (and non drawn otherplayer) check general connection
-
 maybe point forces should have very strong grav right at center...but dont to make slingshot worse.. maybe an actual pos move when near center?
+
+beingDrawn function for ship, that way logic for hit detection is linked to logic for drawing (with additional modifiers)
 
 keep track of a list of names that you killed and killed by for flavor text when die and for...
 
@@ -257,15 +256,13 @@ sometimes can get into game without name set (think without pilot set too?)
 
 blocking troll error screen overlay if "specs too low"
 
-once connections are more optimized revisit the position easing, could be better less or more. THink the occasional brief flickering across screen might be to do with that.
+once connections are more optimized revisit the position easing, could be better less or more. Think the occasional brief flickering across screen might be to do with that.
     could make it ease only the final few pixels.
 
 might be able to try ignoring old messages again once optimised
 
 i think sometimes the invic loss from a mine/other collision might get synced away for slave peers.
  guessing sometimes the timing works out so they send their invic value to the master and the master accepts it
-wards skipping on standard regular updates
-
 
  the game somewhat encourages clicks near the edge of the window - annoying, expecially when uses don't know/understand they should bounce off it. Do I need more of a border?
 
@@ -285,3 +282,111 @@ random events - angle lock, offset angle- could 180 could be just a weird amount
     special event camera messes up in various ways, are screenshake.. which maybe is just a camera thing?
 
 game replay.. what would we need to maintain in gamestate to be able to replay
+
+make bots/humans distinct?
+unclear who is who in the thick of the action... icon instead of name?
+
+how combo's worked was unclear
+
+invicible effect could be a shield (may also combine with bigger hit box)
+
+tips boxes
+
+big camera margin
+OR outside of level could just be the forces pushing back?
+    could be the odd power up in there?
+    easter egg where you can just about get through to secret area with boost (maybe also with the extra speed event?)
+
+health 
+    lot of changes needed for this  
+    do ships bounce off each other?
+    health is another stat and allows for more stats, regen over time,regen for pickups, 
+    have shield and spikey shield? make more clear what they are doing?
+
+melee attack? how would that work for spaceship? some ion.. something
+
+
+more interactive hazards
+    having health
+    having weight for collision bounce
+
+
+better ui for name/health bar 
+teaser for upcoming events
+reconsider master peer server
+
+revist lifes? Each life is stronger than the last to encourage sticking with it?
+
+if have physics collision revisit space football idea.
+    arrow to ball
+
+google sso 
+  long term grind achievments/unlocks
+  score targets for game
+  life target for game
+  survival targets for game
+  "level" with xp and that crap
+
+more post game stats    
+    rank based on ...stuff?
+    longest kill streak
+    total kills
+    total score
+    time alive
+    basic powerups collected
+    snarky comment based on type of play, riff on old goldeneye awards? "mostly harmless" to "master... something"
+
+star carrot? characters are different carrots
+star...wormm... star something...
+
+
+hints on death screen
+intructions as concisely as possible with image?
+    Hold Left Mouse button to engage thrusters!
+    Ships thrusts away from your mouse
+    Right Click to use your unique special!
+
+
+paper clips theme
+ad to continue lol
+
+UI element you can hover for controls?
+cleaner background
+
+
+collect stuff of your color avoid stuff of other color?
+Ships change to random color at .... set interval? (announced?) ...at will? 
+    ships of same color pass through each other
+
+Ships can fire an expanding ring of a set color? 
+    have to be the correct color to avoid.
+    I have to make it's easy to tell the correct color ... maybe RPS themed rather than just color? 
+
+Spawn out of a mothership?
+
+trail effect, maybe that's what kills, snake style....
+
+maintain an enemies array and it's contents then have an inherited method to overrride for equality check or 
+
+
+get points and credit kills if someone dies on your trail
+    collectables drop from crashed ship
+
+enable trail at will to paint?
+
+find a way to optimise trails 
+update trail death message
+
+I think trails should be distinct from mines, and should be a single object with many points of articulation.
+
+hitbox on trails has to account for width and length not radius.
+
+mine destroy effect same as ship 
+
+regular mine spawns should have a chance to spawn a power up pretty close.
+    directional forces ditto
+
+now color is so important master should assign slave peers a color when connected if current color clashes
+    or color is changable at will and no friendly fire
+
+spacing issue can occur where play and menu buttons arn't where expected - looks like a result of an interupted screen shake? need to recover from this

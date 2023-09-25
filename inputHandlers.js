@@ -75,7 +75,7 @@ function handleInputEvents(canvas, player) {
     } else if (e.button === 1) {
       player.u = true;
       keys.u = true;
-      if(keys.shift && keys.space){
+      if (keys.shift && keys.space) {
         player.setDevMode(true);
       }
     } else {
@@ -151,6 +151,9 @@ export function addPilotEventListners(canvas, ctx) {
 
   //selectPilot();
   pilotClickListener = function (event) {
+    //just in case set canvas back
+    canvas.style.left = "0px";
+    canvas.style.top = "0px";
     //x and y that are passed to drawNameEntry, need to remove the need for this duplication
     let x = canvas.width / 2 - 100;
     let y = 80;
@@ -286,16 +289,19 @@ export function removeNameEventListeners(window) {
 export function setupGameEventListeners() {}
 export function removeGameStateEventListeners() {}
 export function setupWinStateEventListeners(window, canvas) {
-  window.addEventListener("keydown", handleWinStateKeyDown);
+  // window.addEventListener("keydown", handleWinStateKeyDown);
   canvas.addEventListener("click", handleWinStateClick);
 }
 
 export function removeWinStateEventListeners(window, canvas) {
-  window.removeEventListener("keydown", handleWinStateKeyDown);
+  // window.removeEventListener("keydown", handleWinStateKeyDown);
   canvas.removeEventListener("click", handleWinStateClick);
 }
 
 function handleWinStateClick(event) {
+  //just in case set canvas back
+  this.style.left = "0px";
+  this.style.top = "0px";
   // Play button dimensions and location
   let buttonX = playButtonX;
   let buttonY = playButtonY;

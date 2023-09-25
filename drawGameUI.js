@@ -57,7 +57,6 @@ export function drawInvincibilityGauge(ctx, player, centerX, bottomY, gaugeWidth
     }
   }
   const fillPercent = player.invincibleTimer / pilotMaxInvcibilityTime;
-  // const fillPercent = player.invincibleTimer / maxInvincibilityTime;
   drawGauge(ctx, centerX, bottomY, fillPercent, "#ff9900", gaugeWidth, gaugeHeight, borderWidth);
 }
 

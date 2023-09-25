@@ -194,7 +194,7 @@ export function sendMinesUpdate(onlyChangedData = true) {
     priority: 2,
     fromMaster: isPlayerMasterPeer(player),
     gameState: true,
-    mines: serializeMines(mines, onlyChangedData),
+    mines: serializeMines(mines, onlyChangedData,true),
   };
 
   sendData(data);

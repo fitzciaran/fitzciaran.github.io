@@ -293,7 +293,9 @@ export function nameToRGB(colorName) {
     white: "rgb(255, 255, 255)",
     gold: "rgb(255,215,0)",
   };
-
+  if (colorName == null) {
+    colorName = "blue";
+  }
   // Look up the color name in the map and return the corresponding RGB value
   return colorMap[colorName.toLowerCase()] || null;
 }
@@ -322,4 +324,23 @@ export function getComplementaryColor(color) {
 
   // Return the complementary color in "rgb(r, g, b)" format
   return `rgb(${complementaryR},${complementaryG},${complementaryB})`;
+}
+
+// Function to determine if a player should be skipped
+export function shouldSkipPlayer(player) {
+  return (
+    !player ||
+    !player.isPlaying ||
+    player.isDead ||
+    (!player.isLocal && !player.isBot && player.timeSinceSentMessageThatWasReceived > 120) ||
+    (player.name === "" && player.pilot === "")
+  );
+}
+
+// Function to draw a player or bot on the minimap
+export function drawMiniMapEntity(entity, ctx, scaleX, scaleY, dotSize) {
+  if (entity != null && entity.isPlaying) {
+    ctx.fillStyle = entity.color;
+    ctx.fillRect(entity.x * scaleX, entity.y * scaleY, dotSize, dotSize);
+  }
 }

@@ -69,3 +69,27 @@ export function screenShake(canvas, intensity, duration) {
   // Start the shake effect
   shake();
 }
+
+export function getRandomUniqueColor(colors, selectedColors) {
+  let remainingColors;
+  if (selectedColors) {
+    remainingColors = colors.filter((color) => !selectedColors.includes(color));
+  } else {
+    remainingColors = colors;
+  }
+  if (remainingColors.length === 0 && selectedColors) {
+    // Reset the selected colors array if all colors have been used
+    selectedColors.length = 0;
+    remainingColors = colors;
+  }
+
+  const randomIndex = Math.floor(Math.random() * remainingColors.length);
+  const selectedColor = remainingColors[randomIndex];
+  if (selectedColors) {
+    selectedColors.push(selectedColor);
+  }
+  if(!selectedColor){
+    console.log("issue getting random unique color");
+  }
+  return selectedColor;
+}

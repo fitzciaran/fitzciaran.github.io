@@ -13,10 +13,10 @@ import {
   GameState,
   globalPowerUps,
   setGlobalPowerUps,
-  canvas,
+  canvas,selectedColors
 } from "./main.js";
 import { isPlayerMasterPeer } from "./connectionHandlers.js";
-import { forces, ForceArea, ForceType, Effect, effects, EffectType } from "./entities.js";
+import { forces, ForceArea, ForceType, Effect, effects, EffectType, MineType, Trail } from "./entities.js";
 import { checkFirstLetterSpace } from "./gameUtils.js";
 import {
   setEndGameMessage,
@@ -27,9 +27,10 @@ import {
   initialInvincibleTime,
   botRespawnDelay,
   pilots,
+  basicAnimationTimer,
 } from "./gameLogic.js";
-import { screenShake } from "./gameUtils.js";
-import { sendPlayerStates, sendRequestForStates, requestFullUpdate, sendEffectsUpdate } from "./sendData.js";
+import { screenShake,getRandomUniqueColor } from "./gameUtils.js";
+import { sendPlayerStates, sendRequestForStates, requestFullUpdate, sendEffectsUpdate, sendMinesUpdate } from "./sendData.js";
 
 const bounceFactor = 1.5;
 const offset = 1;
@@ -70,7 +71,7 @@ export class Player {
     this.x = x !== null ? x : 1200 + Math.random() * (worldDimensions.width - 2400);
     this.y = y !== null ? y : 600 + Math.random() * (worldDimensions.height - 1200);
     this.powerUps = powerUps;
-    this.color = color !== null ? color : colors[Math.floor(Math.random() * colors.length)];
+    this.color = color !== null ? color : getRandomUniqueColor(colors,selectedColors);
     this.angle = angle;
     this.pilot = pilot;
     this.name = name;
@@ -117,7 +118,7 @@ export class Player {
     this.y = 600 + Math.random() * (worldDimensions.height - 1200);
     this.powerUps = 0;
     if (!keepColor) {
-      this.color = colors[Math.floor(Math.random() * colors.length)];
+      this.color =  getRandomUniqueColor(colors,selectedColors);
     }
     this.angle = 0;
     if (!keepName) {
@@ -209,6 +210,9 @@ export class Player {
     }
     if (this.isLocal) {
       screenShake(canvas, 30, 1000);
+    }
+    if (this.isBot) {
+      this.delayReset(botRespawnDelay, true, true);
     }
   }
 
@@ -692,6 +696,58 @@ export class Player {
     }
   }
 
+  emitTrail(mines) {
+    let trailTime = 100;
+    for (let pilot of pilots) {
+      if (this.pilot == pilot.name) {
+        trailTime = pilot.trailTime;
+        break;
+      }
+    }
+    // trailTime = 10000;
+    const velocityAngle = Math.atan2(this.vel.y, this.vel.x);
+    const velocitySize = Math.sqrt(this.vel.x * this.vel.x + this.vel.y * this.vel.y);
+
+    let length = 15;
+    // let length = 45;
+    if (velocitySize > 2) {
+      length *= Math.min(4, velocitySize / 2);
+    }
+    // let width = 20;
+    let width = 50;
+
+    // Calculate the offset based on velocityAngle and a distance (e.g., 10 pixels)
+    const offsetDistance = 20; // Adjust this as needed
+    const xOffset = offsetDistance * Math.cos(velocityAngle);
+    const yOffset = offsetDistance * Math.sin(velocityAngle);
+
+    // Calculate the new x and y coordinates for the trail
+    const trailX = this.x - xOffset;
+    const trailY = this.y - yOffset;
+
+    let trail = new Trail(
+      "trail-" + Math.floor(Math.random() * 10000),
+      trailX,
+      trailY,
+      trailTime,
+     // 30,
+     70,
+      this.color,
+      0,
+      MineType.TRAIL,
+      -5,
+      this.id,
+      velocityAngle + Math.PI / 2,
+      length,
+      width
+    );
+    mines.push(trail);
+    if (isPlayerMasterPeer(this)) {
+      // trying without the send, trusting on sync a bit here... maybe every 10 frames send?
+      // sendMinesUpdate(true);
+    }
+  }
+
   centerCameraOnPlayer(viewportWidth, viewportHeight) {
     const targetCamX = this.x - viewportWidth / 2;
     let targetCamY;
@@ -709,7 +765,7 @@ export class Player {
     let camY = Math.max(Math.min(newCamY, worldDimensions.height - viewportHeight), 0);
     setCam(camX, camY);
   }
-  updateTick(deltaTime) {
+  updateTick(deltaTime, mines) {
     if (this.id == player.id && player.isDead) {
       setGameState(GameState.FINISHED);
       return;
@@ -749,6 +805,9 @@ export class Player {
           this.setComboScaler(1);
           this.recentKillScoreText = "";
         }
+      }
+      if (basicAnimationTimer % 2 == 0 && !this.isInSpawnProtectionTime()&& this.currentSpeed > 0.2) {
+        this.emitTrail(mines);
       }
     }
     otherPlayers.forEach((otherPlayer) => {
@@ -849,7 +908,7 @@ export class Bot extends Player {
     this.setIsDead(false);
   }
 
-  updateTick(deltaTime) {
+  updateTick(deltaTime, mines) {
     if (this.isDead) {
       //todo delay this?
       //this.resetState(true, true);
@@ -857,7 +916,7 @@ export class Bot extends Player {
       return;
     }
 
-    super.updateTick(deltaTime);
+    super.updateTick(deltaTime, mines);
   }
 
   updateBotInputs() {
@@ -869,8 +928,12 @@ export class Bot extends Player {
         this.setBotState(BotState.FOLLOW_PLAYER);
       }
     }
+    if (isNaN(this.inForce)) {
+      this.inForce =  0;
+    }
     if (this.inForce > 50) {
-      this.setRandomTarget(0, 0, "random point");
+      // this.setRandomTarget(0, 0, "random point");
+      this.setRandomTargetInMainArea();
       this.inForce = 0;
     }
 
@@ -911,7 +974,7 @@ export class Bot extends Player {
 
   handleRandomState() {
     if (this.randomTarget.x == 0 && this.randomTarget.y == 0) {
-      this.setRandomTarget(100 + Math.random() * (worldDimensions.width - 200), 100 + Math.random() * (worldDimensions.height - 200));
+      this.setRandomTargetInMainArea();
     }
     this.handleTargeting(this.randomTarget.x, this.randomTarget.y, 0, 0, 0.4);
   }
@@ -925,7 +988,6 @@ export class Bot extends Player {
         this.setRandomTarget(powerUpToTarget.x, powerUpToTarget.y, powerUpToTarget.id);
       } else {
         this.setBotState(BotState.RANDOM);
-        this.setRandomTarget(100 + Math.random() * (worldDimensions.width - 200), 100 + Math.random() * (worldDimensions.height - 200));
       }
     } else {
       let powerUpStillExists = globalPowerUps.some(
@@ -942,6 +1004,9 @@ export class Bot extends Player {
     // Set following target logic here
   }
 
+  setRandomTargetInMainArea() {
+    this.setRandomTarget(200 + Math.random() * (worldDimensions.width - 400), 200 + Math.random() * (worldDimensions.height - 400), "random");
+  }
   setRandomTarget(x, y, id) {
     this.randomTarget.x = x;
     this.randomTarget.y = y;
@@ -949,6 +1014,12 @@ export class Bot extends Player {
   }
 
   setBotState(state) {
+    if (state == this.botState) {
+      return;
+    }
+    if (state == BotState.RANDOM) {
+      this.setRandomTargetInMainArea();
+    }
     this.botState = state;
   }
 

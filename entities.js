@@ -23,6 +23,11 @@ export const EffectType = {
   EXPLOSION: "explosion",
 };
 
+export const MineType = {
+  REGULAR: "regular",
+  TRAIL: "trail",
+};
+
 export class Entity {
   constructor(id = null, x = null, y = null) {
     this.id = id;
@@ -104,16 +109,29 @@ export class Effect extends Enemy {
 }
 
 export class Mine extends Enemy {
-  constructor(id = null, x = null, y = null, duration = -1, radius = 20, color = "red", force = 0) {
+  constructor(
+    id = null,
+    x = null,
+    y = null,
+    duration = -1,
+    radius = 20,
+    color = "red",
+    force = 0,
+    mineType = MineType.REGULAR,
+    hitFrame = -105,
+    playerId = ""
+  ) {
     super(id, x, y, duration, radius, color);
     this.duration = duration;
     this.radius = radius;
     this.color = color;
-    this.hitFrames = -105;
+    this.hitFrames = hitFrame;
     this.force = force;
     if (force != 0) {
       this.createForce();
     }
+    this.mineType = mineType;
+    this.playerId = playerId;
   }
   createForce() {
     // Check if there is already a force with the same id
@@ -132,6 +150,32 @@ export class Mine extends Enemy {
       existingForce.y = this.y;
       //may need to update other properties in future if mine/ mine force behaviour change
     }
+  }
+}
+
+export class Trail extends Mine {
+  constructor(
+    id = null,
+    x = null,
+    y = null,
+    duration = -1,
+    radius = 20,
+    color = "red",
+    force = 0,
+    mineType = MineType.TRAIL,
+    hitFrame = -105,
+    playerId = "",
+    angle,
+    length,
+    width
+  ) {
+    super(id, x, y, duration, radius, color, force, mineType, hitFrame, playerId);
+    this.angle = angle;
+    this.length = length;
+    this.width = width;
+  }
+  createForce() {
+    super.createForce();
   }
 }
 
@@ -163,7 +207,7 @@ export class PowerUp extends Entity {
       existingForce.duration = 10;
       existingForce.x = this.x;
       existingForce.y = this.y;
-      //may need to update other properties in future if mine/ mine force behaviour change
+      //may need to update other properties in future behaviour changes
     }
   }
 }
@@ -206,8 +250,25 @@ export function createForceFromObject(obj) {
   return force;
 }
 export function createMineFromObject(obj) {
-  let mine = new Mine(obj.id, obj.x, obj.y, obj.duration, obj.radius, obj.color);
+  let mine = new Mine(obj.id, obj.x, obj.y, obj.duration, obj.radius, obj.color, obj.force, obj.mineType, obj.hitFrame, obj.playerId);
   return mine;
+}
+export function createTrailFromObject(obj) {
+  let trail = new Trail(
+    obj.id,
+    obj.x,
+    obj.y,
+    obj.duration,
+    obj.radius,
+    obj.color,
+    obj.force,
+    obj.mineType,
+    obj.hitFrame,
+    obj.playerId,
+    obj.angle,
+    obj.length.obj.width
+  );
+  return trail;
 }
 export function createPowerUpFromObject(obj) {
   let powerUp = new PowerUp(obj.id, obj.x, obj.y, obj.color, obj.isStar, obj.radius, obj.value);
@@ -293,21 +354,37 @@ function isEqualForce(force1, force2) {
   );
 }
 
-export function serializeMines(mines, onlyChangedData = false) {
+export function serializeMines(mines, onlyChangedData = false, onlyRegularMines = true) {
+  let minesToSerialize = null;
+  if (onlyRegularMines) {
+    minesToSerialize = mines.filter((mine) => mine.mineType == MineType.REGULAR);
+  } else {
+    minesToSerialize = mines;
+  }
   if (onlyChangedData) {
     // Serialize and return only the changed mines
-    const changedMineData = mines
+    const changedMineData = minesToSerialize
       .map((currentMine) => {
         const lastSentMineData = lastSentMasterMineData.find((lastMineData) => lastMineData.id === currentMine.id);
-        const serializedMine = serializeMine(currentMine);
+        let serializedMine;
+        if (currentMine instanceof Trail) {
+          serializedMine = serializeTrail(currentMine);
+          // Compare the serialized data of the current mine with the last sent data
+          if (!lastSentMineData || !isEqualTrail(serializedMine, lastSentMineData)) {
+            // Update lastSentMasterMineData with the new serialized data if changed
+            lastSentMasterMineData = lastSentMasterMineData.map((mine) => (mine.id === currentMine.id ? serializedMine : mine));
+            return serializedMine;
+          }
+        } else {
+          serializedMine = serializeMine(currentMine);
 
-        // Compare the serialized data of the current mine with the last sent data
-        if (!lastSentMineData || !isEqualMine(serializedMine, lastSentMineData)) {
-          // Update lastSentMasterMineData with the new serialized data if changed
-          lastSentMasterMineData = lastSentMasterMineData.map((mine) => (mine.id === currentMine.id ? serializedMine : mine));
-          return serializedMine;
+          // Compare the serialized data of the current mine with the last sent data
+          if (!lastSentMineData || !isEqualMine(serializedMine, lastSentMineData)) {
+            // Update lastSentMasterMineData with the new serialized data if changed
+            lastSentMasterMineData = lastSentMasterMineData.map((mine) => (mine.id === currentMine.id ? serializedMine : mine));
+            return serializedMine;
+          }
         }
-
         // Return null for mines that haven't changed
         return null;
       })
@@ -316,14 +393,13 @@ export function serializeMines(mines, onlyChangedData = false) {
     return changedMineData;
   } else {
     // If onlyChangedData is false, update lastSentMasterMineData with the current serialized data
-    lastSentMasterMineData = mines.map(serializeMine);
+    lastSentMasterMineData = minesToSerialize.map(serializeMine);
 
     // Serialize and return all mines
     return lastSentMasterMineData;
   }
 }
 
-// Define a function to serialize a mine's data
 function serializeMine(mine) {
   return {
     id: mine.id,
@@ -334,6 +410,8 @@ function serializeMine(mine) {
     radius: mine.radius,
     hitFrames: mine.hitFrames,
     color: mine.color,
+    mineType: mine.mineType,
+    playerId: mine.playerId,
   };
 }
 
@@ -347,7 +425,43 @@ function isEqualMine(mine1, mine2) {
     mine1.duration === mine2.duration &&
     mine1.radius === mine2.radius &&
     mine1.hitFrames === mine2.hitFrames &&
-    mine1.color === mine2.color
+    mine1.color === mine2.color &&
+    mine1.mineType === mine2.mineType &&
+    mine1.playerId === mine2.playerId
+  );
+}
+
+function serializeTrail(trail) {
+  return {
+    id: trail.id,
+    x: trail.x,
+    y: trail.y,
+    force: trail.force,
+    duration: trail.duration,
+    radius: trail.radius,
+    hitFrames: trail.hitFrames,
+    color: trail.color,
+    trail: trail.mineType,
+    playerId: trail.playerId,
+    angle: trail.angle,
+    length: trail.length,
+    width: trail.width,
+  };
+}
+
+// Define a function to compare mine objects for equality
+function isEqualTrail(trail1, trail2) {
+  const tolerance = 1e-4;
+  return (
+    Math.abs(trail1.x - trail2.x) < tolerance &&
+    Math.abs(trail1.y - trail2.y) < tolerance &&
+    trail1.force === trail2.force &&
+    trail1.duration === trail2.duration &&
+    trail1.radius === trail2.radius &&
+    trail1.hitFrames === trail2.hitFrames &&
+    trail1.color === trail2.color &&
+    trail1.mineType === trail2.mineType &&
+    trail1.playerId === trail2.playerId
   );
 }
 

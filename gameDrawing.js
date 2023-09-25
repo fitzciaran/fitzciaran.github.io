@@ -8,8 +8,10 @@ import {
   applyGravityWarpEffect,
   getComplementaryColor,
   nameToRGBFullFormat,
+  drawMiniMapEntity,
+  shouldSkipPlayer,
 } from "./drawingUtils.js";
-import { ForceType, forces, effects, EffectType } from "./entities.js";
+import { ForceType, forces, effects, EffectType, MineType } from "./entities.js";
 import { shipScale, mineScale, basicAnimationTimer } from "./gameLogic.js";
 
 let backLayer = new Image();
@@ -35,12 +37,13 @@ export function drawScene(player, otherPlayers, bots, mines, ctx, camX, camY, wo
   drawBackground(ctx, camX, camY, canvas, backLayer, midBackLayer, middleLayer, midFrontLayer, frontLayer);
   drawWorldBounds(ctx, camX, camY, worldDimensions.width, worldDimensions.height);
   ctx.lineWidth = 2;
-  otherPlayers.forEach((player) => drawShip(ctx, camX, camY, player, shipPoints));
-  bots.forEach((bot) => drawShip(ctx, camX, camY, bot, shipPoints));
   drawPowerups(globalPowerUps, ctx, camX, camY);
   mines.forEach((mine) => drawMine(ctx, camX, camY, mine, spikeyBallPoints));
   forces.forEach((force) => drawForce(ctx, camX, camY, force));
   effects.forEach((effect) => drawEffect(ctx, camX, camY, effect));
+  bots.forEach((bot) => drawShip(ctx, camX, camY, bot, shipPoints));
+  otherPlayers.forEach((player) => drawShip(ctx, camX, camY, player, shipPoints));
+
   drawMinimap(player, otherPlayers, bots, worldDimensions.width, worldDimensions.height);
   drawMinimapPowerups(globalPowerUps, worldDimensions.width, worldDimensions.height);
   if (player != null) {
@@ -217,23 +220,21 @@ function drawMinimap(player, otherPlayers, bots, worldWidth, worldHeight) {
   minimapCtx.lineWidth = 3; // Border width
   minimapCtx.strokeRect(0, 0, minimapCanvas.width, minimapCanvas.height);
 
-  if (player != null && player.isPlaying) {
-    // Draw the player's ship on the minimap
-    minimapCtx.fillStyle = player.color;
-    minimapCtx.fillRect(player.x * scaleX, player.y * scaleY, dotSize, dotSize);
+  // Draw the player's ship on the minimap
+  if (!shouldSkipPlayer(player)) {
+    drawMiniMapEntity(player, minimapCtx, scaleX, scaleY, dotSize);
   }
+
   // Draw other players on the minimap
-  otherPlayers.forEach((player) => {
-    if (player != null && player.isPlaying) {
-      minimapCtx.fillStyle = player.color;
-      minimapCtx.fillRect(player.x * scaleX, player.y * scaleY, dotSize, dotSize);
+  otherPlayers.forEach((otherPlayer) => {
+    if (!shouldSkipPlayer(otherPlayer)) {
+      drawMiniMapEntity(otherPlayer, minimapCtx, scaleX, scaleY, dotSize);
     }
   });
 
   // Draw bots on the minimap
   bots.forEach((bot) => {
-    minimapCtx.fillStyle = bot.color;
-    minimapCtx.fillRect(bot.x * scaleX, bot.y * scaleY, dotSize, dotSize);
+    drawMiniMapEntity(bot, minimapCtx, scaleX, scaleY, dotSize);
   });
 }
 
@@ -255,7 +256,12 @@ function applyGlowingEffect(ctx, glowColor, transitionColor, starTransitionStart
 }
 
 function drawShip(ctx, camX, camY, player, points) {
-  if (!player.isPlaying || player.isDead || (!player.isLocal && !player.isBot && player.timeSinceSentMessageThatWasRecieved > 120) || (player.name == "" && player.pilot == "")) {
+  if (
+    !player.isPlaying ||
+    player.isDead ||
+    (!player.isLocal && !player.isBot && player.timeSinceSentMessageThatWasRecieved > 120) ||
+    (player.name == "" && player.pilot == "")
+  ) {
     return;
   }
 
@@ -264,6 +270,8 @@ function drawShip(ctx, camX, camY, player, points) {
   let angle = player.angle;
   let color = player.color;
   let name = player.name;
+  let lightSourceX = 0;
+  let lightSourceY = 0;
   ctx.strokeStyle = color;
   ctx.fillStyle = color;
   const flameTransitionDuration = 50;
@@ -276,6 +284,34 @@ function drawShip(ctx, camX, camY, player, points) {
   if (!player.flameTransitionStartTime || elapsedTime >= flameTransitionDuration) {
     player.flameTransitionStartTime = currentTime;
   }
+
+  // Calculate the ship's silhouette points
+  let silhouettePoints = [];
+
+  for (let i = 0; i < points.length; i++) {
+    let rotatedPoint = rotateAndScalePoint(points[i].x, points[i].y, angle, shipScale);
+    let silhouetteX = centerX - camX + rotatedPoint.x;
+    let silhouetteY = centerY - camY + rotatedPoint.y;
+
+    // Calculate the shadow position for each silhouette point
+    let shadowX = silhouetteX + (lightSourceX - silhouetteX);
+    let shadowY = silhouetteY + (lightSourceY - silhouetteY);
+
+    silhouettePoints.push({ x: shadowX, y: shadowY });
+  }
+
+  // Draw the ship's silhouette
+  ctx.beginPath();
+  ctx.moveTo(silhouettePoints[0].x, silhouettePoints[0].y);
+
+  for (let i = 1; i < silhouettePoints.length; i++) {
+    ctx.lineTo(silhouettePoints[i].x, silhouettePoints[i].y);
+  }
+
+  ctx.closePath();
+  ctx.fillStyle = "gray"; // Fill color for the silhouette
+  ctx.fill();
+
   if (player.space) {
     const angleOffset = 0.38;
 
@@ -361,8 +397,12 @@ function drawShip(ctx, camX, camY, player, points) {
   }
   ctx.closePath();
   // ctx.fillStyle = ctx.strokeStyle;
-  ctx.stroke();
+
   ctx.fill();
+
+  ctx.strokeStyle = "white";
+  ctx.lineWidth = 5;
+  ctx.stroke();
 
   //for debug draw angle
   // Calculate the endpoint coordinates based on the angle
@@ -385,7 +425,8 @@ function drawShip(ctx, camX, camY, player, points) {
 
   ctx.fillStyle = getComplementaryColor(color);
   ctx.strokeStyle = getComplementaryColor(color);
-  ctx.font = "14px Arial";
+  // ctx.font = "14px Arial";
+  ctx.font = "24px Arial";
   ctx.textAlign = "center";
   ctx.fillText(name, namePositionX, namePositionY);
 
@@ -422,25 +463,97 @@ export function drawMine(ctx, camX, camY, mine, points) {
   const elapsedTime = currentTime - mine.starTransitionStartTime;
   const transitionDuration = 50;
   const animatationFrame = elapsedTime % transitionDuration;
-  if (mine.hitFrames < -1) {
-    if (!mine.starTransitionStartTime || elapsedTime >= transitionDuration) {
-      mine.starTransitionStartTime = currentTime;
-      mine.starTransitionStartColor = color;
-    }
-    applyGlowingEffect(ctx, "white", mine.color, "white", transitionDuration, animatationFrame, 0.2);
-  }
+  // if (mine.hitFrames < -1) {
+  //   if (!mine.starTransitionStartTime || elapsedTime >= transitionDuration) {
+  //     mine.starTransitionStartTime = currentTime;
+  //     mine.starTransitionStartColor = color;
+  //   }
+  //   applyGlowingEffect(ctx, "white", mine.color, "white", transitionDuration, animatationFrame, 0.2);
+  // }
   ctx.beginPath();
-  let rotatedPoint = rotateAndScalePoint(points[0].x, points[0].y, angle, mineScale);
-  ctx.moveTo(centerX - camX + rotatedPoint.x, centerY - camY + rotatedPoint.y);
+  if (mine.mineType == MineType.REGULAR) {
+    if (mine.hitFrames < -1) {
+      if (!mine.starTransitionStartTime || elapsedTime >= transitionDuration) {
+        mine.starTransitionStartTime = currentTime;
+        mine.starTransitionStartColor = color;
+      }
+      applyGlowingEffect(ctx, "white", mine.color, "white", transitionDuration, animatationFrame, 0.2);
+    }
+    let rotatedPoint = rotateAndScalePoint(points[0].x, points[0].y, angle, mineScale);
+    ctx.moveTo(centerX - camX + rotatedPoint.x, centerY - camY + rotatedPoint.y);
 
-  for (let i = 1; i < points.length; i++) {
-    rotatedPoint = rotateAndScalePoint(points[i].x, points[i].y, angle, mineScale);
-    ctx.lineTo(centerX - camX + rotatedPoint.x, centerY - camY + rotatedPoint.y);
+    for (let i = 1; i < points.length; i++) {
+      rotatedPoint = rotateAndScalePoint(points[i].x, points[i].y, angle, mineScale);
+      ctx.lineTo(centerX - camX + rotatedPoint.x, centerY - camY + rotatedPoint.y);
+    }
+    ctx.stroke();
+  } else if (mine.mineType === MineType.TRAIL) {
+    ctx.fillStyle = color;
+    // Handle trail mines here
+    const trailLength = mine.length;
+    const trailWidth = mine.width;
+
+    const trailX = centerX - camX;
+    const trailY = centerY - camY;
+    angle = mine.angle;
+
+    // Apply the rotation transformation
+    ctx.translate(trailX, trailY);
+    ctx.rotate(angle);
+
+    // Calculate half of the trailLength
+    const halfTrailLength = trailLength / 2;
+    const halfTrailWidth = trailWidth / 2;
+
+    // Draw the left circle (start of the sausage)
+    ctx.arc(0, -halfTrailLength, halfTrailWidth, 0, Math.PI * 2);
+
+    // Draw the rectangle (sausage body)
+    ctx.rect(-halfTrailWidth, -trailLength / 2, trailWidth, trailLength);
+
+    // Draw the right circle (end of the sausage)
+    ctx.arc(0, -halfTrailLength + trailLength, halfTrailWidth, 0, Math.PI * 2);
+
+    // // Reset the rotation and translation
+    // ctx.rotate(-angle);
+    // ctx.translate(-trailX, -trailY);
+    ctx.fill();
+
+    // Save the current global composite operation
+    const prevGlobalCompositeOperation = ctx.globalCompositeOperation;
+    // Set the global composite operation to 'source-over' to blend the new content
+    ctx.globalCompositeOperation = "source-over";
+    // Create a radial gradient to simulate the vapor trail with your color
+    const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, halfTrailWidth);
+    let rgbColor = nameToRGBFullFormat(color);
+    gradient.addColorStop(0, `rgba(${rgbColor.r}, ${rgbColor.g}, ${rgbColor.b}, 1)`); // Inner part of the trail
+    gradient.addColorStop(1, `rgba(${rgbColor.r}, ${rgbColor.g}, ${rgbColor.b}, 0.5)`); // Outer part of the trail
+
+    // ctx.fillStyle = gradient;
+    ctx.fillStyle =  `rgba(${rgbColor.r}, ${rgbColor.g}, ${rgbColor.b}, 0.1)`;
+    // Draw the rectangle (sausage body)
+    ctx.rect(-halfTrailWidth - 20, -trailLength / 2 - 20, trailWidth + 40, trailLength + 40);
+    ctx.fill();
+    // Reset the rotation and translation
+    ctx.rotate(-angle);
+    ctx.translate(-trailX, -trailY);
+    // Restore the previous global composite operation
+    ctx.globalCompositeOperation = prevGlobalCompositeOperation;
+    // for (let i = 0; i < trailLength; i++) {
+    //   const trailAlpha = 1 - i * trailOpacityStep;
+    //   ctx.globalAlpha = trailAlpha;
+
+    //   const trailX = centerX - camX + i * trailSpacing; // Adjust the trail position as needed
+    //   const trailY = centerY - camY; // You may need to calculate the Y position based on your needs
+    //   const trailRadius = mine.radius * (1 - i * 0.1); // Adjust the trail size based on radius
+
+    //   ctx.arc(trailX, trailY, trailRadius, 0, Math.PI * 2);
+    // }
   }
 
-  ctx.stroke();
   ctx.closePath();
   ctx.strokeStyle = color;
+  ctx.fillStyle = color;
   ctx.shadowBlur = 0;
   ctx.shadowColor = "transparent";
   ctx.globalAlpha = 1;
@@ -708,54 +821,96 @@ function drawForceLines(ctx, attractive, radius, angle, screenX, screenY) {
   }
 }
 
+// export function drawPowerups(globalPowerUps, ctx, camX, camY) {
+//   // Draw each dot
+//   globalPowerUps.forEach((powerUp) => {
+//     const currentTime = Date.now();
+//     const elapsedTime = currentTime - powerUp.starTransitionStartTime;
+//     const transitionDuration = 200;
+//     const animatationFrame = elapsedTime % transitionDuration;
+//     if (powerUp.hitFrames < -1) {
+//       if (!powerUp.starTransitionStartTime || elapsedTime >= transitionDuration) {
+//         powerUp.starTransitionStartTime = currentTime;
+//         // powerUp.starTransitionStartColor = powerUp.color;
+//       }
+//       applyGlowingEffect(ctx, "white", powerUp.color, "white", transitionDuration, animatationFrame, 0.2);
+//     } else if (powerUp.isStar) {
+//       // Apply a glowing effect for star ships
+//       ctx.shadowBlur = 10;
+//       ctx.strokeStyle = "gold"; // Adjust the stroke color to match the glow
+
+//       // Gradually change the star's color
+//       const transitionEndColor = "gold"; // Final color
+//       applyGlowingEffect(ctx, "gold", powerUp.color, transitionEndColor, transitionDuration, animatationFrame);
+
+//     } else {
+//       ctx.strokeStyle = powerUp.color;
+//       ctx.fillStyle = powerUp.color;
+//     }
+//     ctx.beginPath();
+//     ctx.arc(powerUp.x - camX, powerUp.y - camY, powerUp.radius, 0, Math.PI * 2);
+
+//     ctx.fill();
+//     ctx.shadowBlur = 0;
+//     ctx.shadowColor = "transparent";
+//   });
+// }
+
 export function drawPowerups(globalPowerUps, ctx, camX, camY) {
-  // Draw each dot
   globalPowerUps.forEach((powerUp) => {
     const currentTime = Date.now();
     const elapsedTime = currentTime - powerUp.starTransitionStartTime;
     const transitionDuration = 200;
-    const animatationFrame = elapsedTime % transitionDuration;
+    const animationFrame = elapsedTime % transitionDuration;
+
+    // Save the current canvas state
+    ctx.save();
+
     if (powerUp.hitFrames < -1) {
       if (!powerUp.starTransitionStartTime || elapsedTime >= transitionDuration) {
         powerUp.starTransitionStartTime = currentTime;
         // powerUp.starTransitionStartColor = powerUp.color;
       }
-      applyGlowingEffect(ctx, "white", powerUp.color, "white", transitionDuration, animatationFrame, 0.2);
+      applyGlowingEffect(ctx, "white", powerUp.color, "white", transitionDuration, animationFrame, 0.2);
     } else if (powerUp.isStar) {
       // Apply a glowing effect for star ships
       ctx.shadowBlur = 10;
-      // ctx.shadowColor = "gold"; // Adjust the glow color as needed
       ctx.strokeStyle = "gold"; // Adjust the stroke color to match the glow
 
       // Gradually change the star's color
       const transitionEndColor = "gold"; // Final color
-      // const transitionDuration = 2000; // Transition duration in milliseconds
-      applyGlowingEffect(ctx, "gold", powerUp.color, transitionEndColor, transitionDuration, animatationFrame);
-      // const currentTime = Date.now();
-      // const elapsedTime = currentTime - powerUp.starTransitionStartTime;
-
-      // if (!powerUp.starTransitionStartTime || elapsedTime >= transitionDuration) {
-      //   powerUp.starTransitionStartTime = currentTime;
-      //   powerUp.starTransitionStartColor = powerUp.color;
-      // }
-
-      // const colorProgress = Math.min(1, elapsedTime / transitionDuration);
-      // const r = Math.floor(interpolate(powerUp.starTransitionStartColor.r, transitionColor.r, colorProgress));
-      // const g = Math.floor(interpolate(powerUp.starTransitionStartColor.g, transitionColor.g, colorProgress));
-      // const b = Math.floor(interpolate(powerUp.starTransitionStartColor.b, transitionColor.b, colorProgress));
-
-      // ctx.strokeStyle = `rgb(${r},${g},${b})`;
+      applyGlowingEffect(ctx, "gold", powerUp.color, transitionEndColor, transitionDuration, animationFrame);
     } else {
       ctx.strokeStyle = powerUp.color;
       ctx.fillStyle = powerUp.color;
     }
-    ctx.beginPath();
-    ctx.arc(powerUp.x - camX, powerUp.y - camY, powerUp.radius, 0, Math.PI * 2);
 
-    ctx.fill();
-    ctx.shadowBlur = 0;
-    ctx.shadowColor = "transparent";
+    // Translate the canvas origin to the power-up position
+    ctx.translate(powerUp.x - camX, powerUp.y - camY);
+
+    // Replace this with your custom texture/icon drawing logic
+    // For example, you can draw an image or a more complex shape
+    // Here, we draw a simple star shape as an example
+    drawStar(ctx, powerUp.radius);
+
+    // Restore the canvas state to prevent transformations from affecting other objects
+    ctx.restore();
   });
+}
+
+// Function to draw a simple star shape (you can replace this with your custom image/icon drawing logic)
+function drawStar(ctx, radius) {
+  ctx.beginPath();
+  ctx.moveTo(0, -radius);
+  for (let i = 0; i < 5; i++) {
+    ctx.rotate(Math.PI / 5);
+    ctx.lineTo(0, -0.6 * radius);
+    ctx.rotate(Math.PI / 5);
+    ctx.lineTo(0, -radius);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
 }
 
 export function drawEffect(ctx, camX, camY, effect) {
@@ -763,7 +918,7 @@ export function drawEffect(ctx, camX, camY, effect) {
   const elapsedTime = currentTime - effect.starTransitionStartTime;
   const transitionDuration = 80;
   const animatationFrame = elapsedTime % transitionDuration;
-   if (effect.duration >= 0) {
+  if (effect.duration >= 0) {
     if (!effect.starTransitionStartTime || elapsedTime >= transitionDuration) {
       effect.starTransitionStartTime = currentTime;
     }
@@ -780,8 +935,7 @@ export function drawEffect(ctx, camX, camY, effect) {
   } else if (effect.type == "temp") {
     const animationDuration = 120;
     const animatationFrame = elapsedTime % animationDuration;
-  
-  }else if (effect.type === EffectType.EXPLOSION) {
+  } else if (effect.type === EffectType.EXPLOSION) {
     const animationDuration = 120;
     const numFrames = 10; // Number of frames for the explosion
     const frameDuration = animationDuration / numFrames;

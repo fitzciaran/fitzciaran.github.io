@@ -297,7 +297,7 @@ function updateGlobalPowerUps(data, globalPowerUps) {
         localPowerUp.radius = receivedPowerUp.radius;
         localPowerUp.hitFrames = receivedPowerUp.hitFrames;
       } else {
-        // If the local powerup doesn't exist, add it to the mines array
+        // If the local powerup doesn't exist, add it to the globalPowerUps array
         globalPowerUps.push(createPowerUpFromObject(receivedPowerUp));
       }
     }
@@ -357,6 +357,8 @@ function updateMines(data, mines) {
         localMine.radius = receivedMine.radius;
         localMine.hitFrames = receivedMine.hitFrames;
         localMine.color = receivedMine.color;
+        localMine.mineType = receivedMine.mineType;
+        localMine.playerId = receivedMine.playerId;
       } else {
         // If the local mine doesn't exist, add it to the mines array
         mines.push(createMineFromObject(receivedMine));
@@ -365,7 +367,7 @@ function updateMines(data, mines) {
   }
   if (data.fullSend && data.mines) {
     // Create a new mines array by filtering only the mines that exist in data.mines
-    const updatedMines = mines.filter((mineToCheck) => mineToCheck.id == null || data.mines.some((dataMine) => dataMine.id === mineToCheck.id));
+    const updatedMines = mines.filter((mineToCheck) => /^trail-/.test(mineToCheck.id) || mineToCheck.id == null || data.mines.some((dataMine) => dataMine.id === mineToCheck.id));
 
     // Update the mines array once
     setMines(updatedMines);
@@ -413,16 +415,16 @@ function updateEffects(data, effects) {
         localEffect.color = receivedEffect.color;
         localEffect.type = receivedEffect.type;
       } else {
-        // If the local mine doesn't exist, add it to the mines array
+        // If the local effects doesn't exist, add it to the effects array
         effects.push(createEffectFromObject(receivedEffect));
       }
     }
   }
   if (data.fullSend && data.effects) {
-    // Create a new mines array by filtering only the mines that exist in data.mines
+    // Create a new effects array by filtering only the effects that exist in data.effects
     const updatedEffects = effects.filter((effectToCheck) => effectToCheck.id == null || data.effects.some((dataEffect) => dataEffect.id === effectToCheck.id));
 
-    // Update the mines array once
+    // Update the effects array once
     setEffects(updatedEffects);
   }
 }
@@ -430,7 +432,7 @@ function updateEffects(data, effects) {
 
 function removeEffects(data, effects) {
   if (data.removeEffects && data.removeEffects.length > 0) {
-    let filteredEffects = [...effects]; // Create a copy of the original mines array
+    let filteredEffects = [...effects]; // Create a copy of the original effects array
 
     for (let dataEffect of data.removeEffects) {
       if (dataEffect.id != null) {
@@ -438,7 +440,7 @@ function removeEffects(data, effects) {
       }
     }
 
-    // Update the mines array once after the loop
+    // Update the effects array once after the loop
     setEffects(filteredEffects);
   }
 }

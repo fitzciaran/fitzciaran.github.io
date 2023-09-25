@@ -1,4 +1,16 @@
-import { setGameState, GameState, player, setMines, bots, otherPlayers, mines, setGameTimer, gameTimer, globalPowerUps } from "./main.js";
+import {
+  setGameState,
+  GameState,
+  player,
+  setMines,
+  bots,
+  otherPlayers,
+  mines,
+  setGameTimer,
+  gameTimer,
+  globalPowerUps,
+  selectedColors,
+} from "./main.js";
 import { isPlayerMasterPeer, setTimeSinceMessageFromMaster, timeSinceMessageFromMaster } from "./connectionHandlers.js";
 import {
   sendPlayerStates,
@@ -11,8 +23,9 @@ import {
   sendForcesUpdate,
   sendBotsUpdate,
 } from "./sendData.js";
-import { forces, Mine, PowerUp, ForceType, ForceArea, Entity, effects } from "./entities.js";
+import { forces, Mine, PowerUp, ForceType, ForceArea, Entity, effects, MineType } from "./entities.js";
 import { Player, Bot } from "./player.js";
+import { getRandomUniqueColor } from "./gameUtils.js";
 
 //if mess with these need to change the collision detection - factor these in
 export const shipScale = 2;
@@ -26,7 +39,7 @@ export let maxSpecialMeter = 200;
 let maxPowerups = 10;
 let maxMines = 14;
 let maxBots = 4;
-let maxDirectionalForces = 3;
+let maxDirectionalForces = 7;
 // let directionalForces = [];
 export let spawnProtectionTime = 200;
 export let endGameMessage = "";
@@ -44,6 +57,13 @@ export const PilotName = {
   PILOT_4: "pilot4",
 };
 
+export const BoundaryForce = {
+  LEFT: "leftBoundaryForce-",
+  RIGHT: "rightBoundaryForce-",
+  TOP: "topBoundaryForce-",
+  BOTTOM: "bottomBoundaryForce-",
+};
+
 export class Pilot extends Entity {
   constructor(
     id = null,
@@ -55,6 +75,7 @@ export class Pilot extends Entity {
     name = "",
     src = "",
     pilotInvincibilityTime = 600,
+    trailTime = 100,
     selected = false
   ) {
     super(id, x, y);
@@ -64,10 +85,11 @@ export class Pilot extends Entity {
     this.lore = lore;
     this.name = name;
     this.src = src;
-    this.selected = selected;
-    this.pilotAnimationFrame = 0;
     //deafult 600 is 10 seconds
     this.invincibilityTime = pilotInvincibilityTime;
+    this.trailTime = trailTime;
+    this.selected = selected;
+    this.pilotAnimationFrame = 0;
   }
   setSelected(newSelectedValue) {
     if (newSelectedValue && !this.selected) {
@@ -85,7 +107,8 @@ export const pilot1 = new Pilot(
   "Orion, Speed: 4, Invicible Time: 10,Special: Gravity Attract, Agressive - likes to get powered up and use Gravity Attract to get kills",
   PilotName.PILOT_1,
   "images/wolf.webp",
-  600
+  600,
+  100
 );
 export const pilot2 = new Pilot(
   PilotName.PILOT_2,
@@ -96,7 +119,8 @@ export const pilot2 = new Pilot(
   "Bumble, Speed: 2, Invicible Time: 15,Special: Gravity Repel, Defensive - not so fast but can use Gravity Repel to keep attackers away ",
   PilotName.PILOT_2,
   "images/slippy.webp",
-  900
+  900,
+  70
 );
 export const pilot3 = new Pilot(
   PilotName.PILOT_3,
@@ -107,7 +131,8 @@ export const pilot3 = new Pilot(
   "Zippy, Speed: 5, Invicible Time: 10, Special: Speed Boost, Speedy - tricky to control. Not for scrubs! ",
   PilotName.PILOT_3,
   "images/mouse.webp",
-  600
+  600,
+  100
 );
 export const pilot4 = new Pilot(
   PilotName.PILOT_4,
@@ -118,7 +143,8 @@ export const pilot4 = new Pilot(
   "Snaffle, Speed: 3, Invicible Time: 12, Special: Tractor Beam, Sneaky! Powerful long range narrow tractor beam can cause havok from afar!",
   PilotName.PILOT_4,
   "images/bore612.webp",
-  700
+  700,
+  150
 );
 
 export let pilots = [pilot1, pilot2, pilot3, pilot4];
@@ -141,7 +167,7 @@ export function generatePowerups(globalPowerUps, worldWidth, worldHeight, colors
     // let powerup = {
     //   x: (Math.random() * 0.8 + 0.1) * worldWidth,
     //   y: (Math.random() * 0.8 + 0.1) * worldHeight,
-    //   color: colors[Math.floor(Math.random() * colors.length)],
+    //   color:  getRandomUniqueColor(colors,selectedColors),
     // };
     let isStar = false;
     let radius = 50;
@@ -173,7 +199,7 @@ export function generatePowerups(globalPowerUps, worldWidth, worldHeight, colors
       Math.floor(Math.random() * 10000),
       (Math.random() * 0.8 + 0.1) * worldWidth,
       (Math.random() * 0.8 + 0.1) * worldHeight,
-      colors[Math.floor(Math.random() * colors.length)],
+      getRandomUniqueColor(colors, null),
       isStar,
       radius,
       value,
@@ -214,7 +240,7 @@ export function createBots(worldWidth, worldHeight, colors) {
       (Math.random() * 0.8 + 0.1) * worldWidth,
       (Math.random() * 0.8 + 0.1) * worldHeight,
       0, // Set other properties for the bot as needed
-      colors[Math.floor(Math.random() * colors.length)]
+      getRandomUniqueColor(colors, selectedColors)
     );
 
     bot.isBot = true;
@@ -242,8 +268,9 @@ export function generateMines(worldWidth, worldHeight, colors) {
     return;
   }
   let addedMines = false;
+  const regularMines = mines.filter((mine) => mine.mineType === MineType.REGULAR);
   // Check if there are less than max powerups powerups
-  while (mines.length < maxMines) {
+  while (regularMines.length < maxMines) {
     let hasGravity = 0;
     if (Math.random() > 0.8) {
       if (Math.random() > 0.9) {
@@ -259,18 +286,20 @@ export function generateMines(worldWidth, worldHeight, colors) {
       (Math.random() * 0.8 + 0.1) * worldHeight,
       100,
       10,
-      colors[Math.floor(Math.random() * colors.length)],
+      getRandomUniqueColor(colors, null),
       hasGravity
     );
     mines.push(mine);
+    regularMines.push(mine);
     addedMines = true;
   }
   if (addedMines) {
     sendMinesUpdate(true);
   }
-  // Remove excess mines if there are more than maxMines
-  while (mines.length > maxMines) {
-    const removedMine = mines.pop();
+  // Remove excess regularMines if there are more than maxMines
+  while (regularMines.length > maxMines) {
+    const removedMine = regularMines.pop();
+    setMines(mines.filter((mine) => mine.id != removedMine.id));
     if (isPlayerMasterPeer(player)) {
       sendRemoveEntityUpdate("removeMines", [removedMine]);
     }
@@ -284,12 +313,40 @@ export function generateDirectionalForces(worldWidth, worldHeight, colors) {
   }
   let addedDirectionalForces = false;
   const directionalForces = forces.filter((force) => force.type === ForceType.DIRECTIONAL);
-
+  const boundaryForceSize = 500;
   // Check if there are less than max powerups powerups
   while (directionalForces.length < maxDirectionalForces) {
-    let hasGravity = 0;
-    if (Math.random() > 0.4) {
-      hasGravity = 1;
+    if (!hasGivenBoundaryForce(BoundaryForce.LEFT, directionalForces)) {
+      addedDirectionalForces = true;
+      addBoundaryForce(boundaryForceSize / 2, worldHeight / 2, boundaryForceSize, worldHeight, Math.PI, BoundaryForce.LEFT, directionalForces);
+    }
+    if (!hasGivenBoundaryForce(BoundaryForce.RIGHT, directionalForces)) {
+      addedDirectionalForces = true;
+      addBoundaryForce(
+        worldWidth - boundaryForceSize / 2,
+        worldHeight / 2,
+        boundaryForceSize,
+        worldHeight,
+        0,
+        BoundaryForce.RIGHT,
+        directionalForces
+      );
+    }
+    if (!hasGivenBoundaryForce(BoundaryForce.TOP, directionalForces)) {
+      addedDirectionalForces = true;
+      addBoundaryForce(worldWidth / 2, boundaryForceSize / 2, boundaryForceSize, worldWidth, (3 * Math.PI) / 2, BoundaryForce.TOP, directionalForces);
+    }
+    if (!hasGivenBoundaryForce(BoundaryForce.BOTTOM, directionalForces)) {
+      addedDirectionalForces = true;
+      addBoundaryForce(
+        worldWidth / 2,
+        worldHeight - boundaryForceSize / 2,
+        boundaryForceSize,
+        worldWidth,
+        Math.PI / 2,
+        BoundaryForce.BOTTOM,
+        directionalForces
+      );
     }
     let force = new ForceArea(
       "force-" + Math.floor(Math.random() * 10000),
@@ -306,8 +363,6 @@ export function generateDirectionalForces(worldWidth, worldHeight, colors) {
       ForceType.DIRECTIONAL,
       420 + Math.floor((Math.random() - 1) * 300),
       600 + Math.floor((Math.random() - 1) * 300)
-      // 420 + Math.floor((Math.random() - 1) * 0),
-      // 600 + Math.floor((Math.random() - 1) * 0)
     );
 
     forces.push(force);
@@ -328,6 +383,17 @@ export function generateDirectionalForces(worldWidth, worldHeight, colors) {
       forces.splice(index, 1);
     }
   }
+}
+
+function addBoundaryForce(x, y, width, height, angle, id, directionalForces) {
+  let force = new ForceArea(id, x, y, 1.2, 10, 200, true, "blue", null, 0, angle, ForceType.DIRECTIONAL, width, height);
+  forces.push(force);
+  directionalForces.push(force);
+}
+
+function hasGivenBoundaryForce(id, boundaryForces) {
+  // Use the some() method to check if any force meets the condition
+  return boundaryForces.some((force) => force.id.startsWith(id));
 }
 
 export function checkPowerupCollision(playerToCheck, globalPowerUps) {
@@ -360,27 +426,43 @@ export function checkPowerupCollision(playerToCheck, globalPowerUps) {
 //todo more generic entity based collision function, maybe each entity has its own action upon collision
 export function checkMineCollision(playerToCheck, mines) {
   for (let i = 0; i < mines.length; i++) {
-    let dx = playerToCheck.x - mines[i].x;
-    let dy = playerToCheck.y - mines[i].y;
-    let distance = Math.sqrt(dx * dx + dy * dy);
+    let mine = mines[i];
 
-    if (distance < 10 * shipScale + mines[i].radius) {
+    if (mineCollided(mine, playerToCheck)) {
       // assuming the radius of ship is 10 - todo update for better hitbox on ship
-      if (playerToCheck.isVulnerable() && mines[i].hitFrames == -1) {
-        playerToCheck.gotHit("a mine");
-        mines[i].hitFrames = 2;
+      if (playerToCheck.isVulnerable() && mine.hitFrames == -1 && (mine.playerId == "" || mine.playerId != playerToCheck.id)) {
+        if (mine.mineType == MineType.REGULAR) {
+          playerToCheck.gotHit("a mine");
+        } else {
+          let mineOwner = otherPlayers.find((otherPlayer) => otherPlayer.id == mine.playerId);
+          if (!mineOwner) {
+            mineOwner = bots.find((bot) => bot.id == mine.playerId);
+          }
+          if (!mineOwner) {
+            if (player.id == mine.playerId) {
+              mineOwner = player;
+            }
+          }
+          if (mineOwner) {
+            playerToCheck.gotHit(mineOwner.name);
+            mineOwner.hitOtherPlayer(playerToCheck);
+          } else {
+            playerToCheck.gotHit("a mine");
+          }
+        }
+        mine.hitFrames = 2;
         // mines.splice(i, 1);
       }
       // if (playerToCheck.invincibleTimer > 0 && !playerToCheck.isInSpawnProtectionTime() && mines[i].hitFrames == -1) {
       //if invincible ignore spawn protection
-      if (playerToCheck.isInvincible() && mines[i].hitFrames == -1) {
+      if (playerToCheck.isInvincible() && mine.hitFrames == -1 && (mine.playerId == "" || mine.playerId != playerToCheck.id)) {
         if (playerToCheck.invincibleTimer > 115) {
           playerToCheck.setInvincibleTimer(playerToCheck.invincibleTimer - 100);
         } else {
           //always leave a little bit of time to tick away (but don't increase if time already ticked nearly away)
           playerToCheck.setInvincibleTimer(Math.min(playerToCheck.invincibleTimer, 15));
         }
-        mines[i].hitFrames = 2;
+        mine.hitFrames = 2;
         // mines.splice(i, 1);
       }
       // sendPowerups(globalPowerUps);
@@ -393,6 +475,80 @@ export function checkMineCollision(playerToCheck, mines) {
       break; // exit the loop to avoid possible index errors - does that mean we can only register 1 collection per tick? if so we could simply schedule the removal of collected until after this loop
     }
   }
+}
+
+// function mineCollided(mine, playerToCheck) {
+//   let collision = false;
+//   const relativeX = playerToCheck.x - mine.x;
+//   const relativeY = playerToCheck.y - mine.y;
+
+//   if (mine.mineType == MineType.REGULAR) {
+//     // Collision detection for regular mines (circular hitbox)
+//     const distance = Math.sqrt(relativeX * relativeX + relativeY * relativeY);
+//     if (distance < 10 * shipScale + mine.radius) {
+//       collision = true;
+//     }
+//   } else if (mine.mineType == MineType.TRAIL) {
+//     // Collision detection for trail mines (sausage-shaped hitbox)
+
+//     // Calculate the ship's position in local coordinates of the mine
+//     const localX = relativeX * Math.cos(-mine.angle) - relativeY * Math.sin(-mine.angle);
+//     const localY = relativeX * Math.sin(-mine.angle) + relativeY * Math.cos(-mine.angle);
+
+//     // Calculate half of the trailLength and half of the trailWidth
+//     const halfTrailLength = mine.length / 2;
+//     const halfTrailWidth = mine.width / 2;
+
+//     // Check if the player is within the bounds of the circles
+//     const inCircle1 = localX * localX + (localY + halfTrailLength) * (localY + halfTrailLength) < halfTrailWidth * halfTrailWidth;
+//     const inCircle2 = localX * localX + (localY - halfTrailLength) * (localY - halfTrailLength) < halfTrailWidth * halfTrailWidth;
+
+//     // Check if the player is within the bounds of the rectangle
+//     const inRectangle = Math.abs(localX) < halfTrailWidth && Math.abs(localY) < halfTrailLength;
+
+//     // If the player is within any of the shapes, there is a collision
+//     if (inCircle1 || inCircle2 || inRectangle) {
+//       collision = true;
+//     }
+//   }
+
+//   return collision;
+// }
+
+function mineCollided(mine, playerToCheck) {
+  let collision = false;
+  const relativeX = playerToCheck.x - mine.x;
+  const relativeY = playerToCheck.y - mine.y;
+
+  if (mine.mineType == MineType.REGULAR) {
+    // Same as before, no changes needed
+    const distance = Math.sqrt(relativeX * relativeX + relativeY * relativeY);
+    if (distance < 10 * shipScale + mine.radius) {
+      collision = true;
+    }
+  } else if (mine.mineType == MineType.TRAIL) {
+    // Calculate the ship's position in local coordinates of the mine
+    const localX = relativeX * Math.cos(-mine.angle) - relativeY * Math.sin(-mine.angle);
+    const localY = relativeX * Math.sin(-mine.angle) + relativeY * Math.cos(-mine.angle);
+
+    // Calculate half of the trailLength and half of the trailWidth
+    const halfTrailLength = mine.length / 2;
+    const halfTrailWidth = mine.width / 2;
+
+    // Check if the player is within the bounds of the end circles
+    const inCircle1 = localX * localX + (localY - halfTrailLength) * (localY - halfTrailLength) < halfTrailWidth * halfTrailWidth;
+    const inCircle2 = localX * localX + (localY + halfTrailLength) * (localY + halfTrailLength) < halfTrailWidth * halfTrailWidth;
+
+    // Check if the player is within the bounds of the rectangle
+    const inRectangle = Math.abs(localX) <= halfTrailWidth && Math.abs(localY) <= halfTrailLength;
+
+    // If the player is within any of the shapes, there is a collision
+    if (inCircle1 || inCircle2 || inRectangle) {
+      collision = true;
+    }
+  }
+
+  return collision;
 }
 
 export function checkPlayerCollision(playerToCheck, allPlayers) {
@@ -431,9 +587,9 @@ function handlePlayerHit(playerOne, playerTwo) {
     if (playerOne.isTangible()) {
       playerTwo.gotHit(playerOne.name);
     }
-    if (playerTwo.isBot) {
-      playerTwo.delayReset(botRespawnDelay, true, true);
-    }
+    // if (playerTwo.isBot) {
+    //   playerTwo.delayReset(botRespawnDelay, true, true);
+    // }
   }
   if (playerTwo.isInvincible() && playerOne.isVulnerable()) {
     playerTwo.hitOtherPlayer(playerOne);
@@ -574,9 +730,39 @@ export function updateEnemies(deltaTime) {
   // Update the positions, velocities, etc. of the enemies, create and track forces
   //todo sync forces to deltaTime... could the level of force be linked?
   //or could we get away with only creating new force if old one doesn't exist?
-  for (let mine of mines) {
+  // Remove mines with hit frames that have expired.
+  for (let i = mines.length - 1; i >= 0; i--) {
+    let mine = mines[i];
     mine.createForce();
+    if (mine.hitFrames < -1) {
+      // in "initialising" state - do this first before potential splicing
+      mine.hitFrames++;
+    }
+    if (mine.hitFrames >= 0) {
+      mine.hitFrames--;
+      // If hit frames have expired, remove the mine.
+      if (mine.hitFrames < 0) {
+        if (isPlayerMasterPeer(player)) {
+          sendRemoveEntityUpdate("removeMines", [mine]);
+        }
+        mines.splice(i, 1);
+      }
+    }
+
+    if (mine.mineType == MineType.TRAIL) {
+      if (mine.duration > 0) {
+        mine.duration--;
+      }
+      if (mine.duration <= 0) {
+        if (isPlayerMasterPeer(player)) {
+          //trying letting trails ride without syncing
+          //sendRemoveEntityUpdate("removeMines", [mine]);
+        }
+        mines.splice(i, 1);
+      }
+    }
   }
+
   for (let powerUp of globalPowerUps) {
     powerUp.createForce();
   }
@@ -598,12 +784,12 @@ export function updateEnemies(deltaTime) {
   }
 }
 
-export function updateOtherPlayers(deltaTime) {
+export function updateOtherPlayers(deltaTime, mines) {
   otherPlayers.forEach((otherPlayer, index) => {
     // Check if player is an instance of the Player class
     if (otherPlayer != null && otherPlayer instanceof Player) {
       if (otherPlayer.name != "") {
-        otherPlayer.updateTick(deltaTime);
+        otherPlayer.updateTick(deltaTime, mines);
       }
     } else {
       console.log("otherPlayer is not an instance of the Player class. Reinitializing...");
@@ -627,7 +813,7 @@ export function updateOtherPlayers(deltaTime) {
   });
 }
 
-export function updateBots(deltaTime) {
+export function updateBots(deltaTime, mines) {
   bots.forEach((bot, index) => {
     // Check if bot is an instance of the Bot class
     if (bot == null || !(bot instanceof Bot)) {
@@ -657,7 +843,7 @@ export function updateBots(deltaTime) {
       if (isPlayerMasterPeer(player)) {
         bot.updateBotInputs();
       }
-      bot.updateTick(deltaTime);
+      bot.updateTick(deltaTime, mines);
     }
   });
 }
@@ -680,16 +866,16 @@ export function calculateAngle(player) {
   return Math.atan2(player.mousePosY - player.y, player.mousePosX - player.x);
 }
 
-export function masterUpdateGame(player, globalPowerUps, otherPlayers, bots, deltaTime) {
+export function masterUpdateGame(player, globalPowerUps, otherPlayers, bots, mines, deltaTime) {
   //this isn't synced between peers
   setGameTimer(gameTimer + 1);
   if (!isPlayerMasterPeer(player)) {
     setTimeSinceMessageFromMaster(timeSinceMessageFromMaster + 1);
   }
-  player.updateTick(deltaTime);
+  player.updateTick(deltaTime, mines);
   // createBots(worldWidth,worldHeight,colors);
-  updateBots(deltaTime);
-  updateOtherPlayers(deltaTime);
+  updateBots(deltaTime, mines);
+  updateOtherPlayers(deltaTime, mines);
   updateEnemies(deltaTime);
   updatePowerups(deltaTime);
 
@@ -704,24 +890,6 @@ export function masterUpdateGame(player, globalPowerUps, otherPlayers, bots, del
   bots.forEach((bot) => {
     detectCollisions(bot, globalPowerUps, bots, otherPlayers, forces);
   });
-
-  // Remove mines with hit frames that have expired.
-  for (let i = mines.length - 1; i >= 0; i--) {
-    if (mines[i].hitFrames < -1) {
-      // in "initialising" state - do this first before potential splicing
-      mines[i].hitFrames++;
-    }
-    if (mines[i].hitFrames >= 0) {
-      mines[i].hitFrames--;
-      // If hit frames have expired, remove the mine.
-      if (mines[i].hitFrames < 0) {
-        if (isPlayerMasterPeer(player)) {
-          sendRemoveEntityUpdate("removeMines", [mines[i]]);
-        }
-        mines.splice(i, 1);
-      }
-    }
-  }
 
   // Remove PowerUps with hit frames that have expired.
   for (let i = globalPowerUps.length - 1; i >= 0; i--) {

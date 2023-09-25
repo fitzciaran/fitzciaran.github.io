@@ -16,7 +16,8 @@ import {
   wrappedResolveConflicts,
   timeSinceMessageFromMaster,
   setTimeSinceMessageFromMaster,
-  setMasterPeerId,chooseNewMasterPeer
+  setMasterPeerId,
+  chooseNewMasterPeer,
 } from "./connectionHandlers.js";
 import { sendPlayerStates } from "./sendData.js";
 import { setupCanvas, setupSpikeyBallPoints } from "./drawingUtils.js";
@@ -48,7 +49,8 @@ export function setGameTimer(newTime) {
   gameTimer = newTime;
 }
 export const { canvas, ctx } = setupCanvas();
-export const worldDimensions = { width: 4200, height: 2400 };
+// export const worldDimensions = { width: 4200, height: 2400 };
+export const worldDimensions = { width: 7200, height: 5400 };
 export const colors = [
   "red",
   "blue",
@@ -65,6 +67,7 @@ export const colors = [
   "maroon",
   "crimson",
 ];
+export const  selectedColors = [];
 
 export const acceleration = 0.25;
 
@@ -157,14 +160,14 @@ function updateGame(deltaTime, playerActive) {
   //todo work out what to do here, do we do this for every local or not?
   if (true || playerActive || isPlayerMasterPeer(player)) {
     //dealing with error state, not sure best approach yet
-    if(player.name == "" && player.pilot == ""){
+    if (player.name == "" && player.pilot == "") {
       setGameState(GameState.INTRO);
       // return;
     }
     //todo might have to uncomment the condition
     // if (isPlayerMasterPeer(player)) {
     // This peer is the master, so it runs the game logic for shared objects
-    masterUpdateGame(player, globalPowerUps, otherPlayers, bots, deltaTime);
+    masterUpdateGame(player, globalPowerUps, otherPlayers, bots, mines,deltaTime);
     // }
   }
 
@@ -200,8 +203,7 @@ function updateGame(deltaTime, playerActive) {
     // setTimeout(() => attemptConnections(player, otherPlayers, globalPowerUps), 50);
     // //what about "connections" how is connections and connectedPeers synced?
     setMasterPeerId(chooseNewMasterPeer(player, otherPlayers));
-   
-   
+
     // wrappedResolveConflicts(player, otherPlayers, globalPowerUps);
   }
 }
@@ -231,15 +233,22 @@ function camFollowPlayer(deltaTime) {
   if (playerToSpectate != null) {
     recentlyActive = playerToSpectate.howLongSinceActive() < 1000;
   }
-  if (playerToSpectate != null && inPlayersList && (recentlyActive || playerToSpectate.isBot) && !playerToSpectate.isDead && playerToSpectate.isPlaying) {
+  if (
+    playerToSpectate != null &&
+    inPlayersList &&
+    (recentlyActive || playerToSpectate.isBot) &&
+    !playerToSpectate.isDead &&
+    playerToSpectate.isPlaying
+  ) {
     updateCamera(playerToSpectate, deltaTime);
   } else {
     for (let candidate of allPlayers) {
       if (candidate != null && candidate.id != player.id && (candidate.howLongSinceActive() < 1000 || candidate.isBot)) {
-        // if (candidate != null && !candidate.isDead && candidate.id != player.id && (candidate.howLongSinceActive() < 5000)) {
-        playerToSpectate = candidate;
-        updateCamera(playerToSpectate, deltaTime);
-        break; // Exit the loop once a valid playerToSpectate is found
+        if (!candidate.isDead && candidate.isPlaying) {
+          playerToSpectate = candidate;
+          updateCamera(playerToSpectate, deltaTime);
+          break; // Exit the loop once a valid playerToSpectate is found
+        }
       }
     }
   }
@@ -340,7 +349,7 @@ export function setGameState(newState) {
     setupWinStateEventListeners(window, canvas);
     if (isPlayerMasterPeer(player)) {
       //do we need this special send?
-      sendPlayerStates(player, true, true,true);
+      sendPlayerStates(player, true, true, true);
     }
   }
 
@@ -359,7 +368,7 @@ export function setGameState(newState) {
     player.resetState(true, true);
     player.isPlaying = true;
     player.setIsDead(false);
-    sendPlayerStates(player, isPlayerMasterPeer(player), true,true);
+    sendPlayerStates(player, isPlayerMasterPeer(player), true, true);
 
     // setTimeout(() => connectToPeers(player, otherPlayers, globalPowerUps), 1000);
     removePilotsEventListeners(canvas);
@@ -429,7 +438,7 @@ window.addEventListener("load", function () {
   setTimeout(() => generatePowerups(globalPowerUps, worldDimensions.width, worldDimensions.height, colors), 270);
   setTimeout(() => generateMines(worldDimensions.width, worldDimensions.height, colors), 300);
   setTimeout(() => generateDirectionalForces(worldDimensions.width, worldDimensions.height, colors), 320);
-  
+
   setInterval(() => createBots(worldDimensions.width, worldDimensions.height, colors), 3000);
   setInterval(() => generatePowerups(globalPowerUps, worldDimensions.width, worldDimensions.height, colors), 3303);
   setInterval(() => generateMines(worldDimensions.width, worldDimensions.height, colors), 3607);

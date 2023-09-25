@@ -395,3 +395,4 @@ export function drawNameCursor(canvas, ctx, name, x, y) {
   ctx.fillRect(x + 0.5, y, 2, 20);
   //ctx.fillStyle = "pink";
 }
+
