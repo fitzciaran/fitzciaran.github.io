@@ -10,9 +10,19 @@ import {
   setMasterPeerId,
 } from "./connectionHandlers.js";
 import { setEndGameMessage } from "./gameLogic.js";
-import { forces, setForces, createMineFromObject, createForceFromObject, createPowerUpFromObject,createEffectFromObject, effects, setEffects } from "./entities.js";
+import {
+  forces,
+  setForces,
+  createMineFromObject,
+  createForceFromObject,
+  createPowerUpFromObject,
+  createEffectFromObject,
+  effects,
+  setEffects,
+  MineType,
+} from "./entities.js";
 import { createBotFromObject, Player } from "./player.js";
-import { differsFrom, findForceById, findBotById, findMineById, findPowerUpById,findEffectById } from "./gameUtils.js";
+import { differsFrom, findForceById, findBotById, findMineById, findPowerUpById, findEffectById } from "./gameUtils.js";
 import { sendPlayerStates, sendEntitiesState } from "./sendData.js";
 const interpFactor = 0.05;
 const threshold = 50;
@@ -84,7 +94,7 @@ export function handleData(player, otherPlayers, globalPowerUps, data) {
 
   updateMines(data, mines);
   removeMines(data, mines);
-  
+
   updateEffects(data, effects);
   removeEffects(data, effects);
 
@@ -215,7 +225,6 @@ function updateOwnPlayerData(player, data) {
     }
     // setGameOverText(player);
     player.updateKilledAndKilledByLists(player.hitBy);
-   
   }
   if (data.hasOwnProperty("comboScaler")) {
     player.setComboScaler(data.comboScaler);
@@ -241,12 +250,10 @@ function updateOwnPlayerData(player, data) {
   if (data.hasOwnProperty("killed")) {
     player.killed = data.killed;
     player.updateKilledAndKilledByLists(player.hitBy);
-   
   }
   if (data.hasOwnProperty("killedBy")) {
     player.killedBy = data.killedBy;
     player.updateKilledAndKilledByLists(player.hitBy);
-   
   }
   if (data.hasOwnProperty("invincibleTimer")) {
     player.setInvincibleTimer(data.invincibleTimer);
@@ -359,6 +366,14 @@ function updateMines(data, mines) {
         localMine.color = receivedMine.color;
         localMine.mineType = receivedMine.mineType;
         localMine.playerId = receivedMine.playerId;
+        if (localMine.mineType == MineType.FREE_MINE || localMine.mineType == MineType.TRAIL) {
+          if (receivedMine.angle) {
+            localMine.angle = receivedMine.angle;
+          }
+          if (localMine.mineType == MineType.FREE_MINE) {
+            if (receivedMine.points && receivedMine.points.length > 0) localMine.points = receivedMine.points;
+          }
+        }
       } else {
         // If the local mine doesn't exist, add it to the mines array
         mines.push(createMineFromObject(receivedMine));
@@ -367,7 +382,9 @@ function updateMines(data, mines) {
   }
   if (data.fullSend && data.mines) {
     // Create a new mines array by filtering only the mines that exist in data.mines
-    const updatedMines = mines.filter((mineToCheck) => /^trail-/.test(mineToCheck.id) || mineToCheck.id == null || data.mines.some((dataMine) => dataMine.id === mineToCheck.id));
+    const updatedMines = mines.filter(
+      (mineToCheck) => /^trail-/.test(mineToCheck.id) || mineToCheck.id == null || data.mines.some((dataMine) => dataMine.id === mineToCheck.id)
+    );
 
     // Update the mines array once
     setMines(updatedMines);
@@ -422,13 +439,14 @@ function updateEffects(data, effects) {
   }
   if (data.fullSend && data.effects) {
     // Create a new effects array by filtering only the effects that exist in data.effects
-    const updatedEffects = effects.filter((effectToCheck) => effectToCheck.id == null || data.effects.some((dataEffect) => dataEffect.id === effectToCheck.id));
+    const updatedEffects = effects.filter(
+      (effectToCheck) => effectToCheck.id == null || data.effects.some((dataEffect) => dataEffect.id === effectToCheck.id)
+    );
 
     // Update the effects array once
     setEffects(updatedEffects);
   }
 }
-
 
 function removeEffects(data, effects) {
   if (data.removeEffects && data.removeEffects.length > 0) {
@@ -514,7 +532,7 @@ function updateBots(data, bots) {
         localBot.ticksSincePowerUpCollection = receivedBot.ticksSincePowerUpCollection;
         localBot.timeSinceSpawned = receivedBot.timeSinceSpawned;
         localBot.botState = receivedBot.botState;
-        localBot.randomTarget = receivedBot.randomTarget;
+        localBot.target = receivedBot.target;
         localBot.followingPlayerID = receivedBot.followingPlayerID;
         localBot.previousAngleDifference = receivedBot.previousAngleDifference;
         localBot.previousTurnDirection = receivedBot.previousTurnDirection;

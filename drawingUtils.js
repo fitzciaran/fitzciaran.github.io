@@ -292,6 +292,7 @@ export function nameToRGB(colorName) {
     crimson: "rgb(220, 20, 60)",
     white: "rgb(255, 255, 255)",
     gold: "rgb(255,215,0)",
+    orangered: "rgb(255, 69, 0)",
   };
   if (colorName == null) {
     colorName = "blue";

@@ -12,6 +12,7 @@ import {
   selectedColors,
 } from "./main.js";
 import { isPlayerMasterPeer, setTimeSinceMessageFromMaster, timeSinceMessageFromMaster } from "./connectionHandlers.js";
+import { isSpokeCollision } from "./collisionLogic.js";
 import {
   sendPlayerStates,
   sendEntitiesState,
@@ -22,10 +23,11 @@ import {
   sendPowerUpsUpdate,
   sendForcesUpdate,
   sendBotsUpdate,
+  sendEffectsUpdate,
 } from "./sendData.js";
-import { forces, Mine, PowerUp, ForceType, ForceArea, Entity, effects, MineType } from "./entities.js";
+import { forces, Mine, PowerUp, ForceType, ForceArea, Entity, effects, Effect, EffectType, MineType, FreeMine } from "./entities.js";
 import { Player, Bot } from "./player.js";
-import { getRandomUniqueColor } from "./gameUtils.js";
+import { getRandomUniqueColor, findCompleteShape, isPointInsideShape } from "./gameUtils.js";
 
 //if mess with these need to change the collision detection - factor these in
 export const shipScale = 2;
@@ -423,6 +425,24 @@ export function checkPowerupCollision(playerToCheck, globalPowerUps) {
   }
 }
 
+function resolveMineHit(playerToCheck, mine, otherPlayers, bots, player) {
+  let mineOwner = otherPlayers.find((otherPlayer) => otherPlayer.id == mine.playerId);
+  if (!mineOwner) {
+    mineOwner = bots.find((bot) => bot.id == mine.playerId);
+  }
+  if (!mineOwner) {
+    if (player.id == mine.playerId) {
+      mineOwner = player;
+    }
+  }
+  if (mineOwner) {
+    playerToCheck.gotHit(mineOwner.name);
+    mineOwner.hitOtherPlayer(playerToCheck);
+  } else {
+    playerToCheck.gotHit("a mine");
+  }
+}
+
 //todo more generic entity based collision function, maybe each entity has its own action upon collision
 export function checkMineCollision(playerToCheck, mines) {
   for (let i = 0; i < mines.length; i++) {
@@ -434,21 +454,22 @@ export function checkMineCollision(playerToCheck, mines) {
         if (mine.mineType == MineType.REGULAR) {
           playerToCheck.gotHit("a mine");
         } else {
-          let mineOwner = otherPlayers.find((otherPlayer) => otherPlayer.id == mine.playerId);
-          if (!mineOwner) {
-            mineOwner = bots.find((bot) => bot.id == mine.playerId);
-          }
-          if (!mineOwner) {
-            if (player.id == mine.playerId) {
-              mineOwner = player;
-            }
-          }
-          if (mineOwner) {
-            playerToCheck.gotHit(mineOwner.name);
-            mineOwner.hitOtherPlayer(playerToCheck);
-          } else {
-            playerToCheck.gotHit("a mine");
-          }
+          resolveMineHit(playerToCheck, mine, otherPlayers, bots, player);
+          // let mineOwner = otherPlayers.find((otherPlayer) => otherPlayer.id == mine.playerId);
+          // if (!mineOwner) {
+          //   mineOwner = bots.find((bot) => bot.id == mine.playerId);
+          // }
+          // if (!mineOwner) {
+          //   if (player.id == mine.playerId) {
+          //     mineOwner = player;
+          //   }
+          // }
+          // if (mineOwner) {
+          //   playerToCheck.gotHit(mineOwner.name);
+          //   mineOwner.hitOtherPlayer(playerToCheck);
+          // } else {
+          //   playerToCheck.gotHit("a mine");
+          // }
         }
         mine.hitFrames = 2;
         // mines.splice(i, 1);
@@ -457,63 +478,36 @@ export function checkMineCollision(playerToCheck, mines) {
       //if invincible ignore spawn protection
       if (playerToCheck.isInvincible() && mine.hitFrames == -1 && (mine.playerId == "" || mine.playerId != playerToCheck.id)) {
         if (playerToCheck.invincibleTimer > 115) {
-          playerToCheck.setInvincibleTimer(playerToCheck.invincibleTimer - 100);
+          if (mine.mineType == MineType.REGULAR) {
+            playerToCheck.setInvincibleTimer(playerToCheck.invincibleTimer - 100);
+          } else if (mine.mineType == MineType.TRAIL) {
+            playerToCheck.setInvincibleTimer(playerToCheck.invincibleTimer - 30);
+          } else {
+            resolveMineHit(playerToCheck, mine, otherPlayers, bots, player);
+          }
         } else {
           //always leave a little bit of time to tick away (but don't increase if time already ticked nearly away)
           playerToCheck.setInvincibleTimer(Math.min(playerToCheck.invincibleTimer, 15));
         }
         mine.hitFrames = 2;
+        let effectID = Math.floor(Math.random() * 10000);
+
+        let effect = new Effect(effectID, mine.x, mine.y, 50, 30, "OrangeRed", EffectType.EXPLOSION);
+        effects.push(effect);
+        if (isPlayerMasterPeer(player)) {
+          sendEffectsUpdate(true);
+        }
         // mines.splice(i, 1);
       }
       // sendPowerups(globalPowerUps);
       // setMines(mines);
       if (isPlayerMasterPeer(player)) {
-        sendMinesUpdate(false);
+        sendMinesUpdate(true, true);
       }
-      //cf test do we need this looks like yes
-      //sendGameState(globalPowerUps);
-      break; // exit the loop to avoid possible index errors - does that mean we can only register 1 collection per tick? if so we could simply schedule the removal of collected until after this loop
+      // break; // exit the loop to avoid possible index errors - does that mean we can only register 1 collection per tick? if so we could simply schedule the removal of collected until after this loop
     }
   }
 }
-
-// function mineCollided(mine, playerToCheck) {
-//   let collision = false;
-//   const relativeX = playerToCheck.x - mine.x;
-//   const relativeY = playerToCheck.y - mine.y;
-
-//   if (mine.mineType == MineType.REGULAR) {
-//     // Collision detection for regular mines (circular hitbox)
-//     const distance = Math.sqrt(relativeX * relativeX + relativeY * relativeY);
-//     if (distance < 10 * shipScale + mine.radius) {
-//       collision = true;
-//     }
-//   } else if (mine.mineType == MineType.TRAIL) {
-//     // Collision detection for trail mines (sausage-shaped hitbox)
-
-//     // Calculate the ship's position in local coordinates of the mine
-//     const localX = relativeX * Math.cos(-mine.angle) - relativeY * Math.sin(-mine.angle);
-//     const localY = relativeX * Math.sin(-mine.angle) + relativeY * Math.cos(-mine.angle);
-
-//     // Calculate half of the trailLength and half of the trailWidth
-//     const halfTrailLength = mine.length / 2;
-//     const halfTrailWidth = mine.width / 2;
-
-//     // Check if the player is within the bounds of the circles
-//     const inCircle1 = localX * localX + (localY + halfTrailLength) * (localY + halfTrailLength) < halfTrailWidth * halfTrailWidth;
-//     const inCircle2 = localX * localX + (localY - halfTrailLength) * (localY - halfTrailLength) < halfTrailWidth * halfTrailWidth;
-
-//     // Check if the player is within the bounds of the rectangle
-//     const inRectangle = Math.abs(localX) < halfTrailWidth && Math.abs(localY) < halfTrailLength;
-
-//     // If the player is within any of the shapes, there is a collision
-//     if (inCircle1 || inCircle2 || inRectangle) {
-//       collision = true;
-//     }
-//   }
-
-//   return collision;
-// }
 
 function mineCollided(mine, playerToCheck) {
   let collision = false;
@@ -749,7 +743,7 @@ export function updateEnemies(deltaTime) {
       }
     }
 
-    if (mine.mineType == MineType.TRAIL) {
+    if (mine.mineType == MineType.TRAIL || mine.mineType == MineType.FREE_MINE) {
       if (mine.duration > 0) {
         mine.duration--;
       }
@@ -891,42 +885,12 @@ export function masterUpdateGame(player, globalPowerUps, otherPlayers, bots, min
     detectCollisions(bot, globalPowerUps, bots, otherPlayers, forces);
   });
 
-  // Remove PowerUps with hit frames that have expired.
-  for (let i = globalPowerUps.length - 1; i >= 0; i--) {
-    if (globalPowerUps[i].hitFrames < -1) {
-      // in "initialising" state  - do this first before potential splicing
-      globalPowerUps[i].hitFrames++;
-    }
-    if (globalPowerUps[i].hitFrames >= 0) {
-      globalPowerUps[i].hitFrames--;
-      // If hit frames have expired, remove the PowerUps.
-      if (globalPowerUps[i].hitFrames < 0) {
-        if (isPlayerMasterPeer(player)) {
-          sendRemoveEntityUpdate("removePowerUps", [globalPowerUps[i]]);
-        }
-        globalPowerUps.splice(i, 1);
-      }
-    }
-  }
-
-  // Remove effects with durations that have expired.
-  for (let i = effects.length - 1; i >= 0; i--) {
-    if (effects[i].duration >= 0) {
-      effects[i].duration--;
-      if (effects[i].duration < 0) {
-        //remove effect
-        if (isPlayerMasterPeer(player)) {
-          sendRemoveEntityUpdate("removeEffect", [effects[i]]);
-        }
-        effects.splice(i, 1);
-      }
-    }
-  }
-
+  // Call the main function to execute the refactored code
+  ProcessTrailShapesAllPlayers(player, otherPlayers, mines, effects, globalPowerUps);
+  removeExpiredPowerUps(globalPowerUps, player);
+  removeExpiredEffects(effects, player);
   basicAnimationTimer++;
 
-  //...not sending game state of otherplayers...hmm?
-  //trying out not sending updates every frame
   if (isPlayerMasterPeer(player)) {
     if (gameTimer % 2 == 1) {
       sendBotEntitiesUpdate();
@@ -938,6 +902,132 @@ export function masterUpdateGame(player, globalPowerUps, otherPlayers, bots, min
   }
   if (!player.isDead && gameTimer % 1 == 0) {
     sendPlayerStates(player, isPlayerMasterPeer(player));
+  }
+}
+
+function ProcessTrailShapesAllPlayers(player, otherPlayers, mines, effects, globalPowerUps) {
+  let allPlayers = [...bots, ...otherPlayers, player];
+  for (let candidatePlayer of allPlayers) {
+    ProcessTrailShapes(candidatePlayer, allPlayers);
+  }
+}
+
+function ProcessTrailShapes(candidatePlayer, allPlayers) {
+  const shape = findCompleteShape(candidatePlayer.id, mines, 30000);
+
+  if (shape && shape.shapePath) {
+    let freeMine = createFreeMine(candidatePlayer, shape);
+    handleFreeMineSpawn(candidatePlayer.id, mines, freeMine, shape, allPlayers);
+    createEffects(shape.shapePath, effects);
+    if (isPlayerMasterPeer(player)) {
+      sendMinesUpdate();
+    }
+  }
+}
+
+// Function to create a FreeMine
+function createFreeMine(player, shape) {
+  let freeMine = new FreeMine(
+    "trail-" + Math.floor(Math.random() * 10000),
+    shape.center.x,
+    shape.center.y,
+    40,
+    70,
+    player.color,
+    0,
+    MineType.FREE_MINE,
+    -1,
+    player.id,
+    0,
+    shape.shapePath
+  );
+  freeMine.spokeWidth = shape.spokeWidth;
+  freeMine.spokeLength = shape.spokeLength;
+  return freeMine;
+}
+function createEffects(shapePath, effects) {
+  for (let point of shapePath) {
+    let effect = new Effect("effect-" + Math.floor(Math.random() * 10000), point.x, point.y, 40, 30, "OrangeRed", EffectType.EXPLOSION);
+    effects.push(effect);
+  }
+}
+// Function to set mines and remove overlapping mines
+function handleFreeMineSpawn(playerId, mines, freeMine, shape, allPlayers) {
+  //currently we remove all players trail mines if they make a shape
+  setMines(mines.filter((mine) => mine.playerId != playerId));
+  mines.push(freeMine);
+
+  for (let point of shape.shapePath) {
+    let effect = new Effect("effect-" + Math.floor(Math.random() * 10000), point.x, point.y, 40, 30, "OrangeRed", EffectType.EXPLOSION);
+    effects.push(effect);
+  }
+
+  //destroy mines that overlap
+  for (let mine of mines) {
+    if (mine.mineType != MineType.FREE_MINE) {
+      if (
+        isPointInsideShape(shape.shapePath, { x: mine.x, y: mine.y }) ||
+        isSpokeCollision(mine, mine.radius + 10, freeMine.x, freeMine.y, 0, shape.spokeLength, shape.spokeWidth + 5)
+      ) {
+        mine.hitFrames = 5;
+      }
+    }
+  }
+  //kill players caught
+  for (let candidatePlayer of allPlayers) {
+    if (candidatePlayer.id == playerId) {
+      //don't hit the player who created this
+      continue;
+    }
+    if (
+      isPointInsideShape(shape.shapePath, { x: candidatePlayer.x, y: candidatePlayer.y }) ||
+      isSpokeCollision(candidatePlayer, 10, freeMine.x, freeMine.y, 0, shape.spokeLength, shape.spokeWidth + 5)
+    ) {
+      let owner = allPlayers.find((player) => player.id == playerId);
+      let name = "";
+      if (owner && owner.name) {
+        name = owner.name;
+      }
+      if (candidatePlayer.isVulnerable()) {
+        candidatePlayer.gotHit(name);
+        if (owner) {
+          owner.hitOtherPlayer(candidatePlayer);
+        }
+      }
+    }
+  }
+}
+
+// Function to remove expired power-ups
+function removeExpiredPowerUps(globalPowerUps, player) {
+  for (let i = globalPowerUps.length - 1; i >= 0; i--) {
+    if (globalPowerUps[i].hitFrames < -1) {
+      globalPowerUps[i].hitFrames++;
+    }
+    if (globalPowerUps[i].hitFrames >= 0) {
+      globalPowerUps[i].hitFrames--;
+      if (globalPowerUps[i].hitFrames < 0) {
+        if (isPlayerMasterPeer(player)) {
+          sendRemoveEntityUpdate("removePowerUps", [globalPowerUps[i]]);
+        }
+        globalPowerUps.splice(i, 1);
+      }
+    }
+  }
+}
+
+// Function to remove expired effects
+function removeExpiredEffects(effects, player) {
+  for (let i = effects.length - 1; i >= 0; i--) {
+    if (effects[i].duration >= 0) {
+      effects[i].duration--;
+      if (effects[i].duration < 0) {
+        if (isPlayerMasterPeer(player)) {
+          sendRemoveEntityUpdate("removeEffect", [effects[i]]);
+        }
+        effects.splice(i, 1);
+      }
+    }
   }
 }
 

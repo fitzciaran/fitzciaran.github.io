@@ -1,4 +1,4 @@
-import { maxInvincibilityTime, maxSpecialMeter,pilots } from "./gameLogic.js";
+import { maxInvincibilityTime, maxSpecialMeter, pilots } from "./gameLogic.js";
 import { isPlayerMasterPeer, timeSinceAnyMessageRecieved, timeSinceMessageFromMaster } from "./connectionHandlers.js";
 import { BotState, Player } from "./player.js";
 import { executionTime } from "./main.js";
@@ -37,15 +37,15 @@ export function renderDebugInfo(ctx, player, bots) {
     if (bot.botState == BotState.FOLLOW_PLAYER) {
       botInfo = `${bot.name} state: ${bot.botState} following: ${bot.followingPlayerID} `;
     } else {
-      botInfo = `${bot.name} state: ${bot.botState} aiming: ${bot.randomTarget.x},${bot.randomTarget.y} `;
+      botInfo = `${bot.name} state: ${bot.botState} aiming: ${bot.target.x},${bot.target.y} `;
     }
     ctx.fillText(botInfo, 958, topGap + gap * index - textHeight);
   });
 }
 
-export function drawFilledGauge(ctx, centerX, bottomY, gaugeWidth = 200, gaugeHeight = 50, borderWidth = 7, filled, total,color="#ff9900") {
+export function drawFilledGauge(ctx, centerX, bottomY, gaugeWidth = 200, gaugeHeight = 50, borderWidth = 7, filled, total, color = "#ff9900") {
   const fillPercent = filled / total;
-  drawGauge(ctx, centerX, bottomY, fillPercent,color, gaugeWidth, gaugeHeight, borderWidth);
+  drawGauge(ctx, centerX, bottomY, fillPercent, color, gaugeWidth, gaugeHeight, borderWidth);
 }
 
 export function drawInvincibilityGauge(ctx, player, centerX, bottomY, gaugeWidth = 200, gaugeHeight = 50, borderWidth = 7) {
@@ -133,7 +133,7 @@ export function drawPowerupLevels(ctx, player, otherPlayers, bots) {
     if (!bot.name) {
       // console.log("unnamed other player");
     }
-    if(bot.isDead){
+    if (bot.isDead) {
       return;
     }
     let playerName = bot.name || "Unknown";

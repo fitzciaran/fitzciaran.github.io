@@ -450,6 +450,147 @@ function drawShip(ctx, camX, camY, player, points) {
   }
 }
 
+function drawRegularMine(ctx, centerX, centerY, camX, camY, angle, mineScale, points, color) {
+  ctx.beginPath();
+  let rotatedPoint = rotateAndScalePoint(points[0].x, points[0].y, angle, mineScale);
+  ctx.moveTo(centerX - camX + rotatedPoint.x, centerY - camY + rotatedPoint.y);
+
+  for (let i = 1; i < points.length; i++) {
+    rotatedPoint = rotateAndScalePoint(points[i].x, points[i].y, angle, mineScale);
+    ctx.lineTo(centerX - camX + rotatedPoint.x, centerY - camY + rotatedPoint.y);
+  }
+
+  ctx.stroke();
+}
+
+function drawMineShape(ctx, camX, camY, points, color) {
+  if (points == null) {
+    console.log("no points passed to mine shape draw");
+    return;
+  }
+  ctx.beginPath();
+
+  for (let i = 0; i < points.length; i++) {
+    const { x, y } = points[i];
+    const moveToX = x - camX;
+    const moveToY = y - camY;
+    ctx.lineTo(moveToX, moveToY);
+  }
+
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill();
+}
+
+function drawSpoke(ctx, centerXScreenCoord, centerYScreenCoord, angleRadians, spokeLength, spokeWidth) {
+  ctx.lineWidth = spokeWidth;
+  ctx.beginPath();
+  ctx.moveTo(centerXScreenCoord, centerYScreenCoord);
+
+  const spokeEndX = centerXScreenCoord + spokeLength * Math.cos(angleRadians);
+  const spokeEndY = centerYScreenCoord + spokeLength * Math.sin(angleRadians);
+
+  ctx.lineTo(spokeEndX, spokeEndY);
+
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(spokeEndX, spokeEndY, ctx.lineWidth / 2, 0, 2 * Math.PI, false);
+  ctx.fill();
+}
+
+function drawExplosion(ctx, camX, camY, explosionEffect) {
+  const currentTime = Date.now();
+  const elapsedTime = currentTime - explosionEffect.startTime;
+  const animationDuration = explosionEffect.duration;
+  const numFrames = 10;
+  const frameDuration = animationDuration / numFrames;
+  const frameIndex = Math.floor(elapsedTime / frameDuration);
+  const maxRadius = explosionEffect.maxRadius;
+
+  if (frameIndex < numFrames) {
+    const currentRadius = (frameIndex / numFrames) * maxRadius;
+
+    ctx.beginPath();
+    ctx.arc(explosionEffect.x - camX, explosionEffect.y - camY, currentRadius, 0, Math.PI * 2);
+    ctx.fillStyle = explosionEffect.color;
+    ctx.fill();
+
+    ctx.strokeStyle = "rgba(255, 0, 0, 0.5)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+}
+
+function drawFreeMine(ctx, camX, camY, angle, mineScale, mine, color, centerX, centerY, animationFrame = 0, explosionEffect = false) {
+  let points = mine.points;
+  let spokeWidth = mine.spokeWidth;
+  let spokeLength = mine.spokeLength;
+  if (!explosionEffect) {
+    const centerXScreenCoord = centerX - camX;
+    const centerYScreenCoord = centerY - camY;
+    drawMineShape(ctx, camX, camY, points, color);
+
+    for (let angleDegrees = 0; angleDegrees < 360; angleDegrees += 45) {
+      const angleRadians = (angleDegrees + angle) * (Math.PI / 180);
+      drawSpoke(ctx, centerXScreenCoord, centerYScreenCoord, angleRadians, spokeLength, spokeWidth);
+    }
+  } else {
+    drawExplosion(ctx, camX, camY, explosionEffect);
+  }
+}
+
+function drawTrailMine(ctx, centerX, centerY, camX, camY, angle, mineScale, mine) {
+  ctx.fillStyle = mine.color;
+  if (mine.duration < 10) {
+    ctx.fillStyle = getComplementaryColor(mine.color);
+  }
+
+  const trailLength = mine.length;
+  const trailWidth = mine.width;
+
+  const trailX = centerX - camX;
+  const trailY = centerY - camY;
+
+  // Apply the rotation transformation
+  ctx.translate(trailX, trailY);
+  ctx.rotate(angle);
+
+  // Calculate half of the trailLength
+  const halfTrailLength = trailLength / 2;
+  const halfTrailWidth = trailWidth / 2;
+
+  // Draw the left circle (start of the sausage)
+  ctx.arc(0, -halfTrailLength, halfTrailWidth, 0, Math.PI * 2);
+
+  // Draw the rectangle (sausage body)
+  ctx.rect(-halfTrailWidth, -trailLength / 2, trailWidth, trailLength);
+
+  // Draw the right circle (end of the sausage)
+  ctx.arc(0, -halfTrailLength + trailLength, halfTrailWidth, 0, Math.PI * 2);
+
+  ctx.fill();
+
+  // Save the current global composite operation
+  const prevGlobalCompositeOperation = ctx.globalCompositeOperation;
+  // Set the global composite operation to 'source-over' to blend the new content
+  ctx.globalCompositeOperation = "source-over";
+  // Create a radial gradient to simulate the vapor trail with your color
+  const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, halfTrailWidth);
+  let rgbColor = nameToRGBFullFormat(mine.color);
+  gradient.addColorStop(0, `rgba(${rgbColor.r}, ${rgbColor.g}, ${rgbColor.b}, 1)`); // Inner part of the trail
+  gradient.addColorStop(1, `rgba(${rgbColor.r}, ${rgbColor.g}, ${rgbColor.b}, 0.5)`); // Outer part of the trail
+
+  ctx.fillStyle = `rgba(${rgbColor.r}, ${rgbColor.g}, ${rgbColor.b}, 0.1)`;
+  // Draw the rectangle (sausage body)
+  ctx.rect(-halfTrailWidth - 20, -trailLength / 2 - 20, trailWidth + 40, trailLength + 40);
+  ctx.fill();
+  // Reset the rotation and translation
+  ctx.rotate(-angle);
+  ctx.translate(-trailX, -trailY);
+  // Restore the previous global composite operation
+  ctx.globalCompositeOperation = prevGlobalCompositeOperation;
+}
+
 export function drawMine(ctx, camX, camY, mine, points) {
   let centerX = mine.x;
   let centerY = mine.y;
@@ -462,33 +603,30 @@ export function drawMine(ctx, camX, camY, mine, points) {
   const currentTime = Date.now();
   const elapsedTime = currentTime - mine.starTransitionStartTime;
   const transitionDuration = 50;
-  const animatationFrame = elapsedTime % transitionDuration;
-  // if (mine.hitFrames < -1) {
-  //   if (!mine.starTransitionStartTime || elapsedTime >= transitionDuration) {
-  //     mine.starTransitionStartTime = currentTime;
-  //     mine.starTransitionStartColor = color;
-  //   }
-  //   applyGlowingEffect(ctx, "white", mine.color, "white", transitionDuration, animatationFrame, 0.2);
-  // }
+  const animationFrame = elapsedTime % transitionDuration;
+
   ctx.beginPath();
-  if (mine.mineType == MineType.REGULAR) {
+  if (mine.mineType === MineType.REGULAR) {
     if (mine.hitFrames < -1) {
       if (!mine.starTransitionStartTime || elapsedTime >= transitionDuration) {
         mine.starTransitionStartTime = currentTime;
         mine.starTransitionStartColor = color;
       }
-      applyGlowingEffect(ctx, "white", mine.color, "white", transitionDuration, animatationFrame, 0.2);
+      applyGlowingEffect(ctx, "white", mine.color, "white", transitionDuration, animationFrame, 0.2);
     }
-    let rotatedPoint = rotateAndScalePoint(points[0].x, points[0].y, angle, mineScale);
-    ctx.moveTo(centerX - camX + rotatedPoint.x, centerY - camY + rotatedPoint.y);
-
-    for (let i = 1; i < points.length; i++) {
-      rotatedPoint = rotateAndScalePoint(points[i].x, points[i].y, angle, mineScale);
-      ctx.lineTo(centerX - camX + rotatedPoint.x, centerY - camY + rotatedPoint.y);
+    drawRegularMine(ctx, centerX, centerY, camX, camY, angle, mineScale, points, color);
+  } else if (mine.mineType === MineType.FREE_MINE) {
+    if (!mine.starTransitionStartTime || elapsedTime >= transitionDuration) {
+      mine.starTransitionStartTime = currentTime;
+      mine.starTransitionStartColor = color;
     }
-    ctx.stroke();
+    applyGlowingEffect(ctx, "orange", mine.color, "white", transitionDuration, animationFrame, 0.2);
+    drawFreeMine(ctx, camX, camY, angle, 1, mine, color, centerX, centerY, animationFrame);
   } else if (mine.mineType === MineType.TRAIL) {
     ctx.fillStyle = color;
+    if (mine.duration < 10) {
+      ctx.fillStyle = getComplementaryColor(mine.color);
+    }
     // Handle trail mines here
     const trailLength = mine.length;
     const trailWidth = mine.width;
@@ -530,7 +668,7 @@ export function drawMine(ctx, camX, camY, mine, points) {
     gradient.addColorStop(1, `rgba(${rgbColor.r}, ${rgbColor.g}, ${rgbColor.b}, 0.5)`); // Outer part of the trail
 
     // ctx.fillStyle = gradient;
-    ctx.fillStyle =  `rgba(${rgbColor.r}, ${rgbColor.g}, ${rgbColor.b}, 0.1)`;
+    ctx.fillStyle = `rgba(${rgbColor.r}, ${rgbColor.g}, ${rgbColor.b}, 0.1)`;
     // Draw the rectangle (sausage body)
     ctx.rect(-halfTrailWidth - 20, -trailLength / 2 - 20, trailWidth + 40, trailLength + 40);
     ctx.fill();
@@ -539,16 +677,6 @@ export function drawMine(ctx, camX, camY, mine, points) {
     ctx.translate(-trailX, -trailY);
     // Restore the previous global composite operation
     ctx.globalCompositeOperation = prevGlobalCompositeOperation;
-    // for (let i = 0; i < trailLength; i++) {
-    //   const trailAlpha = 1 - i * trailOpacityStep;
-    //   ctx.globalAlpha = trailAlpha;
-
-    //   const trailX = centerX - camX + i * trailSpacing; // Adjust the trail position as needed
-    //   const trailY = centerY - camY; // You may need to calculate the Y position based on your needs
-    //   const trailRadius = mine.radius * (1 - i * 0.1); // Adjust the trail size based on radius
-
-    //   ctx.arc(trailX, trailY, trailRadius, 0, Math.PI * 2);
-    // }
   }
 
   ctx.closePath();

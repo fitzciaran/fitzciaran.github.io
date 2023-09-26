@@ -13,7 +13,8 @@ import {
   GameState,
   globalPowerUps,
   setGlobalPowerUps,
-  canvas,selectedColors
+  canvas,
+  selectedColors,
 } from "./main.js";
 import { isPlayerMasterPeer } from "./connectionHandlers.js";
 import { forces, ForceArea, ForceType, Effect, effects, EffectType, MineType, Trail } from "./entities.js";
@@ -29,7 +30,7 @@ import {
   pilots,
   basicAnimationTimer,
 } from "./gameLogic.js";
-import { screenShake,getRandomUniqueColor } from "./gameUtils.js";
+import { screenShake, getRandomUniqueColor } from "./gameUtils.js";
 import { sendPlayerStates, sendRequestForStates, requestFullUpdate, sendEffectsUpdate, sendMinesUpdate } from "./sendData.js";
 
 const bounceFactor = 1.5;
@@ -71,7 +72,7 @@ export class Player {
     this.x = x !== null ? x : 1200 + Math.random() * (worldDimensions.width - 2400);
     this.y = y !== null ? y : 600 + Math.random() * (worldDimensions.height - 1200);
     this.powerUps = powerUps;
-    this.color = color !== null ? color : getRandomUniqueColor(colors,selectedColors);
+    this.color = color !== null ? color : getRandomUniqueColor(colors, selectedColors);
     this.angle = angle;
     this.pilot = pilot;
     this.name = name;
@@ -118,7 +119,7 @@ export class Player {
     this.y = 600 + Math.random() * (worldDimensions.height - 1200);
     this.powerUps = 0;
     if (!keepColor) {
-      this.color =  getRandomUniqueColor(colors,selectedColors);
+      this.color = getRandomUniqueColor(colors, selectedColors);
     }
     this.angle = 0;
     if (!keepName) {
@@ -127,7 +128,7 @@ export class Player {
     this.followingPlayerID = "";
     this.timeOfLastMessage = "";
     this.timeOfLastActive = "";
-    this.randomTarget = { x: 0, y: 0, id: "" };
+    this.target = { x: 0, y: 0, id: "" };
     this.targetedBy = [];
     this.space = false;
     this.shift = false;
@@ -333,11 +334,11 @@ export class Player {
   }
 
   setRecentKillText(playerThatGotHitName, revenge = true) {
-    const killFlavorText = ["KILL!", "GOTTEM!", "SMASH!"];
+    const killFlavorText = ["KILL!", "GOTTEM!", "SMASH!", "OOOF!"];
 
-    const revengeFlavorText = ["Got Revenge on ", " gets served with payback", " won't mess with you again"];
+    const revengeFlavorText = ["Got Revenge on ", " gets served with payback", " won't mess with you again", " found out"];
 
-    const dominatingFlavorText = ["Dominating poor ", " dies again", " bites the dust again"];
+    const dominatingFlavorText = ["Dominating poor ", " dies again", " bites the dust again", " found out again"];
 
     // Generate random index, can split this out if want to have different number of options for each text
     const textIndex = Math.floor(Math.random() * killFlavorText.length);
@@ -730,8 +731,8 @@ export class Player {
       trailX,
       trailY,
       trailTime,
-     // 30,
-     70,
+      // 30,
+      70,
       this.color,
       0,
       MineType.TRAIL,
@@ -806,7 +807,7 @@ export class Player {
           this.recentKillScoreText = "";
         }
       }
-      if (basicAnimationTimer % 2 == 0 && !this.isInSpawnProtectionTime()&& this.currentSpeed > 0.2) {
+      if (basicAnimationTimer % 2 == 0 && !this.isInSpawnProtectionTime() && this.currentSpeed > 0.2) {
         this.emitTrail(mines);
       }
     }
@@ -899,7 +900,7 @@ export class Bot extends Player {
     this.botState = BotState.FOLLOW_PLAYER;
     this.followingPlayerID = "";
     this.timeOfLastMessage = "";
-    this.randomTarget = { x: 0, y: 0, id: "" };
+    this.target = { x: 0, y: 0, id: "" };
     this.inRangeTicks = 0;
     this.isBot = true;
   }
@@ -922,17 +923,17 @@ export class Bot extends Player {
   updateBotInputs() {
     //this.randomlyConsiderChangingState();
     if (this.invincibleTimer > 30 && this.botState != BotState.FOLLOW_PLAYER) {
-      this.setFollowingTarget();
+      this.#setFollowingTarget();
       if (this.followingPlayerID != "") {
         this.setRandomTarget(0, 0, "random point");
         this.setBotState(BotState.FOLLOW_PLAYER);
       }
     }
     if (isNaN(this.inForce)) {
-      this.inForce =  0;
+      this.inForce = 0;
     }
     if (this.inForce > 50) {
-      // this.setRandomTarget(0, 0, "random point");
+      //try to get bots out of a force they may be stuck in by aiming somewhere new
       this.setRandomTargetInMainArea();
       this.inForce = 0;
     }
@@ -947,7 +948,7 @@ export class Bot extends Player {
   }
 
   handleFollowPlayerState() {
-    this.setFollowingTarget();
+    this.#setFollowingTarget();
     if (this.followingPlayerID == "") {
       this.setBotState(BotState.RANDOM);
       // return;
@@ -961,10 +962,10 @@ export class Bot extends Player {
       return;
     }
     if (followingPlayer.isBot) {
-      this.randomlyConsiderChangingState(0.95);
+      this.randomlyConsiderChangingState(0.1);
     }
     if (followingPlayer.invincibleTimer > 10) {
-      this.randomlyConsiderChangingState(0.09);
+      this.randomlyConsiderChangingState(0.03);
     }
     if (followingPlayer.isDead) {
       this.followingPlayerID = "";
@@ -973,44 +974,75 @@ export class Bot extends Player {
   }
 
   handleRandomState() {
-    if (this.randomTarget.x == 0 && this.randomTarget.y == 0) {
+    if (this.target.x == 0 && this.target.y == 0) {
       this.setRandomTargetInMainArea();
     }
-    this.handleTargeting(this.randomTarget.x, this.randomTarget.y, 0, 0, 0.4);
+    this.handleTargeting(this.target.x, this.target.y, 0, 0, 0.4);
   }
 
+  // handleCollectState() {
+  //   if (this.target.x == 0 && this.target.y == 0) {
+  //     let powerUpToTarget;
+  //     if (globalPowerUps.length > 0) {
+  //       const randomIndex = Math.floor(Math.random() * globalPowerUps.length);
+  //       powerUpToTarget = globalPowerUps[randomIndex];
+  //       this.setRandomTarget(powerUpToTarget.x, powerUpToTarget.y, powerUpToTarget.id);
+  //     } else {
+  //       this.setBotState(BotState.RANDOM);
+  //     }
+  //   } else {
+  //     let powerUpStillExists = globalPowerUps.some((globalPowerUp) => globalPowerUp.x == this.target.x && globalPowerUp.y == this.target.y);
+  //     if (!powerUpStillExists) {
+  //       this.setBotState(BotState.RANDOM);
+  //     }
+  //   }
+  //   this.handleTargeting(this.target.x, this.target.y, 0, 0, 0.4);
+  // }
+
   handleCollectState() {
-    if (this.randomTarget.x == 0 && this.randomTarget.y == 0) {
-      let powerUpToTarget;
-      if (globalPowerUps.length > 0) {
-        const randomIndex = Math.floor(Math.random() * globalPowerUps.length);
-        powerUpToTarget = globalPowerUps[randomIndex];
-        this.setRandomTarget(powerUpToTarget.x, powerUpToTarget.y, powerUpToTarget.id);
+    if (this.target.x == 0 && this.target.y == 0) {
+      // Calculate the soonPosition
+      const soonPosition = {
+        x: this.x + 3 * this.vel.x,
+        y: this.y + 3 * this.vel.y,
+      };
+
+      let closestPowerUp;
+      let closestDistance = Infinity;
+
+      // Iterate over globalPowerUps to find the closest one to soonPosition
+      for (const powerUp of globalPowerUps) {
+        const distance = Math.sqrt(Math.pow(soonPosition.x - powerUp.x, 2) + Math.pow(soonPosition.y - powerUp.y, 2));
+
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          closestPowerUp = powerUp;
+        }
+      }
+
+      if (closestPowerUp) {
+        // Use the closest power-up as the target
+        this.setRandomTarget(closestPowerUp.x, closestPowerUp.y, closestPowerUp.id);
       } else {
+        // If no power-ups are available, switch to RANDOM state
         this.setBotState(BotState.RANDOM);
       }
     } else {
-      let powerUpStillExists = globalPowerUps.some(
-        (globalPowerUp) => globalPowerUp.x == this.randomTarget.x && globalPowerUp.y == this.randomTarget.y
-      );
+      let powerUpStillExists = globalPowerUps.some((globalPowerUp) => globalPowerUp.x == this.target.x && globalPowerUp.y == this.target.y);
       if (!powerUpStillExists) {
         this.setBotState(BotState.RANDOM);
       }
     }
-    this.handleTargeting(this.randomTarget.x, this.randomTarget.y, 0, 0, 0.4);
-  }
-
-  setFollowingTarget() {
-    // Set following target logic here
+    this.handleTargeting(this.target.x, this.target.y, 0, 0, 0.4);
   }
 
   setRandomTargetInMainArea() {
-    this.setRandomTarget(200 + Math.random() * (worldDimensions.width - 400), 200 + Math.random() * (worldDimensions.height - 400), "random");
+    this.setRandomTarget(300 + Math.random() * (worldDimensions.width - 600), 300 + Math.random() * (worldDimensions.height - 600), "random");
   }
   setRandomTarget(x, y, id) {
-    this.randomTarget.x = x;
-    this.randomTarget.y = y;
-    this.randomTarget.id = id;
+    this.target.x = x;
+    this.target.y = y;
+    this.target.id = id;
   }
 
   setBotState(state) {
@@ -1103,12 +1135,12 @@ export class Bot extends Player {
         }
       }
     } else if (distance < 300 && this.botState == BotState.RANDOM) {
-      this.randomTarget.x = 0;
-      this.randomTarget.y = 0;
+      this.target.x = 0;
+      this.target.y = 0;
       this.chooseNewBotState();
     } else if (distance < 20 && this.botState == BotState.COLLECT) {
-      this.randomTarget.x = 0;
-      this.randomTarget.y = 0;
+      this.target.x = 0;
+      this.target.y = 0;
       this.chooseNewBotState();
     }
   }
@@ -1198,8 +1230,8 @@ export class Bot extends Player {
   randomlyConsiderChangingState(chance = 1) {
     if (Math.random() > chance) {
       this.followingPlayerID = "";
-      this.randomTarget.x = 0;
-      this.randomTarget.y = 0;
+      this.target.x = 0;
+      this.target.y = 0;
       this.chooseNewBotState();
     }
   }
@@ -1272,7 +1304,7 @@ function serializeBot(bot) {
     ticksSincePowerUpCollection: bot.ticksSincePowerUpCollection,
     timeSinceSpawned: bot.timeSinceSpawned,
     botState: bot.botState,
-    randomTarget: bot.randomTarget,
+    target: bot.target,
     followingPlayerID: bot.followingPlayerID,
     previousAngleDifference: bot.previousAngleDifference,
     previousTurnDirection: bot.previousTurnDirection,
@@ -1296,7 +1328,7 @@ function areUpdateCriticalValuesSameBot(bot1, bot2) {
     bot1.comboScaler === bot2.comboScaler &&
     bot1.kills === bot2.kills &&
     bot1.botState === bot2.botState &&
-    bot1.randomTarget === bot2.randomTarget &&
+    bot1.target === bot2.target &&
     bot1.followingPlayerID === bot2.followingPlayerID &&
     bot1.name === bot2.name &&
     bot1.inForce === bot2.inForce;
@@ -1332,7 +1364,7 @@ function isEqualBot(bot1, bot2) {
     bot1.ticksSincePowerUpCollection === bot2.ticksSincePowerUpCollection &&
     bot1.timeSinceSpawned === bot2.timeSinceSpawned &&
     bot1.botState === bot2.botState &&
-    bot1.randomTarget === bot2.randomTarget &&
+    bot1.target === bot2.target &&
     bot1.followingPlayerID === bot2.followingPlayerID &&
     bot1.previousAngleDifference === bot2.previousAngleDifference &&
     bot1.previousTurnDirection === bot2.previousTurnDirection &&

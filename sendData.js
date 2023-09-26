@@ -45,7 +45,10 @@ export function sendPlayerStates(playerToSend, masterSending, sendFullerData = f
   newDataToSend = addProperty(playerToSend, data, "isMaster", "isMaster", sendFullerData) || newDataToSend;
   // newDataToSend = addProperty(playerToSend, data, "ticksSincePowerUpCollection", "ticksSincePowerUpCollection", sendFullerData) || newDataToSend;
   newDataToSend = addProperty(playerToSend, data, "targetedBy", "targetedBy", sendFullerData) || newDataToSend;
-  newDataToSend = addProperty(playerToSend, data, "timeOfLastActive", "timeOfLastActive", sendFullerData) || newDataToSend;
+
+  //todo check this is ok to remove
+  // newDataToSend = addProperty(playerToSend, data, "timeOfLastActive", "timeOfLastActive", sendFullerData) || newDataToSend;
+
   // newDataToSend = addProperty(playerToSend, data, "recentScoreTicks", "recentScoreTicks", sendFullerData) || newDataToSend;
   // newDataToSend = addProperty(playerToSend, data, "recentScoreText", "recentScoreText", sendFullerData) || newDataToSend;
   // newDataToSend = addProperty(playerToSend, data, "kills", "kills", sendFullerData) || newDataToSend;
@@ -53,7 +56,7 @@ export function sendPlayerStates(playerToSend, masterSending, sendFullerData = f
   newDataToSend = addProperty(playerToSend, data, "isBot", "isBot", sendFullerData) || newDataToSend;
   newDataToSend = addProperty(playerToSend, data, "special", "special", sendFullerData) || newDataToSend;
   newDataToSend = addProperty(playerToSend, data, "devMode", "devMode", sendFullerData) || newDataToSend;
-   newDataToSend = addProperty(playerToSend, data, "space", "space", sendFullerData) || newDataToSend;
+  newDataToSend = addProperty(playerToSend, data, "space", "space", sendFullerData) || newDataToSend;
   newDataToSend = addProperty(playerToSend, data, "shift", "shift", sendFullerData) || newDataToSend;
   newDataToSend = addProperty(playerToSend, data, "resetting", "resetting", sendFullerData) || newDataToSend;
 
@@ -73,6 +76,9 @@ export function sendPlayerStates(playerToSend, masterSending, sendFullerData = f
       newDataToSend = true;
       data.isDead = playerToSend.isDead;
       lastSentPlayerData.isDead = playerToSend.isDead;
+    }
+    if (!playerToSend.isPlaying) {
+      newDataToSend = addProperty(playerToSend, data, "isPlaying", "isPlaying", sendFullerData) || newDataToSend;
     }
     if (masterSending || playerReseting) {
       newDataToSend = addProperty(playerToSend, data, "invincibleTimer", "invincibleTimer", sendFullerData) || newDataToSend;
@@ -187,14 +193,14 @@ export function sendPowerUpsUpdate(onlyChangedData = true) {
 }
 
 //this is the mines only update  will only be sent on request / occasionally
-export function sendMinesUpdate(onlyChangedData = true) {
+export function sendMinesUpdate(onlyChangedData = true, onlyRegularMines = true) {
   // Send game state to other player
   let data = {
     timestamp: Date.now(),
     priority: 2,
     fromMaster: isPlayerMasterPeer(player),
     gameState: true,
-    mines: serializeMines(mines, onlyChangedData,true),
+    mines: serializeMines(mines, onlyChangedData, onlyRegularMines),
   };
 
   sendData(data);

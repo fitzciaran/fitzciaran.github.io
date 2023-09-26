@@ -378,8 +378,7 @@ find a way to optimise trails
 update trail death message
 
 I think trails should be distinct from mines, and should be a single object with many points of articulation.
-
-hitbox on trails has to account for width and length not radius.
+    if we go this route the "tail" could have it's own momentum
 
 mine destroy effect same as ship 
 
@@ -390,3 +389,45 @@ now color is so important master should assign slave peers a color when connecte
     or color is changable at will and no friendly fire
 
 spacing issue can occur where play and menu buttons arn't where expected - looks like a result of an interupted screen shake? need to recover from this
+
+team game? team colors? team request?
+
+could improve canvas reset workaround by detecting if a reset took place and if so adjusting/offseting event mouse co-ords to match what the offset was. 
+
+some more fanfare when a bot/otherplayer dies rather than just disappearing from the scoreboard - it could stay in crossed out briefly? would then need an "is dead" timer? nah we could create an object when we get player is dead (or keep trying to create it if doesn't exist for that death?) and update that.
+
+mechanic where you have to enclose something in your trail....maybe if you enclose a circle it all fills in....no idea how to check that without the trail overhaul(probably needed anyway)
+    trail overhaul could be a wrapper and mines could still be the active parts
+    encircling enemies = kill
+    encircling ... some new object (shrine) could be a way to get points. could combine with the idea of being able to switch color...
+        maybe not at will but could be something else...
+        you get color change by entering directional force?
+            and then need to be a certain color to do some things
+            collaborative option?
+        maybe the shrine you encircle becomes ... collected and you take it somewhere.
+
+
+change language for a double ko/ crash
+
+when encircle detected, for a start color the encircled area. create some new entity? new mine version use effect? and just do a kill check?
+
+maybe head /body is invincible but tail isn't?
+
+
+add kill/removal of powerups, otherplayers (than playerID of freeMine), otherbots... from inside freemine.
+    maybe it can - "break open" some new kind of entity 
+tail grows like snake?
+    but loses tailyness over time? That's the in game survial aspect?
+    max length exists
+    no length = game over
+    what to do about tail receding when still?... maybe if trail mines are very close to player of playerID they don't expire
+
+bots could check for close powerups when choosing a new one? at all times? every % frames? 
+
+currently just checking free mine at start I think? at least for the special checks? need to get that being checked in masterUpdate
+
+check colors for good ones improve average quality, vivid bright
+
+test the spoke collision
+
+mines/areas that will on countdown or sporadically explode or generically become hurtboxes.
