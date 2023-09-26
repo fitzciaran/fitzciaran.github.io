@@ -338,10 +338,42 @@ export function shouldSkipPlayer(player) {
   );
 }
 
-// Function to draw a player or bot on the minimap
-export function drawMiniMapEntity(entity, ctx, scaleX, scaleY, dotSize) {
-  if (entity != null && entity.isPlaying) {
-    ctx.fillStyle = entity.color;
-    ctx.fillRect(entity.x * scaleX, entity.y * scaleY, dotSize, dotSize);
+export function applyGlowingEffect(ctx, glowColor, transitionColor, starTransitionStartColor, transitionDuration, elapsedTime, opacity = 1) {
+  ctx.shadowBlur = 10;
+  ctx.shadowColor = glowColor;
+
+  const colorProgress = Math.min(1, elapsedTime / transitionDuration);
+  transitionColor = nameToRGBFullFormat(transitionColor);
+  starTransitionStartColor = nameToRGBFullFormat(starTransitionStartColor);
+  const r = Math.floor(interpolate(starTransitionStartColor.r, transitionColor.r, colorProgress));
+  const g = Math.floor(interpolate(starTransitionStartColor.g, transitionColor.g, colorProgress));
+  const b = Math.floor(interpolate(starTransitionStartColor.b, transitionColor.b, colorProgress));
+
+  // Apply opacity to the glowing effect
+  const interpolatedColor = `rgba(${r},${g},${b},${opacity})`;
+  ctx.strokeStyle = interpolatedColor;
+  ctx.fillStyle = interpolatedColor;
+}
+
+export function drawExplosion(ctx, camX, camY, explosionEffect) {
+  const currentTime = Date.now();
+  const elapsedTime = currentTime - explosionEffect.startTime;
+  const animationDuration = explosionEffect.duration;
+  const numFrames = 10;
+  const frameDuration = animationDuration / numFrames;
+  const frameIndex = Math.floor(elapsedTime / frameDuration);
+  const maxRadius = explosionEffect.maxRadius;
+
+  if (frameIndex < numFrames) {
+    const currentRadius = (frameIndex / numFrames) * maxRadius;
+
+    ctx.beginPath();
+    ctx.arc(explosionEffect.x - camX, explosionEffect.y - camY, currentRadius, 0, Math.PI * 2);
+    ctx.fillStyle = explosionEffect.color;
+    ctx.fill();
+
+    ctx.strokeStyle = "rgba(255, 0, 0, 0.5)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
   }
 }

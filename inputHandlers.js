@@ -10,7 +10,9 @@ import {
   menuButtonWidth,
   menuButtonHeight,
 } from "./canvasDrawingFunctions.js";
-import { pilots, calculateAngle, getRandomName, max_player_name } from "./gameLogic.js";
+import { pilots, max_player_name } from "./gameLogic.js";
+import { getRandomName } from "./generateEntities.js";
+import { calculateAngle } from "./gameUtils.js";
 
 let pilotMouseMoveListener;
 let pilotClickListener;

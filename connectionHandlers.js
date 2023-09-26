@@ -1,4 +1,4 @@
-import { shuffleArray } from "./gameLogic.js";
+import { shuffleArray } from "./gameUtils.js";
 import { handleData } from "./handleData.js";
 import { sendEntitiesState } from "./sendData.js";
 
@@ -8,23 +8,23 @@ export let connections = [];
 export const compression = false;
 
 export let peerIds = [
-  "a7ef962d-14a8-40e4-8a1d-226c438a3321",
-  "b7ef962d-14a8-40e4-8a1d-226c538a3321",
-  "c7ef962d-14a8-40e4-8a1d-226c538a3321",
-  "d7ef962d-14a8-40e4-8a1d-226c538a3321",
-  "e7ef962d-14a8-40e4-8a1d-226c538a3321",
-  "a6ef962d-14a8-40e4-8a1d-226c538a3321",
-  "b6ef962d-14a8-40e4-8a1d-226c538a3321",
+  "a7ef962d-14a8-40e4-8a1d-226c548a3321",
+  "b7ef962d-14a8-40e4-8a1d-226c548a3321",
+  "c7ef962d-14a8-40e4-8a1d-226c548a3321",
+  "d7ef962d-14a8-40e4-8a1d-226c548a3321",
+  "e7ef962d-14a8-40e4-8a1d-226c548a3321",
+  "a6ef962d-14a8-40e4-8a1d-226c548a3321",
+  "b6ef962d-14a8-40e4-8a1d-226c548a3321",
 ];
 if (!compression) {
   peerIds = [
-    "a7ef962d-14a8-40e4-8a1d-226e438a3321",
-    "b7ef962d-14a8-40e4-8a1d-226e438a3321",
-    "c7ef962d-14a8-40e4-8a1d-226e438a3321",
-    "d7ef962d-14a8-40e4-8a1d-226e438a3321",
-    "e7ef962d-14a8-40e4-8a1d-226e438a3321",
-    "a6ef962d-14a8-40e4-8a1d-226e438a3321",
-    "b6ef962d-14a8-40e4-8a1d-226e438a3321",
+    "a7ef962d-14a8-40e4-8a1d-226e638a3321",
+    "b7ef962d-14a8-40e4-8a1d-226e638a3321",
+    "c7ef962d-14a8-40e4-8a1d-226e638a3321",
+    "d7ef962d-14a8-40e4-8a1d-226e638a3321",
+    "e7ef962d-14a8-40e4-8a1d-226e638a3321",
+    "a6ef962d-14a8-40e4-8a1d-226e638a3321",
+    "b6ef962d-14a8-40e4-8a1d-226e638a3321",
   ];
 }
 let reconnectionAttempts = 0;
@@ -243,39 +243,6 @@ function verifyPeerHealth(player, otherPlayers, globalPowerUps) {
       index = 0;
       createPeer(player, otherPlayers, globalPowerUps, reconnectionAttempts);
     }
-    // Listen for the 'open' event to determine if the reconnection was successful
-    // peer.on("open", () => {
-    //   // The Peer connection is now open, you can proceed to create connections
-    //   const conn = peer.connect(id);
-
-    //   // Handle the connection as needed
-    //   conn.on("open", () => {
-    //     // Connection is open and ready to send data
-    //     console.log("Connected to peer:", conn.peer);
-    //   });
-
-    //   conn.on("data", (data) => {
-    //     // Handle incoming data
-    //     console.log("Received data:", data);
-    //   });
-    // });
-  }
-  if (!peer.open) {
-    // console.log("peer was closed");
-    // // Listen for the 'open' event to determine when the Peer connection becomes open
-    // peer.on("open", () => {
-    //   // The Peer connection is now open, you can proceed to create connections
-    //   const conn = peer.connect(id);
-    //   // Handle the connection as needed
-    //   conn.on("open", () => {
-    //     // Connection is open and ready to send data
-    //     console.log("Connected to peer:", conn.peer);
-    //   });
-    //   conn.on("data", (data) => {
-    //     // Handle incoming data
-    //     console.log("Received data:", data);
-    //   });
-    // });
   }
 }
 function addConnectionHandlers(player, otherPlayers, conn, globalPowerUps) {

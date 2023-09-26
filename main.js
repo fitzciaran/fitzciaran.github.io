@@ -22,17 +22,10 @@ import {
 import { sendPlayerStates } from "./sendData.js";
 import { setupCanvas, setupSpikeyBallPoints } from "./drawingUtils.js";
 import { addScoreToDB } from "./db.js";
-import {
-  generatePowerups,
-  generateMines,
-  generateDirectionalForces,
-  endGameMessage,
-  setGameWon,
-  pilots,
-  masterUpdateGame,
-  shuffleArray,
-  createBots,
-} from "./gameLogic.js";
+import { endGameMessage, setGameWon, pilots, masterUpdateGame } from "./gameLogic.js";
+import { generatePowerups, generateMines, generateDirectionalForces, createBots } from "./generateEntities.js";
+
+import { shuffleArray } from "./gameUtils.js";
 import {
   handleInputEvents,
   addPilotEventListners,
@@ -67,7 +60,7 @@ export const colors = [
   "maroon",
   "crimson",
 ];
-export const  selectedColors = [];
+export const selectedColors = [];
 
 export const acceleration = 0.25;
 
@@ -92,8 +85,6 @@ let prioritizeHumanSpectate = false;
 export const player = new Player(null, null, null, 0, null, 0, "", "", false, true);
 player.isMaster = true;
 player.isLocal = true;
-// player.isPlaying = false;
-// player.isUserControlledCharacter = true;
 export let otherPlayers = [];
 export let bots = [];
 export let mines = [];
@@ -167,7 +158,7 @@ function updateGame(deltaTime, playerActive) {
     //todo might have to uncomment the condition
     // if (isPlayerMasterPeer(player)) {
     // This peer is the master, so it runs the game logic for shared objects
-    masterUpdateGame(player, globalPowerUps, otherPlayers, bots, mines,deltaTime);
+    masterUpdateGame(player, globalPowerUps, otherPlayers, bots, mines, deltaTime);
     // }
   }
 
@@ -447,8 +438,6 @@ window.addEventListener("load", function () {
   //setInterval(() => connectToPeers(player, otherPlayers, globalPowerUps), 15000);
 
   setupSpikeyBallPoints();
-  //don;t need to under master system
-  //setInterval(() => sendPowerups(globalPowerUps), 3000);
 
   //for now just do this at game start and transition, in future do this periodically?
   updateTopScoresInfo();

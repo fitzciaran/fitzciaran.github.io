@@ -1,6 +1,7 @@
 import { player, bots, mines, globalPowerUps } from "./main.js";
 import { connections, isPlayerMasterPeer, compression } from "./connectionHandlers.js";
-import { forces, effects, serializeForces, serializeMines, serializeGlobalPowerUps, serializeEffects } from "./entities.js";
+import { forces, effects } from "./entities.js";
+import { serializeForces, serializeMines, serializeGlobalPowerUps, serializeEffects } from "./entitySerialisation.js";
 import { serializeBots } from "./player.js";
 
 let sendCounter = 0;
