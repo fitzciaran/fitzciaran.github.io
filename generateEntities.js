@@ -52,7 +52,7 @@ export function generatePowerups(globalPowerUps, worldWidth, worldHeight, colors
     }
 
     let powerUp = new PowerUp(
-      Math.floor(Math.random() * 10000),
+      "regularPU-" + Math.floor(Math.random() * 10000),
       (Math.random() * 0.8 + 0.1) * worldWidth,
       (Math.random() * 0.8 + 0.1) * worldHeight,
       getRandomUniqueColor(colors, null),
@@ -72,9 +72,11 @@ export function generatePowerups(globalPowerUps, worldWidth, worldHeight, colors
   if (addedPowerUps) {
     sendPowerUpsUpdate(true);
   }
+  let regularPowerUps = globalPowerUps.filter((powerup) => powerup.id.startsWith("mineConvert-"));
   // Remove excess powerUps if there are more than maxPowerups
-  while (globalPowerUps.length > maxPowerups) {
-    const removedPowerUp = globalPowerUps.pop();
+  while (regularPowerUps.length > maxPowerups) {
+    let removedPowerUp = globalPowerUps.pop();
+    removedPowerUp = regularPowerUps.pop();
     if (isPlayerMasterPeer(player)) {
       sendRemoveEntityUpdate("removePowerUps", [removedPowerUp]);
     }
@@ -286,6 +288,7 @@ export function getRandomName() {
     "Silver",
     "Ein",
     "Kevin",
+    "Wesely",
     "Jiggly",
     "Pork",
     "Battle",
@@ -297,6 +300,7 @@ export function getRandomName() {
     "Crusher",
     "Dasher",
     "Blaster",
+    "Racoon",
     "Buster",
     "Zoomer",
     "Flyer",

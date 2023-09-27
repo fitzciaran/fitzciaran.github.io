@@ -1,20 +1,10 @@
-import { player, setMines, bots, otherPlayers, mines, setGameTimer, gameTimer, globalPowerUps, selectedColors } from "./main.js";
+import { player, bots, otherPlayers, mines, setGameTimer, gameTimer, globalPowerUps } from "./main.js";
 import { isPlayerMasterPeer, setTimeSinceMessageFromMaster, timeSinceMessageFromMaster } from "./connectionHandlers.js";
-import { isSpokeCollision, detectCollisions } from "./collisionLogic.js";
-import {
-  sendPlayerStates,
-  sendEntitiesState,
-  sendEntitiesUpdate,
-  sendBotEntitiesUpdate,
-  sendRemoveEntityUpdate,
-  sendMinesUpdate,
-  sendPowerUpsUpdate,
-  sendForcesUpdate,
-  sendBotsUpdate,
-} from "./sendData.js";
-import { forces, Mine, PowerUp, ForceType, ForceArea, Entity, effects, Effect, EffectType, MineType, FreeMine } from "./entities.js";
+import { detectCollisions } from "./collisionLogic.js";
+import { sendPlayerStates, sendEntitiesState, sendEntitiesUpdate, sendBotEntitiesUpdate, sendRemoveEntityUpdate } from "./sendData.js";
+import { forces, Entity, effects, MineType } from "./entities.js";
 import { Player, Bot } from "./player.js";
-import { getRandomUniqueColor, findCompleteShape, isPointInsideShape } from "./gameUtils.js";
+import { ProcessTrailShapesAllPlayers } from "./trailShapes.js";
 
 //finish game after 5 for easier testing the finish
 export let pointsToWin = 5;
@@ -320,99 +310,6 @@ export function masterUpdateGame(player, globalPowerUps, otherPlayers, bots, min
   }
   if (!player.isDead && gameTimer % 1 == 0) {
     sendPlayerStates(player, isPlayerMasterPeer(player));
-  }
-}
-
-function ProcessTrailShapesAllPlayers(player, otherPlayers, mines, effects, globalPowerUps) {
-  let allPlayers = [...bots, ...otherPlayers, player];
-  for (let candidatePlayer of allPlayers) {
-    ProcessTrailShapes(candidatePlayer, allPlayers);
-  }
-}
-
-function ProcessTrailShapes(candidatePlayer, allPlayers) {
-  const shape = findCompleteShape(candidatePlayer.id, mines, 30000);
-
-  if (shape && shape.shapePath) {
-    let freeMine = createFreeMine(candidatePlayer, shape);
-    handleFreeMineSpawn(candidatePlayer.id, mines, freeMine, shape, allPlayers);
-    createEffects(shape.shapePath, effects);
-    if (isPlayerMasterPeer(player)) {
-      sendMinesUpdate();
-    }
-  }
-}
-
-// Function to create a FreeMine
-function createFreeMine(player, shape) {
-  let freeMine = new FreeMine(
-    "trail-" + Math.floor(Math.random() * 10000),
-    shape.center.x,
-    shape.center.y,
-    40,
-    70,
-    player.color,
-    0,
-    MineType.FREE_MINE,
-    -1,
-    player.id,
-    0,
-    shape.shapePath
-  );
-  freeMine.spokeWidth = shape.spokeWidth;
-  freeMine.spokeLength = shape.spokeLength;
-  return freeMine;
-}
-function createEffects(shapePath, effects) {
-  for (let point of shapePath) {
-    let effect = new Effect("effect-" + Math.floor(Math.random() * 10000), point.x, point.y, 40, 30, "OrangeRed", EffectType.EXPLOSION);
-    effects.push(effect);
-  }
-}
-// Function to set mines and remove overlapping mines
-function handleFreeMineSpawn(playerId, mines, freeMine, shape, allPlayers) {
-  //currently we remove all players trail mines if they make a shape
-  setMines(mines.filter((mine) => mine.playerId != playerId));
-  mines.push(freeMine);
-
-  for (let point of shape.shapePath) {
-    let effect = new Effect("effect-" + Math.floor(Math.random() * 10000), point.x, point.y, 40, 30, "OrangeRed", EffectType.EXPLOSION);
-    effects.push(effect);
-  }
-
-  //destroy mines that overlap
-  for (let mine of mines) {
-    if (mine.mineType != MineType.FREE_MINE) {
-      if (
-        isPointInsideShape(shape.shapePath, { x: mine.x, y: mine.y }) ||
-        isSpokeCollision(mine, mine.radius + 10, freeMine.x, freeMine.y, 0, shape.spokeLength, shape.spokeWidth + 5)
-      ) {
-        mine.hitFrames = 5;
-      }
-    }
-  }
-  //kill players caught
-  for (let candidatePlayer of allPlayers) {
-    if (candidatePlayer.id == playerId) {
-      //don't hit the player who created this
-      continue;
-    }
-    if (
-      isPointInsideShape(shape.shapePath, { x: candidatePlayer.x, y: candidatePlayer.y }) ||
-      isSpokeCollision(candidatePlayer, 10, freeMine.x, freeMine.y, 0, shape.spokeLength, shape.spokeWidth + 5)
-    ) {
-      let owner = allPlayers.find((player) => player.id == playerId);
-      let name = "";
-      if (owner && owner.name) {
-        name = owner.name;
-      }
-      if (candidatePlayer.isVulnerable()) {
-        candidatePlayer.gotHit(name);
-        if (owner) {
-          owner.hitOtherPlayer(candidatePlayer);
-        }
-      }
-    }
   }
 }
 

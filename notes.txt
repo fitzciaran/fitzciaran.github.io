@@ -431,3 +431,7 @@ check colors for good ones improve average quality, vivid bright
 test the spoke collision
 
 mines/areas that will on countdown or sporadically explode or generically become hurtboxes.
+
+did refactor break the background paralax?
+
+doesn't work on firefox? detect browser and don't let firefox play?

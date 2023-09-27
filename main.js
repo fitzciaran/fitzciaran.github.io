@@ -13,7 +13,6 @@ import {
   ticksSinceLastFullSendRequestResponse,
   setTimeSinceAnyMessageRecieved,
   timeSinceAnyMessageRecieved,
-  wrappedResolveConflicts,
   timeSinceMessageFromMaster,
   setTimeSinceMessageFromMaster,
   setMasterPeerId,

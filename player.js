@@ -6,13 +6,9 @@ import {
   colors,
   acceleration,
   setCam,
-  camX,
-  camY,
-  ctx,
   setGameState,
   GameState,
   globalPowerUps,
-  setGlobalPowerUps,
   canvas,
   selectedColors,
 } from "./main.js";
@@ -31,7 +27,7 @@ import {
   basicAnimationTimer,
 } from "./gameLogic.js";
 import { screenShake, getRandomUniqueColor } from "./gameUtils.js";
-import { sendPlayerStates, sendRequestForStates, requestFullUpdate, sendEffectsUpdate, sendMinesUpdate } from "./sendData.js";
+import { sendPlayerStates, sendRequestForStates, requestFullUpdate, sendEffectsUpdate } from "./sendData.js";
 
 const bounceFactor = 1.5;
 const offset = 1;
@@ -979,25 +975,6 @@ export class Bot extends Player {
     }
     this.handleTargeting(this.target.x, this.target.y, 0, 0, 0.4);
   }
-
-  // handleCollectState() {
-  //   if (this.target.x == 0 && this.target.y == 0) {
-  //     let powerUpToTarget;
-  //     if (globalPowerUps.length > 0) {
-  //       const randomIndex = Math.floor(Math.random() * globalPowerUps.length);
-  //       powerUpToTarget = globalPowerUps[randomIndex];
-  //       this.setRandomTarget(powerUpToTarget.x, powerUpToTarget.y, powerUpToTarget.id);
-  //     } else {
-  //       this.setBotState(BotState.RANDOM);
-  //     }
-  //   } else {
-  //     let powerUpStillExists = globalPowerUps.some((globalPowerUp) => globalPowerUp.x == this.target.x && globalPowerUp.y == this.target.y);
-  //     if (!powerUpStillExists) {
-  //       this.setBotState(BotState.RANDOM);
-  //     }
-  //   }
-  //   this.handleTargeting(this.target.x, this.target.y, 0, 0, 0.4);
-  // }
 
   handleCollectState() {
     if (this.target.x == 0 && this.target.y == 0) {
