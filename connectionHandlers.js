@@ -202,6 +202,7 @@ export function createPeer(player, otherPlayers, globalPowerUps, reconnectionAtt
     // Add the local player's ID to the connectedPeers array //why is our id in this list?
     connectedPeers.push(id);
     console.log("My peer ID is: " + id);
+    attemptConnections(player, otherPlayers, globalPowerUps, true, true);
   });
 
   peer.on("error", function (err) {

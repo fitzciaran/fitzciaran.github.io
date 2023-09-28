@@ -84,7 +84,7 @@ export function generatePowerups(globalPowerUps, worldWidth, worldHeight, colors
   }
 }
 
-export function createBots(worldWidth, worldHeight, colors) {
+export function generateBots(worldWidth, worldHeight, colors) {
   if (!isPlayerMasterPeer(player)) {
     return;
   }

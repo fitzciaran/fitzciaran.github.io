@@ -22,7 +22,6 @@ import { sendPlayerStates } from "./sendData.js";
 import { setupCanvas, setupSpikeyBallPoints } from "./drawingUtils.js";
 import { addScoreToDB } from "./db.js";
 import { endGameMessage, setGameWon, pilots, masterUpdateGame } from "./gameLogic.js";
-import { generatePowerups, generateMines, generateDirectionalForces, createBots } from "./generateEntities.js";
 
 import { shuffleArray } from "./gameUtils.js";
 import {
@@ -41,9 +40,25 @@ export function setGameTimer(newTime) {
   gameTimer = newTime;
 }
 export const { canvas, ctx } = setupCanvas();
-// export const worldDimensions = { width: 4200, height: 2400 };
 export const worldDimensions = { width: 7200, height: 5400 };
 export const colors = [
+  "red",
+  "blue",
+  "SpringGreen",
+  "green",
+  "lime",
+  "cyan",
+  "indigo",
+  "purple",
+  "orange",
+  "pink",
+  "MediumVioletRed",
+  "violet",
+  "maroon",
+  "crimson",
+];
+
+export const powerUpColors = [
   "red",
   "blue",
   "SpringGreen",
@@ -419,20 +434,18 @@ window.addEventListener("load", function () {
   /* START CONNECTION HANDLERS  */
   createPeer(player, otherPlayers, globalPowerUps);
 
-  setTimeout(() => attemptConnections(player, otherPlayers, globalPowerUps), 500);
-  //do we need to keep doing this??
-  // setInterval(() => connectToPeers(player, otherPlayers, globalPowerUps), 6000);
-  setTimeout(() => connectToPeers(player, otherPlayers, globalPowerUps), 2000);
+  // setTimeout(() => connectToPeers(player, otherPlayers, globalPowerUps), 20);
+  // setTimeout(() => attemptConnections(player, otherPlayers, globalPowerUps), 60);
 
-  setTimeout(() => createBots(worldDimensions.width, worldDimensions.height, colors), 250);
-  setTimeout(() => generatePowerups(globalPowerUps, worldDimensions.width, worldDimensions.height, colors), 270);
-  setTimeout(() => generateMines(worldDimensions.width, worldDimensions.height, colors), 300);
-  setTimeout(() => generateDirectionalForces(worldDimensions.width, worldDimensions.height, colors), 320);
+  // setTimeout(() => generateBots(worldDimensions.width, worldDimensions.height, colors), 250);
+  // setTimeout(() => generatePowerups(globalPowerUps, worldDimensions.width, worldDimensions.height, powerUpColors), 270);
+  // setTimeout(() => generateMines(worldDimensions.width, worldDimensions.height, colors), 300);
+  // setTimeout(() => generateDirectionalForces(worldDimensions.width, worldDimensions.height, colors), 320);
 
-  setInterval(() => createBots(worldDimensions.width, worldDimensions.height, colors), 3000);
-  setInterval(() => generatePowerups(globalPowerUps, worldDimensions.width, worldDimensions.height, colors), 3303);
-  setInterval(() => generateMines(worldDimensions.width, worldDimensions.height, colors), 3607);
-  setInterval(() => generateDirectionalForces(worldDimensions.width, worldDimensions.height, colors), 3901);
+  // setInterval(() => generateBots(worldDimensions.width, worldDimensions.height, colors), 3000);
+  // setInterval(() => generatePowerups(globalPowerUps, worldDimensions.width, worldDimensions.height, powerUpColors), 3303);
+  // setInterval(() => generateMines(worldDimensions.width, worldDimensions.height, colors), 3607);
+  // setInterval(() => generateDirectionalForces(worldDimensions.width, worldDimensions.height, colors), 3901);
 
   //setInterval(() => connectToPeers(player, otherPlayers, globalPowerUps), 15000);
 

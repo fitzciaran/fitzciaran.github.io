@@ -6,6 +6,7 @@ import { drawMinimap, drawMinimapPowerups } from "./miniMapDrawing.js";
 import { drawShip } from "./drawShip.js";
 import { drawForce } from "./forceDrawing.js";
 import { drawMine } from "./mineDrawing.js";
+import { basicAnimationTimer } from "./gameLogic.js";
 
 let backLayer = new Image();
 let midBackLayer = new Image();
@@ -51,18 +52,20 @@ export function drawScene(player, otherPlayers, bots, mines, ctx, camX, camY, wo
 export function drawPowerups(globalPowerUps, ctx, camX, camY) {
   globalPowerUps.forEach((powerUp) => {
     const currentTime = Date.now();
-    const elapsedTime = currentTime - powerUp.starTransitionStartTime;
+    let elapsedTime = currentTime - powerUp.starTransitionStartTime;
     const transitionDuration = 200;
+    if (isNaN(elapsedTime)) {
+      elapsedTime = Math.floor(Math.random() * transitionDuration);
+    }
+    if (!powerUp.starTransitionStartTime || elapsedTime >= transitionDuration) {
+      powerUp.starTransitionStartTime = currentTime - elapsedTime;
+    }
     const animationFrame = elapsedTime % transitionDuration;
 
     // Save the current canvas state
     ctx.save();
 
     if (powerUp.hitFrames < -1) {
-      if (!powerUp.starTransitionStartTime || elapsedTime >= transitionDuration) {
-        powerUp.starTransitionStartTime = currentTime;
-        // powerUp.starTransitionStartColor = powerUp.color;
-      }
       applyGlowingEffect(ctx, "white", powerUp.color, "white", transitionDuration, animationFrame, 0.2);
     } else if (powerUp.isStar) {
       // Apply a glowing effect for star ships
@@ -76,9 +79,13 @@ export function drawPowerups(globalPowerUps, ctx, camX, camY) {
       ctx.strokeStyle = powerUp.color;
       ctx.fillStyle = powerUp.color;
     }
+    // Rotate the star
+    const rotationSpeed = 2 / (powerUp.radius * powerUp.radius); // Adjust the rotation speed
+    const rotationAngle = (elapsedTime * rotationSpeed) % (2 * Math.PI);
 
     // Translate the canvas origin to the power-up position
     ctx.translate(powerUp.x - camX, powerUp.y - camY);
+    ctx.rotate(rotationAngle);
     drawStar(ctx, powerUp.radius);
 
     // Restore the canvas state to prevent transformations from affecting other objects

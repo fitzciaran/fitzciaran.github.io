@@ -1,10 +1,22 @@
 import { rotateAndScalePoint, getComplementaryColor, nameToRGBFullFormat, applyGlowingEffect, drawExplosion } from "./drawingUtils.js";
 import { MineType } from "./entities.js";
-import { basicAnimationTimer } from "./gameLogic.js";
 import { mineScale } from "./collisionLogic.js";
 
-function drawRegularMine(ctx, centerX, centerY, camX, camY, angle, mineScale, points, color) {
+function drawRegularMine(ctx, centerX, centerY, camX, camY, angle, mineScale, points, outerColor, coreColor, basicAnimationTimer) {
+  const glowWidth = 5;
+  const shadowBlur = 10;
+  let coreRadius = 15;
+  const pulseSpeed = 0.0095;
+  const blinkSpeed = 0.005;
+
+  //   coreRadius = basicAnimationTimer % maxCoreRadius;
+  coreRadius = coreRadius + Math.sin(basicAnimationTimer * pulseSpeed) * 15;
+  // Draw the outer spikey ball with glow and shadow
   ctx.beginPath();
+  ctx.shadowBlur = shadowBlur;
+  ctx.shadowColor = outerColor;
+  ctx.strokeStyle = outerColor;
+
   let rotatedPoint = rotateAndScalePoint(points[0].x, points[0].y, angle, mineScale);
   ctx.moveTo(centerX - camX + rotatedPoint.x, centerY - camY + rotatedPoint.y);
 
@@ -14,6 +26,24 @@ function drawRegularMine(ctx, centerX, centerY, camX, camY, angle, mineScale, po
   }
 
   ctx.stroke();
+
+  // Add a glowing effect
+  ctx.strokeStyle = "rgba(255, 0, 0, 0.5)"; // Adjust the color and opacity for the glow
+  ctx.lineWidth = glowWidth;
+  ctx.stroke();
+
+  // Reset shadow and line width
+  ctx.shadowBlur = 0;
+  ctx.lineWidth = 1;
+
+  // Draw the pulsating core
+  const coreOpacity = 0.8 + Math.sin(Date.now() * blinkSpeed) * 0.2; // Pulsating opacity
+  ctx.fillStyle = coreColor;
+  ctx.globalAlpha = coreOpacity;
+  ctx.beginPath();
+  ctx.arc(centerX - camX, centerY - camY, coreRadius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1; // Reset global alpha
 }
 
 function drawMineShape(ctx, camX, camY, points, color) {
@@ -37,7 +67,6 @@ function drawMineShape(ctx, camX, camY, points, color) {
 
 function drawSpoke(ctx, centerXScreenCoord, centerYScreenCoord, angleRadians, spokeLength, spokeWidth) {
   ctx.lineWidth = spokeWidth;
-  //   ctx.lineWidth = 10;
 
   ctx.beginPath();
   ctx.moveTo(centerXScreenCoord, centerYScreenCoord);
@@ -57,6 +86,7 @@ function drawSpoke(ctx, centerXScreenCoord, centerYScreenCoord, angleRadians, sp
   ctx.lineCap = "round";
 
   ctx.stroke();
+  ctx.lineWidth = 1;
 }
 
 function drawFreeMine(ctx, camX, camY, angle, mineScale, mine, color, centerX, centerY, animationFrame = 0, explosionEffect = false) {
@@ -83,24 +113,28 @@ export function drawMine(ctx, camX, camY, mine, points) {
   let color = mine.color;
   let angle = 0;
   ctx.strokeStyle = color;
+  ctx.fillStyle = color;
   ctx.shadowBlur = 0;
   ctx.shadowColor = "transparent";
   ctx.globalAlpha = 1;
   const currentTime = Date.now();
-  const elapsedTime = currentTime - mine.starTransitionStartTime;
+  let elapsedTime = currentTime - mine.starTransitionStartTime;
   const transitionDuration = 50;
+  if (isNaN(elapsedTime)) {
+    elapsedTime = Math.floor(Math.random() * transitionDuration);
+  }
+  if (!mine.starTransitionStartTime || elapsedTime >= transitionDuration) {
+    mine.starTransitionStartTime = currentTime - elapsedTime;
+    mine.starTransitionStartColor = color;
+  }
   const animationFrame = elapsedTime % transitionDuration;
 
   ctx.beginPath();
   if (mine.mineType === MineType.REGULAR) {
     if (mine.hitFrames < -1) {
-      if (!mine.starTransitionStartTime || elapsedTime >= transitionDuration) {
-        mine.starTransitionStartTime = currentTime;
-        mine.starTransitionStartColor = color;
-      }
       applyGlowingEffect(ctx, "white", mine.color, "white", transitionDuration, animationFrame, 0.2);
     }
-    drawRegularMine(ctx, centerX, centerY, camX, camY, angle, mineScale, points, color);
+    drawRegularMine(ctx, centerX, centerY, camX, camY, angle, mineScale, points, color, "red", elapsedTime);
   } else if (mine.mineType === MineType.FREE_MINE) {
     if (!mine.starTransitionStartTime || elapsedTime >= transitionDuration) {
       mine.starTransitionStartTime = currentTime;
@@ -168,6 +202,7 @@ export function drawMine(ctx, camX, camY, mine, points) {
   ctx.closePath();
   ctx.strokeStyle = color;
   ctx.fillStyle = color;
+  ctx.lineWidth = 1;
   ctx.shadowBlur = 0;
   ctx.shadowColor = "transparent";
   ctx.globalAlpha = 1;

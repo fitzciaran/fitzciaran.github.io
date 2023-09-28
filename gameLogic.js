@@ -1,13 +1,12 @@
-import { player, bots, otherPlayers, mines, setGameTimer, gameTimer, globalPowerUps } from "./main.js";
 import { isPlayerMasterPeer, setTimeSinceMessageFromMaster, timeSinceMessageFromMaster } from "./connectionHandlers.js";
 import { detectCollisions } from "./collisionLogic.js";
-import { sendPlayerStates, sendEntitiesState, sendEntitiesUpdate, sendBotEntitiesUpdate, sendRemoveEntityUpdate } from "./sendData.js";
 import { forces, Entity, effects, MineType } from "./entities.js";
+import { generatePowerups, generateMines, generateDirectionalForces, generateBots } from "./generateEntities.js";
+import { player, bots, otherPlayers, mines, setGameTimer, gameTimer, globalPowerUps, worldDimensions, colors, powerUpColors } from "./main.js";
 import { Player, Bot } from "./player.js";
+import { sendPlayerStates, sendEntitiesState, sendEntitiesUpdate, sendBotEntitiesUpdate, sendRemoveEntityUpdate } from "./sendData.js";
 import { ProcessTrailShapesAllPlayers } from "./trailShapes.js";
 
-//finish game after 5 for easier testing the finish
-export let pointsToWin = 5;
 export let initialInvincibleTime = 60 * 10;
 export let maxInvincibilityTime = initialInvincibleTime;
 export let maxSpecialMeter = 200;
@@ -85,7 +84,7 @@ export const pilot2 = new Pilot(
   PilotName.PILOT_2,
   "images/slippy.webp",
   900,
-  70
+  120
 );
 export const pilot3 = new Pilot(
   PilotName.PILOT_3,
@@ -275,7 +274,7 @@ export function masterUpdateGame(player, globalPowerUps, otherPlayers, bots, min
     setTimeSinceMessageFromMaster(timeSinceMessageFromMaster + 1);
   }
   player.updateTick(deltaTime, mines);
-  // createBots(worldWidth,worldHeight,colors);
+  // generateBots(worldWidth,worldHeight,colors);
   updateBots(deltaTime, mines);
   updateOtherPlayers(deltaTime, mines);
   updateEnemies(deltaTime);
@@ -293,23 +292,31 @@ export function masterUpdateGame(player, globalPowerUps, otherPlayers, bots, min
     detectCollisions(bot, globalPowerUps, bots, otherPlayers, forces);
   });
 
-  // Call the main function to execute the refactored code
-  ProcessTrailShapesAllPlayers(player, otherPlayers, mines, effects, globalPowerUps);
+  if (gameTimer % 2 == 0) {
+    ProcessTrailShapesAllPlayers(player, otherPlayers, mines, effects, globalPowerUps);
+  }
   removeExpiredPowerUps(globalPowerUps, player);
   removeExpiredEffects(effects, player);
   basicAnimationTimer++;
 
   if (isPlayerMasterPeer(player)) {
-    if (gameTimer % 2 == 1) {
-      sendBotEntitiesUpdate();
-    } else if (gameTimer % 11 == 1) {
-      sendEntitiesUpdate();
-    } else if (gameTimer % 59 == 1) {
+    if (gameTimer % 89 == 1) {
       sendEntitiesState();
+    } else if (gameTimer % 21 == 1) {
+      sendEntitiesUpdate();
+    } else if (gameTimer % 2 == 1) {
+      sendBotEntitiesUpdate();
     }
   }
   if (!player.isDead && gameTimer % 1 == 0) {
     sendPlayerStates(player, isPlayerMasterPeer(player));
+  }
+
+  if (gameTimer % 100 == 2 && isPlayerMasterPeer(player)) {
+    generateBots(worldDimensions.width, worldDimensions.height, colors);
+    generatePowerups(globalPowerUps, worldDimensions.width, worldDimensions.height, powerUpColors);
+    generateMines(worldDimensions.width, worldDimensions.height, colors);
+    generateDirectionalForces(worldDimensions.width, worldDimensions.height, colors);
   }
 }
 

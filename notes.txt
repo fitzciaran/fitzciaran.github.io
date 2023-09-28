@@ -428,10 +428,29 @@ currently just checking free mine at start I think? at least for the special che
 
 check colors for good ones improve average quality, vivid bright
 
-test the spoke collision
-
 mines/areas that will on countdown or sporadically explode or generically become hurtboxes.
 
 did refactor break the background paralax?
 
 doesn't work on firefox? detect browser and don't let firefox play?
+
+deliberate hallucinations between players?
+or shared hallucinations "fake" enitities?
+    viewing field - maybe the force fields could reveal (or new power up)
+    could be a "dark mode" where every player casts a searchlight
+
+
+    let know if score is a top X score of the day/all time /whatever on dead screen...show daily leaderboard on that view?
+
+Can we cache things like daily leaderboard? Are we querying / generating every frame?
+
+when removing mines due to too many, do it with an effect and blink out rather than disappear
+
+if not connected don't prepare data to send.
+
+if e.g. 2 master peers don't get connected to each other (or lose connection) say a and b, b shouldn't be master but each connection to c thinks it's master so c gets messed up...
+    can C detect this state and.... something   
+        get a and b connected would be ideal
+        
+
+general connection issues ... firefox? privacy extension/ in built? ... general not recovering connection state?

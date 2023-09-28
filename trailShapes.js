@@ -18,7 +18,7 @@ function ProcessTrailShapes(candidatePlayer, allPlayers) {
   if (shape && shape.shapePath) {
     let freeMine = createFreeMine(candidatePlayer, shape);
     handleFreeMineSpawn(candidatePlayer.id, mines, freeMine, shape, allPlayers);
-    createEffects(shape.shapePath, effects);
+    // createEffects(shape.shapePath, effects);
     if (isPlayerMasterPeer(player)) {
       sendMinesUpdate();
     }
@@ -56,9 +56,9 @@ function createEffects(shapePath, effects) {
 function handleFreeMineSpawn(playerId, mines, freeMine, shape, allPlayers) {
   removePlayerTrailMines(playerId, mines);
   mines.push(freeMine);
-  createExplosionEffects(shape.shapePath);
+  //   createExplosionEffects(shape.shapePath);
 
-  destroyOverlappingMines(mines, shape, freeMine);
+  destroyOverlappingMines(mines, shape, freeMine, playerId);
   hitPlayersCaught(allPlayers, playerId, shape, freeMine);
 }
 
@@ -74,9 +74,9 @@ function createExplosionEffects(shapePath) {
   }
 }
 
-function destroyOverlappingMines(mines, shape, freeMine) {
+function destroyOverlappingMines(mines, shape, freeMine, playerId) {
   for (let mine of mines) {
-    if (mine.mineType !== MineType.FREE_MINE) {
+    if (mine.mineType !== MineType.FREE_MINE && mine.playerId != playerId) {
       if (isMineOverlapping(shape, mine, freeMine)) {
         destroyMine(mine);
         addPowerUpOnMineDestroy(mine);
@@ -104,7 +104,7 @@ function addPowerUpOnMineDestroy(mine) {
 }
 
 function shouldAddPowerupOnMineDestroy(mine) {
-  if (mine.mineType === MineType.TRAIL && Math.random() > 0.3) {
+  if (mine.mineType === MineType.TRAIL && Math.random() > 0.5) {
     return false;
   }
 
