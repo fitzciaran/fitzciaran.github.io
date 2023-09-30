@@ -393,11 +393,15 @@ export class Player {
     }
   }
 
+  isActive() {
+    return (this.isPlaying || this.isBot) && !this.isDead;
+  }
+
   isInvincible() {
     return this.invincibleTimer > 0;
   }
   isVulnerable() {
-    return !this.isInvincible() && !this.isInSpawnProtectionTime();
+    return !this.isInvincible() && !this.isInSpawnProtectionTime() && this.isActive();
   }
   isTangible() {
     return !this.isInSpawnProtectionTime() || this.isInvincible();
