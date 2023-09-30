@@ -454,3 +454,7 @@ if e.g. 2 master peers don't get connected to each other (or lose connection) sa
         
 
 general connection issues ... firefox? privacy extension/ in built? ... general not recovering connection state?
+
+ping test?
+
+flag / icon select (draw own?)

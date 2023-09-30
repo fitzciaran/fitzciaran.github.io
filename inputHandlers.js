@@ -1,6 +1,7 @@
 import { camX, camY, getGameState, setGameState, getCanvas, GameState, player } from "./main.js";
 import {
   drawNameEntry,
+  drawInputField,
   playButtonX,
   playButtonY,
   playButtonWidth,

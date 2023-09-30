@@ -87,83 +87,78 @@ let loreIndex = 0;
 let lineCount = 0;
 let maxCharsPerLine = 20; // Adjust this value based on the width of your tablet
 
-export function drawPreGameOverlay(canvas, ctx) {
-  const bestScoresXOffset = 250;
-  const bestScoresYOffset = 300;
+function drawBorder(ctx, x, y, width, height) {
   // Create gradient
-  let gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+  let gradient = ctx.createLinearGradient(0, 0, ctx.canvas.width, 0);
   gradient.addColorStop("0", "magenta");
   gradient.addColorStop("0.5", "blue");
   gradient.addColorStop("1.0", "red");
 
-  let boxWidth = 360;
-  let boxHeight = 320;
   // Draw border
   ctx.lineWidth = 10;
   ctx.strokeStyle = gradient;
-  ctx.strokeRect(bestScoresXOffset - 170, bestScoresYOffset - 50, boxWidth, boxHeight);
+  ctx.strokeRect(x, y, width, height);
+}
 
+function drawBoxBackground(ctx, x, y, width, height) {
   // Create a gradient for the box background
-  const backGadient = ctx.createLinearGradient(
-    bestScoresXOffset - 170,
-    bestScoresYOffset - 50,
-    bestScoresXOffset - 170 + boxWidth,
-    bestScoresYOffset - 50 + boxHeight
-  );
-  backGadient.addColorStop(0, "rgba(0, 0, 0, 0.2)"); // Transparent black
-  backGadient.addColorStop(1, "rgba(0, 0, 0, 0.3)"); // Semi-transparent black
+  const backGradient = ctx.createLinearGradient(x, y, x + width, y + height);
+  backGradient.addColorStop(0, "rgba(0, 0, 0, 0.2)"); // Transparent black
+  backGradient.addColorStop(1, "rgba(0, 0, 0, 0.3)"); // Semi-transparent black
 
   // Draw the box background with gradient
-  ctx.fillStyle = backGadient;
-  //  ctx.strokeStyle = "#555"; // Border color
-  ctx.fillRect(bestScoresXOffset - 170, bestScoresYOffset - 50, boxWidth, boxHeight);
+  ctx.fillStyle = backGradient;
+  ctx.fillRect(x, y, width, height);
+}
 
-  // Draw title
-  ctx.font = "20px Arial";
-  ctx.fillStyle = "white";
+function drawText(ctx, text, x, y, font, color, textAlign = "left") {
+  ctx.font = font;
+  ctx.fillStyle = color;
+  ctx.textAlign = textAlign;
+  ctx.fillText(text, x, y);
+}
+
+export function drawPreGameOverlay(canvas, ctx) {
+  const bestScoresXOffset = 200;
+  const bestScoresYOffset = 300;
+  const boxWidth = 360;
+  const boxHeight = 320;
+
+  drawBorder(ctx, bestScoresXOffset - 130, bestScoresYOffset - 50, boxWidth, boxHeight);
+  drawBoxBackground(ctx, bestScoresXOffset - 130, bestScoresYOffset - 50, boxWidth, boxHeight);
   ctx.textAlign = "center";
-
-  ctx.fillText("Best Scores Today!", bestScoresXOffset, bestScoresYOffset);
+  // Draw title
+  drawText(ctx, "Best Scores Today!", bestScoresXOffset, bestScoresYOffset, "20px Arial", "white");
 
   // Draw table headers
-  ctx.font = "16px Arial";
-  ctx.fillText("Rank", bestScoresXOffset - 100, bestScoresYOffset + 30);
-  ctx.fillText("Score", bestScoresXOffset, bestScoresYOffset + 30);
-  ctx.fillText("Player", bestScoresXOffset + 100, bestScoresYOffset + 30);
+  drawText(ctx, "Rank", bestScoresXOffset - 100, bestScoresYOffset + 30, "16px Arial", "white");
+  drawText(ctx, "Score", bestScoresXOffset, bestScoresYOffset + 30, "16px Arial", "white");
+  drawText(ctx, "Player", bestScoresXOffset + 100, bestScoresYOffset + 30, "16px Arial", "white");
 
   // Draw scores
-  ctx.font = "14px Arial";
+  drawText(ctx, "Rank", bestScoresXOffset - 100, bestScoresYOffset + 30, "16px Arial", "white");
+  drawText(ctx, "Score", bestScoresXOffset, bestScoresYOffset + 30, "16px Arial", "white");
+  drawText(ctx, "Player", bestScoresXOffset + 100, bestScoresYOffset + 30, "16px Arial", "white");
   let gap = 20;
   const textHeight = 75;
   if (topDailyScoresString != "") {
     var scores = topDailyScoresString.split("; ");
     for (var i = 0; i < scores.length; i++) {
-      let scoreData = scores[i].split(", "); // Assuming score data is in format "score, player"
-      ctx.fillText((i + 1).toString(), bestScoresXOffset - 100, bestScoresYOffset + 130 + gap * i - textHeight); // Rank
-      ctx.fillText(scoreData[0], bestScoresXOffset, bestScoresYOffset + 130 + gap * i - textHeight); // Score
-      ctx.fillText(scoreData[1], bestScoresXOffset + 100, bestScoresYOffset + 130 + gap * i - textHeight); // Player
+      let scoreData = scores[i].split(", ");
+      drawText(ctx, (i + 1).toString(), bestScoresXOffset - 100, bestScoresYOffset + 130 + gap * i - textHeight, "14px Arial", "white");
+      drawText(ctx, scoreData[0], bestScoresXOffset, bestScoresYOffset + 130 + gap * i - textHeight, "14px Arial", "white");
+      drawText(ctx, scoreData[1], bestScoresXOffset + 100, bestScoresYOffset + 130 + gap * i - textHeight, "14px Arial", "white");
     }
   }
 
-  // Draw title
-  ctx.font = "30px Arial";
-  ctx.fillStyle = "white";
-  ctx.textAlign = "center";
-  ctx.fillText("Select Your Pilot", canvas.width / 2, 50);
+  // Draw title for pilot selection
+  drawText(ctx, "Select Your Pilot", canvas.width / 2, 50, "30px Arial", "white", "center");
 
-  // Draw lore tablet
-  //todo can use this when have a non-trash asset
-  // ctx.drawImage(loreTablet.image, loreTablet.x, loreTablet.y, loreTablet.width, loreTablet.height);
-
-  // Draw the box background with gradient
-  ctx.fillStyle = backGadient;
-  //  ctx.strokeStyle = "#555"; // Border color
-  ctx.fillRect(loreTablet.x, loreTablet.y, loreTablet.width, loreTablet.height);
+  drawBoxBackground(ctx, loreTablet.x, loreTablet.y, loreTablet.width, loreTablet.height);
 
   ctx.strokeStyle = "white";
   ctx.strokeRect(loreTablet.x, loreTablet.y, loreTablet.width, loreTablet.height);
 
-  // Draw pilot options and highlight selected pilot
   for (let i = 0; i < pilots.length; i++) {
     let pilot = pilots[i];
     ctx.drawImage(pilot.image, pilot.x, pilot.y, pilot.width, pilot.height);
@@ -175,7 +170,6 @@ export function drawPreGameOverlay(canvas, ctx) {
     }
   }
 
-  // Reset lore index and line count if no pilot is selected
   if (pilots.every((pilot) => !pilot.selected)) {
     loreIndex = 0;
     lineCount = 0;
@@ -184,12 +178,11 @@ export function drawPreGameOverlay(canvas, ctx) {
   let x = loreTablet.x + 60;
   let y = loreTablet.y + 65; // Initial y value
 
-  // draw info text for the selected pilot
   for (let i = 0; i < pilots.length; i++) {
     let pilot = pilots[i];
     if (pilot.selected) {
       renderInfoText(ctx, pilot.lore, x, y, 330, pilot.pilotAnimationFrame);
-      break; // Exit the loop once a selected pilot is found
+      break;
     }
   }
 }
@@ -296,56 +289,88 @@ function animateLoreText(ctx, lore, loreIndex, lineCount) {
     loreIndex++;
   }
 }
-
-export function drawNameEntry(canvas, ctx, name, x, y) {
-  // Reset context to preserve consistency when this function is called
-  ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset the canvas transform
-  // ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
+export function drawInputField(canvas, ctx, inputText, x, y, width, height, inputTitle) {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.textAlign = "center";
-  // Reset fill and stroke styles
   ctx.fillStyle = "black";
   ctx.strokeStyle = "black";
+  // ctx.font = "12px Arial";
 
-  // Reset font
+  if (inputTitle) {
+    ctx.fillStyle = "white";
+    // Draw title
+    ctx.fillText(inputTitle, canvas.width / 2, y + 15);
+  }
+  // Draw input field background
+  ctx.fillStyle = "white";
+  ctx.fillRect(x, y, width, height); // Adjust the width and height as needed
+
+  // // Draw input text
+  // ctx.fillStyle = "black";
+  // ctx.fillText(inputText, x + 5, y + 20); // Adjust the x and y offsets as needed
+
+  // // Calculate the cursor position
+  // const cursorX = x + width / 2 + ctx.measureText(inputText).width + 5; // Adjust the offset as needed
+
+  // // Draw the cursor (a vertical line)
+  // if (document.hasFocus()) {
+  //   drawCursor(ctx, cursorX, y + 5, y + 25); // Adjust the cursor height as needed
+  // }
+
+  ctx.font = "20px Arial";
+  ctx.fillStyle = "black";
+  let ogTextAlign = ctx.textAlign;
+  ctx.textAlign = "center";
+  // Calculate the center of the box
+  let centerX = x + width / 2;
+  let centerY = y + 15;
+
+  // Calculate the width of the text
+  let textWidth = ctx.measureText(inputText).width;
+
+  //text align center so we can just aim at the middle
+  let textStartX = centerX;
+  // Draw player's name
+  ctx.fillText(inputText, textStartX, centerY);
+
+  // Draw the cursor just to the right of the text
+  if (document.hasFocus()) {
+    drawTextCursor(ctx, textStartX + textWidth / 2, centerY - 10);
+  }
+
+  ctx.textAlign = ogTextAlign;
+}
+
+function drawCursor(ctx, x, startY, endY) {
+  ctx.strokeStyle = "black";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(x, startY);
+  ctx.lineTo(x, endY);
+  ctx.stroke();
+}
+
+export function drawNameEntry(canvas, ctx, name, x, y) {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.textAlign = "center";
+  ctx.fillStyle = "black";
+  ctx.strokeStyle = "black";
   ctx.font = "12px Arial";
 
   // Draw background
-  // ctx.fillRect(0, 0, canvas.width, canvas.height);
-
   ctx.fillStyle = "white";
   let enterNameText = "Enter Your Name";
-  // Draw title
   ctx.fillText(enterNameText, canvas.width / 2, y + 15);
 
   // Draw name entry box
   ctx.strokeStyle = "white";
   ctx.strokeRect(x, y, 200, 100);
-  ctx.textAlign = "start";
-  // Draw player's name
-  ctx.font = "20px Arial";
-  let nameAdjustment = 30;
-  // ctx.fillText(name, x + nameAdjustment, y + 50);
-  // if (document.hasFocus()) {
-  //   drawNameCursor(canvas, ctx, name, x + ctx.measureText(name).width + nameAdjustment, y + 38);
-  // }
 
-  // Calculate the center of the box
-  let centerX = x + 100;
-  let centerY = y + 50;
+  let inputFieldWidth = 180;
 
-  // Calculate the width of the text
-  let textWidth = ctx.measureText(name).width;
+  // Draw player's name using the new drawInputField function
+  drawInputField(canvas, ctx, name, x + 10, y + 30, inputFieldWidth, 30);
 
-  // Calculate the start position of the text so that it's centered in the box
-  let textStartX = centerX - textWidth / 2;
-
-  // Draw player's name
-  ctx.fillText(name, textStartX, centerY);
-
-  // Draw the cursor just to the right of the text
-  if (document.hasFocus()) {
-    drawNameCursor(canvas, ctx, name, textStartX + textWidth, centerY - 12);
-  }
   // Draw play button
   let buttonX = x + 50;
   let buttonY = y + 70;
@@ -383,16 +408,21 @@ function drawButton(ctx, buttonX, buttonY, buttonWidth, buttonHeight, radius, te
   ctx.fillText(text, buttonX + buttonWidth / 2, buttonY + buttonHeight / 2);
 }
 
-export function drawNameCursor(canvas, ctx, name, x, y) {
-  var forDebug = ctx.measureText(name).width;
-  // Draw text cursor
+export function drawTextCursor(ctx, x, y) {
   if (cursorBlink) {
-    ctx.fillStyle = "white";
+    ctx.fillStyle = "black";
   } else {
     ctx.fillStyle = "transparent";
   }
-  //adjust by 0.5 so cursor just to the right of the text
-  ctx.fillRect(x + 0.5, y, 2, 20);
-  //ctx.fillStyle = "pink";
+
+  if (x && y) {
+    ctx.fillRect(x, y, 2, 20);
+  }
 }
 
+export function drawTextCursorFromText(ctx, text) {
+  let x = 0;
+  let y = 0;
+
+  drawTextCursor(ctx, x, y);
+}

@@ -1,4 +1,11 @@
-import { drawNameEntry, drawGameOverMessage, drawNameCursor, updateTopScoresInfo, drawPreGameOverlay } from "./canvasDrawingFunctions.js";
+import {
+  drawInputField,
+  drawNameEntry,
+  drawGameOverMessage,
+  drawTextCursorFromText,
+  updateTopScoresInfo,
+  drawPreGameOverlay,
+} from "./canvasDrawingFunctions.js";
 import { setupPilotsImageSources, setupPilotsImages } from "./drawingUtils.js";
 import { drawScene } from "./gameDrawing.js";
 import {
@@ -20,10 +27,10 @@ import {
 } from "./connectionHandlers.js";
 import { sendPlayerStates } from "./sendData.js";
 import { setupCanvas, setupSpikeyBallPoints } from "./drawingUtils.js";
-import { addScoreToDB } from "./db.js";
+import { addScoreToDB, getFirebase } from "./db.js";
 import { endGameMessage, setGameWon, pilots, masterUpdateGame } from "./gameLogic.js";
-
 import { shuffleArray } from "./gameUtils.js";
+import { drawLoginForm, autoSignInWithGoogle } from "./login.js";
 import {
   handleInputEvents,
   addPilotEventListners,
@@ -411,8 +418,9 @@ function update() {
     }
     if (gameState === GameState.INTRO) {
       updateName();
-      drawNameCursor(canvas, ctx, player.name);
+      drawTextCursorFromText(ctx, player.name);
       updatePilot();
+      drawLoginForm(ctx, getFirebase());
     } else if (gameState === GameState.PILOT_SELECT) {
       updatePilot();
     } else if (gameState === GameState.GAME) {
@@ -460,6 +468,8 @@ window.addEventListener("load", function () {
   update();
   setupGameEventListeners(window);
   setGameState(GameState.INTRO);
+  // autoSignInWithGoogle(getFirebase());
+  setTimeout(() => autoSignInWithGoogle(getFirebase()), 500);
 });
 
 window.addEventListener("resize", function (event) {
