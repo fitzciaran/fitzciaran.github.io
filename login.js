@@ -1,5 +1,5 @@
 import { player } from "./main.js";
-import { DbPropertyKey, incrementFirebaseGivenPropertyValue, readUserDataFromFirestore, updateAchievements } from "./db.js";
+import { DbPropertyKey, DbDocumentKey, incrementFirebaseGivenPropertyValue, readUserDataFromFirestore, updateAchievements } from "./db.js";
 import { setAchievementsTitle } from "/gameLogic.js";
 
 const emailInput = {
@@ -24,6 +24,11 @@ const loginButton = {
   width: 200,
   height: 40,
   text: "Login with Google",
+};
+
+export const achievementsTitleText = {
+  YOUR_ACHIEVMENTS: "Your Achievments",
+  LOGIN_TO_TRACK: "login to track your achievments",
 };
 
 let googleSignInPopupOpen = false;
@@ -83,7 +88,7 @@ function firebaseLogin(firebase, email, password) {
       console.log(`Signed in as ${user.email}`);
       loginButton.text = `${user.email}`;
       player.setPlayerName(user.displayName);
-      setAchievementsTitle("Your Achievments");
+      setAchievementsTitle(achievementsTitleText.YOUR_ACHIEVMENTS);
     })
     .catch((error) => {
       // Handle login errors.
@@ -118,7 +123,7 @@ function firebaseGoogleLogin() {
       //   updateLoginsCount(firebase);
       //   incrementFirebaseLoginsValue(firebase);
       incrementFirebaseGivenPropertyValue(firebase, DbPropertyKey.LOGINS, 1);
-      setAchievementsTitle("Your Achievments");
+      setAchievementsTitle(achievementsTitleText.YOUR_ACHIEVMENTS);
     })
     .catch((error) => {
       // Handle Google Sign-In errors.
@@ -163,10 +168,10 @@ export function autoSignInWithGoogle(firebase) {
     // updateLoginsCount(firebase);
     //   incrementFirebaseLoginsValue(firebase);
     incrementFirebaseGivenPropertyValue(firebase, DbPropertyKey.LOGINS, 1);
-    setAchievementsTitle("Your Achievments");
+    setAchievementsTitle(achievementsTitleText.YOUR_ACHIEVMENTS);
     let loginButtonText = `${firebase.auth().currentUser.email}`;
     player.setPlayerName(firebase.auth().currentUser.displayName);
-    readUserDataFromFirestore(firebase, "users", (error, userData) => {
+    readUserDataFromFirestore(firebase, DbDocumentKey.USERS, (error, userData) => {
       if (error) {
         if (error.message === "User not logged in") {
           console.log("User is not logged in.");
@@ -207,7 +212,7 @@ function updateLoginsCount(firebase) {
   const user = firebase.auth().currentUser;
 
   if (user) {
-    const userRef = firebase.firestore().collection("users").doc(user.uid);
+    const userRef = firebase.firestore().collection(DbDocumentKey.USERS).doc(user.uid);
 
     // Get the current logins count and increment it by 1.
     userRef

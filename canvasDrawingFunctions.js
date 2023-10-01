@@ -11,6 +11,7 @@ import {
 } from "./db.js";
 import { drawRoundedRectangle, loreTablet } from "./drawingUtils.js";
 import { drawFilledGauge } from "./drawGameUI.js";
+import { achievementsTitleText } from "./login.js";
 
 import { pilots, getLevel, getLevelXP, getXp, getNextLevelXP, getXpToNextLevel, levelAnimationFrame, achievementsTitle } from "./gameLogic.js";
 
@@ -175,20 +176,16 @@ export function drawAchievements(ctx) {
   drawBorder(ctx, achievementsAreaXPos, achievementsAreaYPos, boxWidth, boxHeight);
   drawBoxBackground(ctx, achievementsAreaXPos, achievementsAreaYPos, boxWidth, boxHeight);
   ctx.textAlign = "center";
-
+  if (achievementsTitle != achievementsTitleText.YOUR_ACHIEVMENTS) {
+    drawText(ctx, achievementsTitle, achievementsAreaCenter, currentYPos + 100, "20px Arial", "white", ctx.textAlign);
+    return;
+  }
   drawText(ctx, achievementsTitle, achievementsAreaCenter, currentYPos, "20px Arial", "white", ctx.textAlign);
   currentYPos += 30;
   let xp = getXp();
-
-  // let xp = 500;
-
   let level = getLevel(xp);
   let remainingNeededNextLevelXP = getXpToNextLevel(xp);
   let totalNeededNextLevelXP = getNextLevelXP(xp);
-
-  // let level = 2;
-  // let levelXP = 120;
-  // let totalNeededNextLevelXP = 30;
 
   ctx.textAlign = "left";
   drawText(ctx, "Level: " + level, achievementsAreaXPos + 20, currentYPos, "26px Arial", "white", ctx.textAlign);
@@ -207,23 +204,8 @@ export function drawAchievements(ctx) {
 
   drawFilledGauge(ctx, achievementsAreaCenter, currentYPos + gaugeHeight / 2, gaugeWidth, gaugeHeight, 3, filled, max, "blue");
 
-  currentYPos += 30;
+  currentYPos += 35;
   drawText(ctx, remainingNeededNextLevelXP + " XP to next level", achievementsAreaXPos + 20, currentYPos, "26px Arial", "white", ctx.textAlign);
-  // drawText(ctx, "Score", achievementsAreaCenter, currentYPos, "16px Arial", "white", ctx.textAlign);
-  // drawText(ctx, "Player", achievementsAreaCenter + 100, currentYPos, "16px Arial", "white", ctx.textAlign);
-
-  // let gap = 5;
-  // const textHeight = 18;
-  // if (topDailyScoresString != "") {
-  //   var scores = topDailyScoresString.split("; ");
-  //   for (var i = 0; i < scores.length; i++) {
-  //     let scoreData = scores[i].split(", ");
-  //     currentYPos += gap + textHeight;
-  //     drawText(ctx, (i + 1).toString(), achievementsAreaCenter - 100, currentYPos, "14px Arial", "white");
-  //     drawText(ctx, scoreData[0], achievementsAreaCenter, currentYPos, "14px Arial", "white");
-  //     drawText(ctx, scoreData[1], achievementsAreaCenter + 100, currentYPos, "14px Arial", "white");
-  //   }
-  // }
 }
 
 export function drawPreGameOverlay(canvas, ctx) {

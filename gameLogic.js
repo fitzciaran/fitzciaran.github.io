@@ -13,6 +13,7 @@ import {
   allTimeLogins,
 } from "./db.js";
 import { forces, Entity, effects, MineType } from "./entities.js";
+import { achievementsTitleText } from "./login.js";
 import { generatePowerups, generateMines, generateDirectionalForces, generateBots } from "./generateEntities.js";
 import { player, bots, otherPlayers, mines, setGameTimer, gameTimer, globalPowerUps, worldDimensions, colors, powerUpColors } from "./main.js";
 import { Player, Bot } from "./player.js";
@@ -44,7 +45,7 @@ export let levelAnimationFrame = 0;
 export function incrementLevelAnimationFrame() {
   levelAnimationFrame++;
 }
-export let achievementsTitle = "login to track your achievments";
+export let achievementsTitle = achievementsTitleText.LOGIN_TO_TRACK;
 
 export function setAchievementsTitle(newTitle) {
   achievementsTitle = newTitle;

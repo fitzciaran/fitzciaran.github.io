@@ -31,7 +31,7 @@ export function renderDebugInfo(ctx, player, bots) {
 
   const velocityText = `player velocity = ${player.vel.x.toFixed(1)}, ${player.vel.y.toFixed(1)}`;
   ctx.fillText(velocityText, 558, topGap + gap * 7 - textHeight);
-
+  let lineCount = 0;
   bots.forEach((bot, index) => {
     let botInfo;
     if (bot.botState == BotState.FOLLOW_PLAYER) {
@@ -40,7 +40,14 @@ export function renderDebugInfo(ctx, player, bots) {
       botInfo = `${bot.name} state: ${bot.botState} aiming: ${bot.target.x},${bot.target.y} `;
     }
     ctx.fillText(botInfo, 958, topGap + gap * index - textHeight);
+    lineCount = index;
   });
+  if (player.currentFrictionPercent) {
+    const frictionPercentText = `friction percent:   ${player.currentFrictionPercent}`;
+    ctx.fillText(frictionPercentText, 958, topGap + gap * (lineCount + 1) - textHeight);
+    const speedText = `speed:   ${player.currentSpeed}`;
+    ctx.fillText(speedText, 958, topGap + gap * (lineCount + 2) - textHeight);
+  }
 }
 
 export function drawFilledGauge(ctx, centerX, bottomY, gaugeWidth = 200, gaugeHeight = 50, borderWidth = 7, filled, total, color = "#ff9900") {

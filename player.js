@@ -516,8 +516,14 @@ export class Player {
     let dx = this.playerAngleData.dx;
     let dy = this.playerAngleData.dy;
     let distance = this.playerAngleData.distance;
-    let squareFactor = this.currentSpeed * this.currentSpeed;
-    let newFriction = Math.pow(Math.max(0.99 - squareFactor * 0.0001, 0.95), deltaTime);
+    let squareFactor = this.currentSpeed * this.currentSpeed * 0.0001;
+    // let velocity = Math.sqrt(this.currentSpeed, this.currentSpeed);
+    let minFrictionExponent = 0.8;
+    let frictionPowerScaler = 2;
+    let newFriction = Math.pow(Math.max(0.999 - squareFactor, minFrictionExponent), deltaTime / frictionPowerScaler);
+    newFriction = Math.min(newFriction, 0.99);
+    this.currentFrictionPercent = (1 - newFriction) * 100;
+    // let newFriction = Math.pow(Math.max(0.99 - squareFactor * 0.0001, 0.95), deltaTime);
 
     let pilotBoostFactor = 1;
     if (this.pilot == PilotName.PILOT_1) {
@@ -528,6 +534,13 @@ export class Player {
       pilotBoostFactor = 1.3;
     } else if (this.pilot == PilotName.PILOT_4) {
       pilotBoostFactor = 1.0;
+    }
+    if (this.currentSpeed < 2) {
+      pilotBoostFactor * 6;
+    } else if (this.currentSpeed < 4) {
+      pilotBoostFactor * 3;
+    } else if (this.currentSpeed < 7) {
+      pilotBoostFactor * 2;
     }
     let boosting = false;
     if (this.shift && (this.specialMeter > 50 || (this.usingSpecial && this.specialMeter > 1))) {

@@ -468,6 +468,15 @@ for now I'll just do the update for master
 
 draw XP guage, calculate what level should be based on xp.
 
-"ice" / areas that change friction effectCharacter unlocked after certain level? 
+"ice" / areas that change friction effect
+Character unlocked after certain level? 
+    other unlocks?
+
+bonus xp missions?
+    score x points in one game
+    get x kills in one game
+
 Does achievements update when return to menu?
  Xp added to guage after deathLogin user as anonymous? Or just have fallback "in ram" values maintained. 
+
+game music, for now switch between ip music?
