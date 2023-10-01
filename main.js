@@ -5,13 +5,11 @@ import {
   drawTextCursorFromText,
   updateTopScoresInfo,
   drawPreGameOverlay,
+  drawDailyScores,
+  drawAchievements,
 } from "./canvasDrawingFunctions.js";
-import { setupPilotsImageSources, setupPilotsImages } from "./drawingUtils.js";
-import { drawScene } from "./gameDrawing.js";
 import {
   createPeer,
-  attemptConnections,
-  connectToPeers,
   isPlayerMasterPeer,
   removeClosedConnections,
   setTicksSinceLastConnectionAttempt,
@@ -25,12 +23,11 @@ import {
   setMasterPeerId,
   chooseNewMasterPeer,
 } from "./connectionHandlers.js";
-import { sendPlayerStates } from "./sendData.js";
-import { setupCanvas, setupSpikeyBallPoints } from "./drawingUtils.js";
-import { addScoreToDB, getFirebase } from "./db.js";
+import { addScoreToDB, getFirebase, incrementFirebaseGivenPropertyValue } from "./db.js";
+import { setupPilotsImageSources, setupPilotsImages, setupCanvas, setupSpikeyBallPoints } from "./drawingUtils.js";
+import { drawScene } from "./gameDrawing.js";
 import { endGameMessage, setGameWon, pilots, masterUpdateGame } from "./gameLogic.js";
 import { shuffleArray } from "./gameUtils.js";
-import { drawLoginForm, autoSignInWithGoogle } from "./login.js";
 import {
   handleInputEvents,
   addPilotEventListners,
@@ -40,8 +37,13 @@ import {
   setupGameEventListeners,
   setupWinStateEventListeners,
   removeWinStateEventListeners,
+  addLoginHandler,
+  removeLoginHandler,
 } from "./inputHandlers.js";
+import { drawLoginForm, autoSignInWithGoogle } from "./login.js";
+import { sendPlayerStates } from "./sendData.js";
 import { Player } from "./player.js";
+
 export let gameTimer = 0;
 export function setGameTimer(newTime) {
   gameTimer = newTime;
@@ -300,6 +302,8 @@ function updateName() {
 function updateWinState() {
   //drawScene(player, otherPlayers, bots, mines,ctx, camX, camY, worldDimensions, canvas, globalPowerUps);
   drawGameOverMessage(ctx, canvas, endGameMessage);
+  drawDailyScores(ctx);
+  drawAchievements(ctx);
 }
 
 export function setGlobalPowerUps(newPowerUps) {
@@ -346,10 +350,12 @@ export function setGameState(newState) {
     setupPilots(canvas, ctx);
     setupNameEventListeners(window);
     updateName();
+    addLoginHandler(ctx);
   }
 
   if (newState !== GameState.INTRO && prevGameState === GameState.INTRO) {
     removeNameEventListeners(window);
+    removeLoginHandler(ctx);
   }
 
   if (newState === GameState.FINISHED && prevGameState !== GameState.FINISHED) {
@@ -359,6 +365,7 @@ export function setGameState(newState) {
     addScoreToDB("daily-" + dateString, player.name, player.powerUps * 100);
 
     setupWinStateEventListeners(window, canvas);
+    removeLoginHandler(ctx);
     if (isPlayerMasterPeer(player)) {
       //do we need this special send?
       sendPlayerStates(player, true, true, true);
@@ -384,6 +391,7 @@ export function setGameState(newState) {
 
     // setTimeout(() => connectToPeers(player, otherPlayers, globalPowerUps), 1000);
     removePilotsEventListeners(canvas);
+    removeLoginHandler(ctx);
   }
 
   if (newState !== GameState.GAME && prevGameState === GameState.GAME) {
@@ -420,7 +428,7 @@ function update() {
       updateName();
       drawTextCursorFromText(ctx, player.name);
       updatePilot();
-      drawLoginForm(ctx, getFirebase());
+      drawLoginForm(ctx);
     } else if (gameState === GameState.PILOT_SELECT) {
       updatePilot();
     } else if (gameState === GameState.GAME) {
@@ -442,21 +450,6 @@ window.addEventListener("load", function () {
   /* START CONNECTION HANDLERS  */
   createPeer(player, otherPlayers, globalPowerUps);
 
-  // setTimeout(() => connectToPeers(player, otherPlayers, globalPowerUps), 20);
-  // setTimeout(() => attemptConnections(player, otherPlayers, globalPowerUps), 60);
-
-  // setTimeout(() => generateBots(worldDimensions.width, worldDimensions.height, colors), 250);
-  // setTimeout(() => generatePowerups(globalPowerUps, worldDimensions.width, worldDimensions.height, powerUpColors), 270);
-  // setTimeout(() => generateMines(worldDimensions.width, worldDimensions.height, colors), 300);
-  // setTimeout(() => generateDirectionalForces(worldDimensions.width, worldDimensions.height, colors), 320);
-
-  // setInterval(() => generateBots(worldDimensions.width, worldDimensions.height, colors), 3000);
-  // setInterval(() => generatePowerups(globalPowerUps, worldDimensions.width, worldDimensions.height, powerUpColors), 3303);
-  // setInterval(() => generateMines(worldDimensions.width, worldDimensions.height, colors), 3607);
-  // setInterval(() => generateDirectionalForces(worldDimensions.width, worldDimensions.height, colors), 3901);
-
-  //setInterval(() => connectToPeers(player, otherPlayers, globalPowerUps), 15000);
-
   setupSpikeyBallPoints();
 
   //for now just do this at game start and transition, in future do this periodically?
@@ -468,7 +461,7 @@ window.addEventListener("load", function () {
   update();
   setupGameEventListeners(window);
   setGameState(GameState.INTRO);
-  // autoSignInWithGoogle(getFirebase());
+
   setTimeout(() => autoSignInWithGoogle(getFirebase()), 500);
 });
 

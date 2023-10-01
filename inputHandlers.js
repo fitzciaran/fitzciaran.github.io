@@ -14,6 +14,7 @@ import {
 import { pilots, max_player_name } from "./gameLogic.js";
 import { getRandomName } from "./generateEntities.js";
 import { calculateAngle } from "./gameUtils.js";
+import { getFirebase } from "./db.js";
 
 let pilotMouseMoveListener;
 let pilotClickListener;
@@ -324,5 +325,40 @@ function handleWinStateClick(event) {
   if (event.clientX > buttonX && event.clientX < buttonX + buttonWidth && event.clientY > buttonY && event.clientY < buttonY + buttonHeight) {
     // Menu button has been clicked
     setGameState(GameState.INTRO);
+  }
+}
+
+export function removeLoginHandler(ctx) {
+  ctx.canvas.removeEventListener("click", handleLoginButtonClick);
+}
+
+export function addLoginHandler(ctx) {
+  ctx.canvas.removeEventListener("click", handleLoginButtonClick);
+  ctx.canvas.addEventListener("click", (event) => handleLoginButtonClick(event, ctx));
+}
+// Add a click event listener to handle login button click.
+function handleLoginButtonClick(event, ctx) {
+  let firebase = getFirebase();
+  if (firebase.auth().currentUser) {
+    console.log("Already logged in");
+    return;
+  }
+  const mouseX = event.clientX - ctx.canvas.getBoundingClientRect().left;
+  const mouseY = event.clientY - ctx.canvas.getBoundingClientRect().top;
+
+  // Calculate the new position of the login button based on the updated drawing code.
+  const loginButtonX = ctx.canvas.width - loginButton.width - loginButton.x;
+  const loginButtonY = loginButton.y;
+
+  if (mouseX >= loginButtonX && mouseX <= loginButtonX + loginButton.width && mouseY >= loginButtonY && mouseY <= loginButtonY + loginButton.height) {
+    // Handle login button click event.
+    if (user) {
+      // User is signed in, handle sign out or other actions.
+      // For example:
+      // signOut();
+    } else {
+      // User is not signed in, handle sign in.
+      firebaseGoogleLogin(firebase);
+    }
   }
 }

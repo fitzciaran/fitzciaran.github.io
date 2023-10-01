@@ -1,8 +1,18 @@
-import { getTopScores } from "./db.js";
+import {
+  getTopScores,
+  incrementFirebaseGivenPropertyValue,
+  readUserDataFromFirestore,
+  getFirebaseProperty,
+  DbPropertyKey,
+  DbDocumentKey,
+  getFirebase,
+  allTimeKills,
+  allTimePoints,
+} from "./db.js";
 import { drawRoundedRectangle, loreTablet } from "./drawingUtils.js";
 import { drawFilledGauge } from "./drawGameUI.js";
 
-import { pilots } from "./gameLogic.js";
+import { pilots, getLevel, getLevelXP, getXp, getNextLevelXP, getXpToNextLevel, levelAnimationFrame, achievementsTitle } from "./gameLogic.js";
 
 let cursorBlink = true;
 let cursorBlinkInterval = setInterval(() => (cursorBlink = !cursorBlink), 450);
@@ -111,46 +121,114 @@ function drawBoxBackground(ctx, x, y, width, height) {
   ctx.fillRect(x, y, width, height);
 }
 
-function drawText(ctx, text, x, y, font, color, textAlign = "left") {
+function drawText(ctx, text, x, y, font, color, textAlign) {
   ctx.font = font;
   ctx.fillStyle = color;
-  ctx.textAlign = textAlign;
+  if (textAlign) {
+    ctx.textAlign = textAlign;
+  }
   ctx.fillText(text, x, y);
 }
 
-export function drawPreGameOverlay(canvas, ctx) {
-  const bestScoresXOffset = 200;
-  const bestScoresYOffset = 300;
+export function drawDailyScores(ctx) {
+  const bestScoresXPos = 70;
+  const bestScoresYPos = 250;
   const boxWidth = 360;
   const boxHeight = 320;
+  const bestScoreCenterX = bestScoresXPos + boxWidth / 2;
+  let currentYpos = bestScoresYPos + 30;
 
-  drawBorder(ctx, bestScoresXOffset - 130, bestScoresYOffset - 50, boxWidth, boxHeight);
-  drawBoxBackground(ctx, bestScoresXOffset - 130, bestScoresYOffset - 50, boxWidth, boxHeight);
+  drawBorder(ctx, bestScoresXPos, bestScoresYPos, boxWidth, boxHeight);
+  drawBoxBackground(ctx, bestScoresXPos, bestScoresYPos, boxWidth, boxHeight);
   ctx.textAlign = "center";
   // Draw title
-  drawText(ctx, "Best Scores Today!", bestScoresXOffset, bestScoresYOffset, "20px Arial", "white");
+  drawText(ctx, "Best Scores Today!", bestScoreCenterX, currentYpos, "20px Arial", "white");
 
+  currentYpos += 30;
   // Draw table headers
-  drawText(ctx, "Rank", bestScoresXOffset - 100, bestScoresYOffset + 30, "16px Arial", "white");
-  drawText(ctx, "Score", bestScoresXOffset, bestScoresYOffset + 30, "16px Arial", "white");
-  drawText(ctx, "Player", bestScoresXOffset + 100, bestScoresYOffset + 30, "16px Arial", "white");
+  drawText(ctx, "Rank", bestScoreCenterX - 120, currentYpos, "16px Arial", "white");
+  drawText(ctx, "Score", bestScoreCenterX - 70, currentYpos, "16px Arial", "white");
+  drawText(ctx, "Player", bestScoreCenterX + 50, currentYpos, "16px Arial", "white");
 
-  // Draw scores
-  drawText(ctx, "Rank", bestScoresXOffset - 100, bestScoresYOffset + 30, "16px Arial", "white");
-  drawText(ctx, "Score", bestScoresXOffset, bestScoresYOffset + 30, "16px Arial", "white");
-  drawText(ctx, "Player", bestScoresXOffset + 100, bestScoresYOffset + 30, "16px Arial", "white");
-  let gap = 20;
-  const textHeight = 75;
+  let gap = 5;
+  const textHeight = 18;
   if (topDailyScoresString != "") {
     var scores = topDailyScoresString.split("; ");
     for (var i = 0; i < scores.length; i++) {
       let scoreData = scores[i].split(", ");
-      drawText(ctx, (i + 1).toString(), bestScoresXOffset - 100, bestScoresYOffset + 130 + gap * i - textHeight, "14px Arial", "white");
-      drawText(ctx, scoreData[0], bestScoresXOffset, bestScoresYOffset + 130 + gap * i - textHeight, "14px Arial", "white");
-      drawText(ctx, scoreData[1], bestScoresXOffset + 100, bestScoresYOffset + 130 + gap * i - textHeight, "14px Arial", "white");
+      currentYpos += gap + textHeight;
+      drawText(ctx, (i + 1).toString(), bestScoreCenterX - 120, currentYpos, "14px Arial", "white");
+      drawText(ctx, scoreData[0], bestScoreCenterX - 70, currentYpos, "14px Arial", "white");
+      drawText(ctx, scoreData[1], bestScoreCenterX + 50, currentYpos, "14px Arial", "white");
     }
   }
+}
 
+export function drawAchievements(ctx) {
+  const boxWidth = 360;
+  const boxHeight = 320;
+  const achievementsAreaXPos = ctx.canvas.width - boxWidth - 70;
+  const achievementsAreaYPos = 250;
+  const achievementsAreaCenter = achievementsAreaXPos + boxWidth / 2;
+  let currentYPos = achievementsAreaYPos + 30;
+
+  drawBorder(ctx, achievementsAreaXPos, achievementsAreaYPos, boxWidth, boxHeight);
+  drawBoxBackground(ctx, achievementsAreaXPos, achievementsAreaYPos, boxWidth, boxHeight);
+  ctx.textAlign = "center";
+
+  drawText(ctx, achievementsTitle, achievementsAreaCenter, currentYPos, "20px Arial", "white", ctx.textAlign);
+  currentYPos += 30;
+  let xp = getXp();
+
+  // let xp = 500;
+
+  let level = getLevel(xp);
+  let remainingNeededNextLevelXP = getXpToNextLevel(xp);
+  let totalNeededNextLevelXP = getNextLevelXP(xp);
+
+  // let level = 2;
+  // let levelXP = 120;
+  // let totalNeededNextLevelXP = 30;
+
+  ctx.textAlign = "left";
+  drawText(ctx, "Level: " + level, achievementsAreaXPos + 20, currentYPos, "26px Arial", "white", ctx.textAlign);
+
+  const gaugeWidth = 150;
+  const gaugeHeight = 30;
+  const max = totalNeededNextLevelXP;
+  const percentOfFilledAnimatedTo = Math.min(levelAnimationFrame / 60, 1);
+  const filled = (totalNeededNextLevelXP - remainingNeededNextLevelXP) * percentOfFilledAnimatedTo;
+
+  currentYPos += 30;
+  drawText(ctx, "Kills: " + allTimeKills, achievementsAreaXPos + 20, currentYPos, "26px Arial", "white", ctx.textAlign);
+  currentYPos += 30;
+  drawText(ctx, "Points: " + allTimePoints, achievementsAreaXPos + 20, currentYPos, "26px Arial", "white", ctx.textAlign);
+  currentYPos += 40;
+
+  drawFilledGauge(ctx, achievementsAreaCenter, currentYPos + gaugeHeight / 2, gaugeWidth, gaugeHeight, 3, filled, max, "blue");
+
+  currentYPos += 30;
+  drawText(ctx, remainingNeededNextLevelXP + " XP to next level", achievementsAreaXPos + 20, currentYPos, "26px Arial", "white", ctx.textAlign);
+  // drawText(ctx, "Score", achievementsAreaCenter, currentYPos, "16px Arial", "white", ctx.textAlign);
+  // drawText(ctx, "Player", achievementsAreaCenter + 100, currentYPos, "16px Arial", "white", ctx.textAlign);
+
+  // let gap = 5;
+  // const textHeight = 18;
+  // if (topDailyScoresString != "") {
+  //   var scores = topDailyScoresString.split("; ");
+  //   for (var i = 0; i < scores.length; i++) {
+  //     let scoreData = scores[i].split(", ");
+  //     currentYPos += gap + textHeight;
+  //     drawText(ctx, (i + 1).toString(), achievementsAreaCenter - 100, currentYPos, "14px Arial", "white");
+  //     drawText(ctx, scoreData[0], achievementsAreaCenter, currentYPos, "14px Arial", "white");
+  //     drawText(ctx, scoreData[1], achievementsAreaCenter + 100, currentYPos, "14px Arial", "white");
+  //   }
+  // }
+}
+
+export function drawPreGameOverlay(canvas, ctx) {
+  drawDailyScores(ctx);
+  drawAchievements(ctx);
   // Draw title for pilot selection
   drawText(ctx, "Select Your Pilot", canvas.width / 2, 50, "30px Arial", "white", "center");
 

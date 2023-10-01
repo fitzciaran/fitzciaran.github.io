@@ -1,5 +1,17 @@
 import { isPlayerMasterPeer, setTimeSinceMessageFromMaster, timeSinceMessageFromMaster } from "./connectionHandlers.js";
 import { detectCollisions } from "./collisionLogic.js";
+import {
+  getTopScores,
+  incrementFirebaseGivenPropertyValue,
+  readUserDataFromFirestore,
+  getFirebaseProperty,
+  DbPropertyKey,
+  DbDocumentKey,
+  getFirebase,
+  allTimeKills,
+  allTimePoints,
+  allTimeLogins,
+} from "./db.js";
 import { forces, Entity, effects, MineType } from "./entities.js";
 import { generatePowerups, generateMines, generateDirectionalForces, generateBots } from "./generateEntities.js";
 import { player, bots, otherPlayers, mines, setGameTimer, gameTimer, globalPowerUps, worldDimensions, colors, powerUpColors } from "./main.js";
@@ -27,6 +39,16 @@ export const PilotName = {
   PILOT_3: "pilot3",
   PILOT_4: "pilot4",
 };
+export let levelAnimationFrame = 0;
+
+export function incrementLevelAnimationFrame() {
+  levelAnimationFrame++;
+}
+export let achievementsTitle = "login to track your achievments";
+
+export function setAchievementsTitle(newTitle) {
+  achievementsTitle = newTitle;
+}
 
 export class Pilot extends Entity {
   constructor(
@@ -298,7 +320,7 @@ export function masterUpdateGame(player, globalPowerUps, otherPlayers, bots, min
   removeExpiredPowerUps(globalPowerUps, player);
   removeExpiredEffects(effects, player);
   basicAnimationTimer++;
-
+  incrementLevelAnimationFrame();
   if (isPlayerMasterPeer(player)) {
     if (gameTimer % 89 == 1) {
       sendEntitiesState();
@@ -351,4 +373,50 @@ function removeExpiredEffects(effects, player) {
       }
     }
   }
+}
+// Initial XP required for first level up
+let initialXPRequired = 100;
+let xpRequiredGrowthFactor = 1.6;
+
+export function getXp() {
+  let totalXp = 0;
+  totalXp += allTimePoints;
+  totalXp += allTimeKills * 500;
+  totalXp += allTimeLogins * 1;
+  return totalXp;
+}
+
+export function calculateLevelXP(xp, initialXPRequired, growthFactor) {
+  let level = 1;
+  let xpRequired = initialXPRequired;
+
+  // Find the level at which the given XP belongs
+  while (xp >= xpRequired) {
+    xp -= xpRequired;
+    level++;
+    xpRequired = Math.floor(xpRequired * growthFactor); // Increase XP required for the next level
+  }
+  let xpToNextLevel = xpRequired - xp;
+
+  return { level, remainingXP: xp, nextLevelXP: xpRequired, xpToNextLevel };
+}
+
+export function getLevel(xp) {
+  const { level } = calculateLevelXP(xp, initialXPRequired, xpRequiredGrowthFactor);
+  return level;
+}
+
+export function getLevelXP(xp) {
+  const { remainingXP } = calculateLevelXP(xp, initialXPRequired, xpRequiredGrowthFactor);
+  return remainingXP;
+}
+
+export function getNextLevelXP(xp) {
+  const { nextLevelXP } = calculateLevelXP(xp, initialXPRequired, xpRequiredGrowthFactor);
+  return nextLevelXP;
+}
+
+export function getXpToNextLevel(xp) {
+  const { xpToNextLevel } = calculateLevelXP(xp, initialXPRequired, xpRequiredGrowthFactor);
+  return xpToNextLevel;
 }

@@ -428,7 +428,7 @@ currently just checking free mine at start I think? at least for the special che
 
 check colors for good ones improve average quality, vivid bright
 
-mines/areas that will on countdown or sporadically explode or generically become hurtboxes.
+mines/areas that will on countdown or sporadically explode or generically become hurtboxes. think retracting spikes. on off laser field?
 
 did refactor break the background paralax?
 
@@ -458,3 +458,16 @@ general connection issues ... firefox? privacy extension/ in built? ... general 
 ping test?
 
 flag / icon select (draw own?)
+
+XP gain at death? XP gain 
+
+
+
+rather than send updated isDead property maybe run function to handle that (score update)?
+for now I'll just do the update for master
+
+draw XP guage, calculate what level should be based on xp.
+
+"ice" / areas that change friction effectCharacter unlocked after certain level? 
+Does achievements update when return to menu?
+ Xp added to guage after deathLogin user as anonymous? Or just have fallback "in ram" values maintained. 

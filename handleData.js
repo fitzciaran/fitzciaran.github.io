@@ -9,6 +9,7 @@ import {
   chooseNewMasterPeer,
   setMasterPeerId,
 } from "./connectionHandlers.js";
+import { incrementFirebaseGivenPropertyValue, DbPropertyKey, getFirebase } from "./db.js";
 import { setEndGameMessage } from "./gameLogic.js";
 import {
   forces,
@@ -230,6 +231,21 @@ function updateOwnPlayerData(player, data) {
     player.setComboScaler(data.comboScaler);
   }
   if (data.hasOwnProperty("isDead")) {
+    if (data.isDead && !player.isDead) {
+      //just found out we're dead
+      let firebase = getFirebase();
+      if (firebase) {
+        const user = firebase.auth().currentUser;
+        if (user) {
+          if (player.powerUps) {
+            incrementFirebaseGivenPropertyValue(firebase, DbPropertyKey.SCORE, player.powerUps);
+          }
+          if (player.kills) {
+            incrementFirebaseGivenPropertyValue(firebase, DbPropertyKey.KILLS, player.kills);
+          }
+        }
+      }
+    }
     player.setIsDead(data.isDead);
     if (data.isDead) {
       player.vel.x = 0;

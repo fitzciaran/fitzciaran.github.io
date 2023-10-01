@@ -13,6 +13,7 @@ import {
   selectedColors,
 } from "./main.js";
 import { isPlayerMasterPeer } from "./connectionHandlers.js";
+import { incrementFirebaseGivenPropertyValue, getFirebase, DbPropertyKey, DbDocumentKey } from "./db.js";
 import { forces, ForceArea, ForceType, Effect, effects, EffectType, MineType, Trail } from "./entities.js";
 import { checkFirstLetterSpace } from "./gameUtils.js";
 import {
@@ -207,6 +208,14 @@ export class Player {
     }
     if (this.isLocal) {
       screenShake(canvas, 30, 1000);
+      let firebase = getFirebase();
+      if (firebase) {
+        const user = firebase.auth().currentUser;
+        if (user) {
+          incrementFirebaseGivenPropertyValue(firebase, DbPropertyKey.SCORE, this.powerUps);
+          incrementFirebaseGivenPropertyValue(firebase, DbPropertyKey.KILLS, this.kills);
+        }
+      }
     }
     if (this.isBot) {
       this.delayReset(botRespawnDelay, true, true);
@@ -390,6 +399,13 @@ export class Player {
     }
     if (this.isLocal) {
       screenShake(canvas, 30, 500);
+      // let firebase = getFirebase();
+      // if (firebase) {
+      //   const user = firebase.auth().currentUser;
+      //   if (user) {
+      //     incrementFirebaseGivenPropertyValue(firebase, DbPropertyKey.KILLS, 1);
+      //   }
+      // }
     }
   }
 

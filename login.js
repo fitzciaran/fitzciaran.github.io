@@ -1,4 +1,7 @@
 import { player } from "./main.js";
+import { DbPropertyKey, incrementFirebaseGivenPropertyValue, readUserDataFromFirestore, updateAchievements } from "./db.js";
+import { setAchievementsTitle } from "/gameLogic.js";
+
 const emailInput = {
   x: 50,
   y: 50,
@@ -42,7 +45,7 @@ function drawRoundRect(ctx, x, y, width, height, radius) {
   ctx.stroke();
 }
 
-export function drawLoginForm(ctx, firebase, user) {
+export function drawLoginForm(ctx) {
   // Function to calculate the width of the text.
   function getTextWidth(text, font) {
     ctx.font = font;
@@ -63,35 +66,6 @@ export function drawLoginForm(ctx, firebase, user) {
 
   ctx.fillStyle = "white";
   ctx.fillText(loginButton.text, ctx.canvas.width - loginButton.width - loginButton.x + 25, loginButton.y + 20);
-
-  // Add a click event listener to handle login button click.
-  function handleLoginButtonClick(event) {
-    const mouseX = event.clientX - ctx.canvas.getBoundingClientRect().left;
-    const mouseY = event.clientY - ctx.canvas.getBoundingClientRect().top;
-
-    // Calculate the new position of the login button based on the updated drawing code.
-    const loginButtonX = ctx.canvas.width - loginButton.width - loginButton.x;
-    const loginButtonY = loginButton.y;
-
-    if (
-      mouseX >= loginButtonX &&
-      mouseX <= loginButtonX + loginButton.width &&
-      mouseY >= loginButtonY &&
-      mouseY <= loginButtonY + loginButton.height
-    ) {
-      // Handle login button click event.
-      if (user) {
-        // User is signed in, handle sign out or other actions.
-        // For example:
-        // signOut();
-      } else {
-        // User is not signed in, handle sign in.
-        firebaseGoogleLogin(firebase);
-      }
-    }
-  }
-
-  ctx.canvas.addEventListener("click", handleLoginButtonClick);
 }
 
 function firebaseLogin(firebase, email, password) {
@@ -109,6 +83,7 @@ function firebaseLogin(firebase, email, password) {
       console.log(`Signed in as ${user.email}`);
       loginButton.text = `${user.email}`;
       player.setPlayerName(user.displayName);
+      setAchievementsTitle("Your Achievments");
     })
     .catch((error) => {
       // Handle login errors.
@@ -140,7 +115,10 @@ function firebaseGoogleLogin() {
       loginButton.text = `${user.email}`;
       player.setPlayerName(user.displayName);
       setSignInCookie();
-      updateLoginsCount(firebase);
+      //   updateLoginsCount(firebase);
+      //   incrementFirebaseLoginsValue(firebase);
+      incrementFirebaseGivenPropertyValue(firebase, DbPropertyKey.LOGINS, 1);
+      setAchievementsTitle("Your Achievments");
     })
     .catch((error) => {
       // Handle Google Sign-In errors.
@@ -182,10 +160,13 @@ export function autoSignInWithGoogle(firebase) {
     firebaseGoogleLogin();
   } else {
     //handle user logged in
-    updateLoginsCount(firebase);
+    // updateLoginsCount(firebase);
+    //   incrementFirebaseLoginsValue(firebase);
+    incrementFirebaseGivenPropertyValue(firebase, DbPropertyKey.LOGINS, 1);
+    setAchievementsTitle("Your Achievments");
     let loginButtonText = `${firebase.auth().currentUser.email}`;
     player.setPlayerName(firebase.auth().currentUser.displayName);
-    readUserDataFromFirestore(firebase, "users", "user-document-id", (error, userData) => {
+    readUserDataFromFirestore(firebase, "users", (error, userData) => {
       if (error) {
         if (error.message === "User not logged in") {
           console.log("User is not logged in.");
@@ -262,31 +243,5 @@ function updateLoginsCount(firebase) {
       .catch((error) => {
         console.error(`Error getting user document: ${error}`);
       });
-  }
-}
-
-// Function to read data from Firestore (e.g., logins count) for the currently authenticated user.
-function readUserDataFromFirestore(firebase, collectionName, documentId, callback) {
-  const user = firebase.auth().currentUser;
-
-  if (user) {
-    const userRef = firebase.firestore().collection(collectionName).doc(user.uid);
-
-    userRef
-      .get()
-      .then((doc) => {
-        if (doc.exists) {
-          const userData = doc.data();
-          callback(null, userData);
-        } else {
-          callback(new Error("User data not found"), null);
-        }
-      })
-      .catch((error) => {
-        callback(error, null);
-      });
-  } else {
-    // User is not logged in.
-    callback(new Error("User not logged in"), null);
   }
 }
