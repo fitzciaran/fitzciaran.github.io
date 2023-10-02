@@ -7,7 +7,7 @@ export let everConnected = false;
 export let connections = [];
 export const compression = false;
 
-export let versionNumber = 114;
+export let versionNumber = 115;
 export let peerIds = [
   "a7ef962d-14a9-40e5-8a2d-226c548b3" + versionNumber,
   "b7ef962d-14a9-40e5-8a2d-226c548b3" + versionNumber,

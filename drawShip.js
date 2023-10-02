@@ -81,10 +81,12 @@ export function drawShip(ctx, camX, camY, player, points) {
   ctx.globalAlpha = 1;
   ctx.shadowBlur = 0;
   ctx.shadowColor = "transparent";
-  ctx.beginPath();
-  ctx.arc(player.mousePosX - camX, player.mousePosY - camY, 55, 0, Math.PI * 2);
-  ctx.closePath();
-  ctx.fill();
+
+  //draw mouse pos for debug
+  // ctx.beginPath();
+  // ctx.arc(player.mousePosX - camX, player.mousePosY - camY, 55, 0, Math.PI * 2);
+  // ctx.closePath();
+  // ctx.fill();
   // Draw name and invincibility gauge
   drawNameAndInvincibility(ctx, player, playerCenterXScreenCoords, playerCenterYScreenCoords, name, color);
 

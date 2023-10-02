@@ -410,14 +410,12 @@ export function setGameState(newState) {
 }
 
 function update() {
-  // const startTime = Date.now();
-  // let now = Date.now();
   const startTime = performance.now();
   let now = performance.now();
   let deltaTime = (now - lastTime) / 1000; // Time since last frame in seconds
-  // let deltaTime = (now - lastTime); // Time since last frame in seconds
   lastTime = now;
-
+  deltaTime = Math.min(deltaTime, 0.1);
+  //if master and we see here have been paused a long time perhaps we need to at least get game state from another before sending out updates?
   accumulator += deltaTime;
 
   while (accumulator >= fixedDeltaTime) {
@@ -440,7 +438,6 @@ function update() {
     accumulator -= fixedDeltaTime;
   }
 
-  // const endTime = Date.now();
   const endTime = performance.now();
   executionTime = endTime - startTime;
 

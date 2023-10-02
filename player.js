@@ -508,8 +508,10 @@ export class Player {
   }
 
   updatePlayerAngle(camX, camY) {
-    this.mousePosX = this.absoluteMousePosX + camX;
-    this.mousePosY = this.absoluteMousePosY + camY;
+    if (!this.isBot) {
+      this.mousePosX = this.absoluteMousePosX + camX;
+      this.mousePosY = this.absoluteMousePosY + camY;
+    }
     let dx = this.x - this.mousePosX;
     let dy = this.y - this.mousePosY;
     let distance = Math.sqrt(dx * dx + dy * dy);
@@ -526,13 +528,11 @@ export class Player {
     let dy = this.playerAngleData.dy;
     let distance = this.playerAngleData.distance;
     let squareFactor = this.currentSpeed * this.currentSpeed * 0.0001;
-    // let velocity = Math.sqrt(this.currentSpeed, this.currentSpeed);
     let minFrictionExponent = 0.8;
     let frictionPowerScaler = 2;
     let newFriction = Math.pow(Math.max(0.999 - squareFactor, minFrictionExponent), deltaTime / frictionPowerScaler);
     newFriction = Math.min(newFriction, 0.99);
     this.currentFrictionPercent = (1 - newFriction) * 100;
-    // let newFriction = Math.pow(Math.max(0.99 - squareFactor * 0.0001, 0.95), deltaTime);
 
     let pilotBoostFactor = 1;
     if (this.pilot == PilotName.PILOT_1) {
