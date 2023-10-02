@@ -13,6 +13,7 @@ import {
   selectedColors,
 } from "./main.js";
 import { isPlayerMasterPeer } from "./connectionHandlers.js";
+import { HitByType } from "./collisionLogic.js";
 import { incrementFirebaseGivenPropertyValue, getFirebase, DbPropertyKey, DbDocumentKey } from "./db.js";
 import { forces, ForceArea, ForceType, Effect, effects, EffectType, MineType, Trail } from "./entities.js";
 import { checkFirstLetterSpace } from "./gameUtils.js";
@@ -186,15 +187,15 @@ export class Player {
 
   //gotHit and addScore are both doing an additional key function of sending the playerstates as master.
   //Need to unpick this, maybe there should be events for gotHit and addscore and masterpeer responds to such events with sending player state for the given player
-  gotHit(hitBy) {
+  gotHit(hitBy, otherPlayerGotHitToo = false) {
     this.setIsDead(true);
     this.recentScoreTicks = 0;
     this.setComboScaler(1);
     this.hitBy = hitBy;
 
-    this.updateKilledAndKilledByLists(hitBy, this == player);
+    this.updateKilledAndKilledByLists(hitBy, this == player, otherPlayerGotHitToo);
 
-    if (!this.killedBy.includes(hitBy) && hitBy != "a mine") {
+    if (!this.killedBy.includes(hitBy) && hitBy != HitByType.MINE) {
       this.killedBy.push(hitBy);
     }
     let effectID = Math.floor(Math.random() * 10000);
@@ -222,20 +223,22 @@ export class Player {
     }
   }
 
-  updateKilledAndKilledByLists(hitBy, isPlayer) {
+  updateKilledAndKilledByLists(hitBy, isPlayer, otherPlayerGotHitToo) {
     if (hitBy != null && hitBy != "") {
-      this.updateKilledAndKilledByListsValidHitBy(hitBy, isPlayer);
+      this.updateKilledAndKilledByListsValidHitBy(hitBy, isPlayer, otherPlayerGotHitToo);
     } else if (isPlayer) {
       setEndGameMessage("Score: " + this.powerUps * 100);
     }
   }
 
-  updateKilledAndKilledByListsValidHitBy(hitBy, isPlayer) {
+  updateKilledAndKilledByListsValidHitBy(hitBy, isPlayer, otherPlayerGotHitToo) {
     if (!this.killed.includes(hitBy)) {
       if (!this.killedBy.includes(hitBy)) {
         if (isPlayer) {
-          if (hitBy == "a mine") {
+          if (hitBy == HitByType.MINE) {
             setEndGameMessage("Watch out for mines! \nScore: " + this.powerUps * 100);
+          } else if (otherPlayerGotHitToo) {
+            setEndGameMessage("Crashed into: " + hitBy + "\nScore: " + this.powerUps * 100);
           } else {
             setEndGameMessage("Killed by: " + hitBy + "\nScore: " + this.powerUps * 100);
           }
@@ -734,26 +737,25 @@ export class Player {
         break;
       }
     }
-    // trailTime = 10000;
     const velocityAngle = Math.atan2(this.vel.y, this.vel.x);
     const velocitySize = Math.sqrt(this.vel.x * this.vel.x + this.vel.y * this.vel.y);
 
     let length = 15;
-    // let length = 45;
     if (velocitySize > 2) {
-      length *= Math.min(4, velocitySize / 2);
+      length *= Math.min(4, velocitySize / 2.5);
     }
-    // let width = 20;
     let width = 50;
 
-    // Calculate the offset based on velocityAngle and a distance (e.g., 10 pixels)
-    const offsetDistance = 20; // Adjust this as needed
+    // Calculate the offset based on velocityAngle and velocity
+    const offsetDistance = velocitySize * 3.5;
     const xOffset = offsetDistance * Math.cos(velocityAngle);
     const yOffset = offsetDistance * Math.sin(velocityAngle);
 
     // Calculate the new x and y coordinates for the trail
     const trailX = this.x - xOffset;
     const trailY = this.y - yOffset;
+    // const trailX = this.x + xOffset;
+    // const trailY = this.y + yOffset;
 
     let trail = new Trail(
       "trail-" + Math.floor(Math.random() * 10000),

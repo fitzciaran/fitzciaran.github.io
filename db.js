@@ -1,3 +1,5 @@
+import { updateTopScoresInfo } from "/canvasDrawingFunctions.js";
+
 let firebaseConfig = {
   apiKey: "AIzaSyAKNQY57EwlQ6TAf13wSx4eba4NK-MAN88",
   authDomain: "p2p-game-test.firebaseapp.com",

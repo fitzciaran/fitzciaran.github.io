@@ -7,24 +7,25 @@ export let everConnected = false;
 export let connections = [];
 export const compression = false;
 
+export let versionNumber = 111;
 export let peerIds = [
-  "a7ef962d-14a9-40e4-8a2d-226c548b3321",
-  "b7ef962d-14a9-40e4-8a2d-226c548b3321",
-  "c7ef962d-14a9-40e4-8a2d-226c548b3321",
-  "d7ef962d-14a9-40e4-8a2d-226c548b3321",
-  "e7ef962d-14a9-40e4-8a2d-226c548b3321",
-  "a6ef962d-14a9-40e4-8a2d-226c548b3321",
-  "b6ef962d-14a9-40e4-8a2d-226c548b3321",
+  "a7ef962d-14a9-40e5-8a2d-226c548b3" + versionNumber,
+  "b7ef962d-14a9-40e5-8a2d-226c548b3" + versionNumber,
+  "c7ef962d-14a9-40e5-8a2d-226c548b3" + versionNumber,
+  "d7ef962d-14a9-40e5-8a2d-226c548b3" + versionNumber,
+  "e7ef962d-14a9-40e5-8a2d-226c548b3" + versionNumber,
+  "a6ef962d-14a9-40e5-8a2d-226c548b3" + versionNumber,
+  "b6ef962d-14a9-40e5-8a2d-226c548b3" + versionNumber,
 ];
 if (!compression) {
   peerIds = [
-    "a7ef962d-14a9-40e4-8a2d-226e638b3321",
-    "b7ef962d-14a9-40e4-8a2d-226e638b3321",
-    "c7ef962d-14a9-40e4-8a2d-226e638b3321",
-    "d7ef962d-14a9-40e4-8a2d-226e638b3321",
-    "e7ef962d-14a9-40e4-8a2d-226e638b3321",
-    "a6ef962d-14a9-40e4-8a2d-226e638b3321",
-    "b6ef962d-14a9-40e4-8a2d-226e638b3321",
+    "a7ef962d-14a9-40e5-8a2d-226e638b3" + versionNumber,
+    "b7ef962d-14a9-40e5-8a2d-226e638b3" + versionNumber,
+    "c7ef962d-14a9-40e5-8a2d-226e638b3" + versionNumber,
+    "d7ef962d-14a9-40e5-8a2d-226e638b3" + versionNumber,
+    "e7ef962d-14a9-40e5-8a2d-226e638b3" + versionNumber,
+    "a6ef962d-14a9-40e5-8a2d-226e638b3" + versionNumber,
+    "b6ef962d-14a9-40e5-8a2d-226e638b3" + versionNumber,
   ];
 }
 let reconnectionAttempts = 0;

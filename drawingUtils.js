@@ -9,7 +9,7 @@ export const loreTablet = {
   image: new Image(),
 };
 
-function centerPilots(canvas) {
+export function centerPilots(canvas) {
   // Calculate the horizontal gap between pilots (excluding the central gap)
   const gapBetweenPilots = 20; // Gap between all pilots except the central gap
   const centralGap = 300; // Width of the central gap
@@ -55,21 +55,11 @@ function centerPilots(canvas) {
   loreTablet.y = canvas.height / 2 - 100;
 }
 
-export function setupPilotsImageSources() {
-  // Set image sources for each pilot
-  for (let i = 0; i < pilots.length; i++) {
-    const pilot = pilots[i];
-    pilot.image.src = pilot.src;
-  }
-}
-
 export function setupPilotsImages(canvas) {
-  setupPilotsImageSources();
-  loreTablet.image.src = "images/tablet.png";
   centerPilots(canvas);
 }
 
-// Export a setupCanvas function that initializes the canvas and returns it
+// initializes the canvas and sets up basic event listeners
 export function setupCanvas() {
   const canvas = document.getElementById("gameCanvas");
   const ctx = canvas.getContext("2d");

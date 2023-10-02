@@ -13,7 +13,17 @@ import { drawRoundedRectangle, loreTablet } from "./drawingUtils.js";
 import { drawFilledGauge } from "./drawGameUI.js";
 import { achievementsTitleText } from "./login.js";
 
-import { pilots, getLevel, getLevelXP, getXp, getNextLevelXP, getXpToNextLevel, levelAnimationFrame, achievementsTitle } from "./gameLogic.js";
+import {
+  pilots,
+  getLevel,
+  getLevelXP,
+  getXp,
+  getNextLevelXP,
+  getXpToNextLevel,
+  levelAnimationFrame,
+  achievementsTitle,
+  PilotName,
+} from "./gameLogic.js";
 
 let cursorBlink = true;
 let cursorBlinkInterval = setInterval(() => (cursorBlink = !cursorBlink), 450);
@@ -211,6 +221,7 @@ export function drawAchievements(ctx) {
 export function drawPreGameOverlay(canvas, ctx) {
   drawDailyScores(ctx);
   drawAchievements(ctx);
+
   // Draw title for pilot selection
   drawText(ctx, "Select Your Pilot", canvas.width / 2, 50, "30px Arial", "white", "center");
 
@@ -221,7 +232,8 @@ export function drawPreGameOverlay(canvas, ctx) {
 
   for (let i = 0; i < pilots.length; i++) {
     let pilot = pilots[i];
-    ctx.drawImage(pilot.image, pilot.x, pilot.y, pilot.width, pilot.height);
+    const carrotCanvas = document.getElementById(pilot.src);
+    drawCarrot(ctx, carrotCanvas, pilot.x, pilot.y);
 
     if (pilot.selected) {
       ctx.lineWidth = 7;
@@ -236,21 +248,438 @@ export function drawPreGameOverlay(canvas, ctx) {
   }
 
   let x = loreTablet.x + 60;
-  let y = loreTablet.y + 65; // Initial y value
+  let y = loreTablet.y + 55;
 
   for (let i = 0; i < pilots.length; i++) {
     let pilot = pilots[i];
     if (pilot.selected) {
-      renderInfoText(ctx, pilot.lore, x, y, 330, pilot.pilotAnimationFrame);
+      renderInfoText(ctx, pilot.lore, x, y, 350, pilot.pilotAnimationFrame);
       break;
     }
   }
 }
 
-function renderInfoText(ctx, lore, x, y, maxWidth, animationFrame) {
+export function setupCarrots() {
+  const carrot1Canvas = document.getElementById("carrot1Canvas");
+  const carrot1Ctx = carrot1Canvas.getContext("2d");
+  setupCarrot1(carrot1Ctx);
+  const carrot2Canvas = document.getElementById("carrot2Canvas");
+  const carrot2Ctx = carrot2Canvas.getContext("2d");
+  setupCarrot2(carrot2Ctx);
+  const carrot3Canvas = document.getElementById("carrot3Canvas");
+  const carrot3Ctx = carrot3Canvas.getContext("2d");
+  setupCarrot3(carrot3Ctx);
+  const carrot4Canvas = document.getElementById("carrot4Canvas");
+  const carrot4Ctx = carrot4Canvas.getContext("2d");
+  setupCarrot4(carrot4Ctx);
+}
+function drawCarrots(ctx, mainX, mainY) {
+  const carrot1Canvas = document.getElementById("carrot1Canvas");
+  drawCarrot(ctx, carrot1Canvas, mainX, mainY);
+  const carrot2Canvas = document.getElementById("carrot2Canvas");
+  drawCarrot(ctx, carrot2Canvas, mainX + 120, mainY);
+  const carrot3Canvas = document.getElementById("carrot3Canvas");
+  drawCarrot(ctx, carrot3Canvas, mainX + 240, mainY);
+  const carrot4Canvas = document.getElementById("carrot4Canvas");
+  drawCarrot(ctx, carrot4Canvas, mainX + 360, mainY);
+}
+function drawCarrot(mainCtx, carrotCanvas, mainX, mainY) {
+  mainCtx.drawImage(carrotCanvas, mainX, mainY);
+}
+
+function drawBackground(ctx, left, top, width, height, color) {
+  ctx.fillStyle = color;
+  ctx.fillRect(left, top, width, height);
+}
+
+function drawCarrotBody(ctx, left, top, color) {
+  ctx.beginPath();
+  ctx.moveTo(left + 50, top + 10);
+  ctx.bezierCurveTo(left + 80, top + 10, left + 80, top + 70, left + 50, top + 120);
+  ctx.bezierCurveTo(left + 20, top + 70, left + 20, top + 10, left + 50, top + 10);
+  ctx.fillStyle = color;
+  ctx.fill();
+}
+
+function drawCarrotTop(ctx, left, top, color) {
+  ctx.beginPath();
+  ctx.moveTo(left + 50, top + 10);
+  ctx.lineTo(left + 80, top + 60);
+  ctx.lineTo(left + 50, top + 90);
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill();
+}
+
+function drawCarrotFace(ctx, left, top, bodyColor) {
+  // Draw face
+  ctx.beginPath();
+  ctx.arc(left + 50, top + 75, 20, 0, Math.PI * 2);
+  ctx.fillStyle = bodyColor;
+  ctx.fill();
+}
+
+function drawCarrotEyes(ctx, left, top, eyeColor, pupilColor) {
+  ctx.beginPath();
+  ctx.ellipse(left + 45, top + 70, 8, 14, 0, 0, Math.PI * 2);
+  ctx.ellipse(left + 55, top + 70, 8, 14, 0, 0, Math.PI * 2);
+  ctx.fillStyle = eyeColor;
+  ctx.fill();
+
+  // Draw pupils
+  ctx.beginPath();
+  ctx.arc(left + 45, top + 70, 3, 0, Math.PI * 2);
+  ctx.arc(left + 55, top + 70, 3, 0, Math.PI * 2);
+  ctx.fillStyle = pupilColor;
+  ctx.fill();
+}
+
+function drawGoofyCarrotEyes(ctx, left, top, eyeColor, pupilColor) {
+  // Draw eyes
+  ctx.beginPath();
+  ctx.ellipse(left + 45, top + 70, 8, 14, Math.PI / 4, 0, Math.PI * 2);
+  ctx.ellipse(left + 55, top + 70, 8, 14, Math.PI / 4, 0, Math.PI * 2);
+  ctx.fillStyle = eyeColor;
+  ctx.fill();
+
+  // Draw pupils
+  ctx.beginPath();
+  ctx.arc(left + 45, top + 70, 3, 0, Math.PI * 2);
+  ctx.arc(left + 55, top + 70, 3, 0, Math.PI * 2);
+  ctx.fillStyle = pupilColor;
+  ctx.fill();
+}
+
+function drawUghCarrotEyes(ctx, left, top, eyeColor, pupilColor) {
+  // Draw eyes
+  ctx.beginPath();
+  ctx.ellipse(left + 45, top + 70, 8, 14, 0, 0, Math.PI);
+  ctx.ellipse(left + 55, top + 70, 8, 14, 0, 0, Math.PI);
+  ctx.fillStyle = eyeColor;
+  ctx.fill();
+
+  // Draw pupils
+  ctx.beginPath();
+  ctx.arc(left + 45, top + 70, 3, 0, Math.PI * 2);
+  ctx.arc(left + 55, top + 70, 3, 0, Math.PI * 2);
+  ctx.fillStyle = pupilColor;
+  ctx.fill();
+}
+
+function drawLookingUpCarrotEyes(ctx, left, top, eyeColor, pupilColor) {
+  // Draw eyes
+  ctx.beginPath();
+  ctx.ellipse(left + 45, top + 70, 8, 14, 0, 0, Math.PI * 2);
+  ctx.ellipse(left + 55, top + 70, 8, 14, 0, 0, Math.PI * 2);
+  ctx.fillStyle = eyeColor;
+  ctx.fill();
+
+  // Draw pupils
+  ctx.beginPath();
+  ctx.arc(left + 45, top + 65, 3, 0, Math.PI * 2);
+  ctx.arc(left + 55, top + 65, 3, 0, Math.PI * 2);
+  ctx.fillStyle = pupilColor;
+  ctx.fill();
+}
+
+function drawLookingDownCarrotEyes(ctx, left, top, eyeColor, pupilColor) {
+  // Draw eyes
+  ctx.beginPath();
+  ctx.ellipse(left + 45, top + 70, 8, 14, 0, 0, Math.PI * 2);
+  ctx.ellipse(left + 55, top + 70, 8, 14, 0, 0, Math.PI * 2);
+  ctx.fillStyle = eyeColor;
+  ctx.fill();
+
+  // Draw pupils
+  ctx.beginPath();
+  ctx.arc(left + 45, top + 75, 3, 0, Math.PI * 2);
+  ctx.arc(left + 55, top + 75, 3, 0, Math.PI * 2);
+  ctx.fillStyle = pupilColor;
+  ctx.fill();
+}
+
+function drawNarrowCarrotEyes(ctx, left, top, eyeColor, pupilColor) {
+  // Draw eyes
+  ctx.beginPath();
+  ctx.ellipse(left + 45, top + 70, 8, 14, 0, 0, Math.PI * 2);
+  ctx.ellipse(left + 55, top + 70, 8, 14, 0, 0, Math.PI * 2);
+  ctx.fillStyle = eyeColor;
+  ctx.fill();
+
+  // Draw pupils
+  ctx.beginPath();
+  ctx.arc(left + 45, top + 70, 3, 0, Math.PI * 2);
+  ctx.arc(left + 55, top + 70, 3, 0, Math.PI * 2);
+  ctx.fillStyle = pupilColor;
+  ctx.fill();
+
+  // Draw eyelids
+  ctx.beginPath();
+  ctx.ellipse(left + 45, top + 70, 8, 6, 0, 0, Math.PI);
+  ctx.ellipse(left + 55, top + 70, 8, 6, 0, 0, Math.PI);
+  ctx.fillStyle = eyeColor;
+  ctx.fill();
+}
+
+function drawBleedingCarrotEyes(ctx, left, top, eyeColor, pupilColor) {
+  // Draw eyes
+  ctx.beginPath();
+  ctx.ellipse(left + 45, top + 70, 8, 14, 0, 0, Math.PI * 2);
+  ctx.ellipse(left + 55, top + 70, 8, 14, 0, 0, Math.PI * 2);
+  ctx.fillStyle = eyeColor;
+  ctx.fill();
+
+  // Draw pupils
+  ctx.beginPath();
+  ctx.arc(left + 45, top + 70, 3, 0, Math.PI * 2);
+  ctx.arc(left + 55, top + 70, 3, 0, Math.PI * 2);
+  ctx.fillStyle = pupilColor;
+  ctx.fill();
+
+  // Draw heart symbols
+  ctx.beginPath();
+  ctx.moveTo(left + 45, top + 80);
+  ctx.bezierCurveTo(left + 45, top + 80, left + 40, top + 75, left + 45, top + 70);
+  ctx.bezierCurveTo(left + 50, top + 75, left + 45, top + 80, left + 45, top + 80);
+  ctx.moveTo(left + 55, top + 80);
+  ctx.bezierCurveTo(left + 55, top + 80, left + 50, top + 75, left + 55, top + 70);
+  ctx.bezierCurveTo(left + 60, top + 75, left + 55, top + 80, left + 55, top + 80);
+  ctx.fillStyle = "red";
+  ctx.fill();
+}
+
+function drawCarrotMouth(ctx, left, top, mouthColor) {
+  // Draw mouth
+  ctx.beginPath();
+  ctx.arc(left + 50, top + 85, 8, 0, Math.PI);
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = mouthColor;
+  ctx.stroke();
+}
+
+function drawScaredCarrotMouth(ctx, left, top, mouthColor) {
+  // Draw mouth (scared)
+  ctx.beginPath();
+  ctx.arc(left + 50, top + 95, 8, 0, Math.PI, true); // Inverted arc for a scared mouth
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = mouthColor;
+  ctx.stroke();
+}
+
+function drawGrumpyCarrotMouth(ctx, left, top, mouthColor) {
+  // Draw mouth (grumpy)
+  ctx.beginPath();
+  ctx.moveTo(left + 40, top + 90);
+  ctx.lineTo(left + 60, top + 90); // Straight line for a grumpy mouth
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = mouthColor;
+  ctx.stroke();
+}
+
+function drawSurprisedCarrotMouth(ctx, left, top, mouthColor) {
+  // Draw mouth (surprised)
+  ctx.beginPath();
+  ctx.arc(left + 50, top + 90, 3, 0, Math.PI * 2); // Circle for a surprised mouth
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = mouthColor;
+  ctx.stroke();
+}
+
+function drawHappyCarrotMouth(ctx, left, top, mouthColor) {
+  // Draw mouth (happy)
+  ctx.beginPath();
+  ctx.arc(left + 50, top + 85, 8, 0, Math.PI, false); // Smiling arc for a happy mouth
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = mouthColor;
+  ctx.stroke();
+}
+
+function drawCarrotGreens(ctx, left, top, color) {
+  ctx.beginPath();
+  ctx.ellipse(left + 50, top + 10, 10, 20, 0, 0, Math.PI * 2);
+  ctx.ellipse(left + 50, top + 30, 15, 25, 0, 0, Math.PI * 2);
+  ctx.fillStyle = color;
+  ctx.fill();
+}
+
+function drawCurlyCarrotGreens(ctx, left, top, color) {
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    let x = left + 50 + 10 * Math.cos(i);
+    let y = top + 10 * Math.sin(i);
+    ctx.arc(x, y, 5, 0, Math.PI * 2, false);
+  }
+  ctx.fillStyle = color;
+  ctx.fill();
+}
+
+function drawPigtailsCarrotGreens(ctx, left, top, color) {
+  ctx.beginPath();
+  ctx.moveTo(left + 30, top + 10);
+  ctx.bezierCurveTo(left + 30, top + 30, left + 20, top + 50, left + 30, top + 70);
+  ctx.moveTo(left + 70, top + 10);
+  ctx.bezierCurveTo(left + 70, top + 30, left + 80, top + 50, left + 70, top + 70);
+  ctx.strokeStyle = color;
+  ctx.stroke();
+}
+
+function drawLongFlowingCarrotGreens(ctx, left, top, color) {
+  ctx.beginPath();
+  top -= 20;
+  left += 5;
+  for (let i = -20; i <= 20; i += 4) {
+    let rand = Math.random() * 10;
+    ctx.moveTo(left + 50 + i, top);
+    ctx.bezierCurveTo(left + 50 + i, top + 20, left + 30 + i + rand, top + 40 + rand, left + 50 + i, top + 60);
+  }
+  ctx.strokeStyle = color;
+  ctx.stroke();
+}
+
+function drawAfroCarrotGreens(ctx, left, top, color) {
+  ctx.beginPath();
+  for (let i = 0; i < 360; i += 10) {
+    let x = left + 50 + 30 * Math.cos((i * Math.PI) / 180);
+    let y = top + 20 + 30 * Math.sin((i * Math.PI) / 180);
+    ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill();
+}
+
+function drawSpikeCarrotGreens(ctx, left, top, color) {
+  ctx.beginPath();
+  for (let i = 0; i < 5; i++) {
+    let x = left + 50 + 20 * Math.cos((i * Math.PI) / 2.5);
+    let y = top + 20 * Math.sin((i * Math.PI) / 2.5);
+    ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill();
+}
+
+function drawCarrotLimbs(ctx, left, top, color) {
+  // Draw arms
+  ctx.beginPath();
+  ctx.moveTo(left + 20, top + 70);
+  ctx.lineTo(left + 30, top + 80);
+  ctx.moveTo(left + 80, top + 70);
+  ctx.lineTo(left + 70, top + 80);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 5;
+  ctx.stroke();
+
+  // Draw legs
+  ctx.beginPath();
+  ctx.moveTo(left + 40, top + 120);
+  ctx.lineTo(left + 30, top + 130);
+  ctx.moveTo(left + 60, top + 120);
+  ctx.lineTo(left + 70, top + 130);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 5;
+  ctx.stroke();
+}
+
+function setupCarrot1(carrotCtx) {
+  let left = 0;
+  let top = 0;
+
+  drawBackground(carrotCtx, left, top, 100, 130, "lightblue");
+  drawCarrotBody(carrotCtx, left, top, "orange");
+  drawCarrotTop(carrotCtx, left, top, "green");
+  drawCarrotFace(carrotCtx, left, top, "orange");
+  drawCarrotEyes(carrotCtx, left, top, "white", "black");
+  drawCarrotMouth(carrotCtx, left, top, "black");
+  drawCarrotGreens(carrotCtx, left, top, "green");
+  drawCarrotLimbs(carrotCtx, left, top, "orange");
+}
+
+function setupCarrot2(carrotCtx) {
+  let left = 0;
+  let top = 0;
+
+  drawBackground(carrotCtx, left, top, 100, 130, "lightblue");
+  drawFatCarrotBody(carrotCtx, left, top, "orange");
+
+  // drawLongFlowingCarrotTop(carrotCtx, left, top, "green");
+
+  drawCarrotFace(carrotCtx, left, top, "orange");
+  // drawBleedingCarrotEyes(carrotCtx, left, top, "white", "black");
+  // drawNarrowCarrotEyes(carrotCtx, left, top, "white", "black");
+  // drawLookingDownCarrotEyes(carrotCtx, left, top, "white", "black");
+  // drawLookingUpCarrotEyes(carrotCtx, left, top, "white", "black");
+  drawUghCarrotEyes(carrotCtx, left, top, "white", "black");
+  // drawGoofyCarrotEyes(carrotCtx, left, top, "white", "black");
+  drawScaredCarrotMouth(carrotCtx, left, top, "black");
+
+  drawLongFlowingCarrotGreens(carrotCtx, left, top, "green");
+
+  drawCarrotLimbs(carrotCtx, left, top, "orange");
+}
+
+function setupCarrot3(carrotCtx) {
+  let left = 0;
+  let top = 0;
+
+  drawBackground(carrotCtx, left, top, 100, 130, "lightblue");
+  drawThinCarrotBody(carrotCtx, left, top, "orange");
+
+  // drawCarrotTop(carrotCtx, left, top, "green");
+  drawCarrotFace(carrotCtx, left, top, "orange");
+  drawNarrowCarrotEyes(carrotCtx, left, top, "white", "black");
+  drawGrumpyCarrotMouth(carrotCtx, left, top, "black");
+  drawCarrotGreens(carrotCtx, left, top, "green");
+  drawCarrotLimbs(carrotCtx, left, top, "orange");
+}
+
+function setupCarrot4(carrotCtx) {
+  let left = 0;
+  let top = 0;
+
+  drawBackground(carrotCtx, left, top, 100, 130, "lightblue");
+  drawCarrotBody(carrotCtx, left, top, "orange");
+
+  // drawCarrotTop(carrotCtx, left, top, "green");
+  drawCarrotFace(carrotCtx, left, top, "orange");
+  drawBleedingCarrotEyes(carrotCtx, left, top, "white", "black");
+  drawSurprisedCarrotMouth(carrotCtx, left, top, "black");
+  // drawHappyCarrotMouth(carrotCtx, left, top, "black");
+  // drawCarrotGreens(carrotCtx, left, top, "green");
+  drawCarrotLimbs(carrotCtx, left, top, "orange");
+}
+
+function drawUprightCarrotGreens(ctx, left, top, color) {
+  ctx.beginPath();
+  ctx.fillRect(left + 45, top - 20, 10, 20);
+  ctx.fillRect(left + 55, top - 30, 10, 30);
+  ctx.fillStyle = color;
+  ctx.fill();
+}
+
+function drawFatCarrotBody(ctx, left, top, color) {
+  ctx.beginPath();
+  ctx.moveTo(left + 50, top + 10);
+  ctx.bezierCurveTo(left + 90, top + 10, left + 90, top + 70, left + 50, top + 120); // Wider bezier curves for a fatter body
+  ctx.bezierCurveTo(left + 10, top + 70, left + 10, top + 10, left + 50, top + 10);
+  ctx.fillStyle = color;
+  ctx.fill();
+}
+
+function drawThinCarrotBody(ctx, left, top, color) {
+  ctx.beginPath();
+  ctx.moveTo(left + 50, top + 10);
+  ctx.bezierCurveTo(left + 70, top + 10, left + 70, top + 70, left + 50, top + 120); // Narrower bezier curves for a thinner body
+  ctx.bezierCurveTo(left + 30, top + 70, left + 30, top + 10, left + 50, top + 10);
+  ctx.fillStyle = color;
+  ctx.fill();
+}
+
+function renderInfoText(ctx, text, x, y, maxWidth, animationFrame) {
   // Set font and color
   ctx.textAlign = "start";
-  let sections = lore.split(",");
+  let sections = text.split(";");
   let currentY = y;
 
   for (let i = 0; i < sections.length; i++) {
@@ -262,15 +691,15 @@ function renderInfoText(ctx, lore, x, y, maxWidth, animationFrame) {
     if (i === 0) {
       // First section (title) should be the biggest
       fontSize = 50;
-      lineHeight = fontSize * 1.5; // Adjust the multiple as needed
-    } else if (i === sections.length - 1) {
-      // Last section (description) should be the smallest
+      lineHeight = fontSize * 1.1; // Adjust the multiple as needed
+    } else if (i === sections.length - 1 || i === sections.length - 2) {
+      // Last sections (description) should be the smallest
       fontSize = 20;
-      lineHeight = fontSize * 1.2; // Adjust the multiple as needed
+      lineHeight = fontSize * 1.1; // Adjust the multiple as needed
     } else {
       // Other sections can have a default size
       fontSize = 33;
-      lineHeight = fontSize * 1.3; // Adjust the multiple as needed
+      lineHeight = fontSize * 1.2; // Adjust the multiple as needed
     }
 
     ctx.font = fontSize + "px Gothic";

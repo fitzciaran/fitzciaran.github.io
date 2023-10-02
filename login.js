@@ -18,7 +18,7 @@ const passwordInput = {
   text: "",
 };
 
-const loginButton = {
+export const loginButton = {
   x: 50,
   y: 50,
   width: 200,

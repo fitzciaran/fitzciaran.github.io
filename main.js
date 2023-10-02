@@ -7,6 +7,7 @@ import {
   drawPreGameOverlay,
   drawDailyScores,
   drawAchievements,
+  setupCarrots,
 } from "./canvasDrawingFunctions.js";
 import {
   createPeer,
@@ -23,8 +24,8 @@ import {
   setMasterPeerId,
   chooseNewMasterPeer,
 } from "./connectionHandlers.js";
-import { addScoreToDB, getFirebase, incrementFirebaseGivenPropertyValue } from "./db.js";
-import { setupPilotsImageSources, setupPilotsImages, setupCanvas, setupSpikeyBallPoints } from "./drawingUtils.js";
+import { addScoreToDB, getFirebase } from "./db.js";
+import { setupCanvas, setupSpikeyBallPoints, centerPilots } from "./drawingUtils.js";
 import { drawScene } from "./gameDrawing.js";
 import { endGameMessage, setGameWon, pilots, masterUpdateGame } from "./gameLogic.js";
 import { shuffleArray } from "./gameUtils.js";
@@ -269,7 +270,6 @@ function camFollowPlayer(deltaTime) {
 }
 
 function setupPilots(canvas, ctx) {
-  setupPilotsImageSources();
   addPilotEventListners(canvas, ctx);
   //todo will need to update this if multiple pilots
   let anySelected = false;
@@ -402,6 +402,7 @@ export function setGameState(newState) {
     player.x = -600;
     player.y = -600;
     player.centerCameraOnPlayer(canvas.width, canvas.height);
+    setTimeout(() => updateTopScoresInfo(), 100);
 
     //todo addback in if there was a good reason for this
     // globalPowerUps = [];
@@ -455,9 +456,8 @@ window.addEventListener("load", function () {
   //for now just do this at game start and transition, in future do this periodically?
   updateTopScoresInfo();
   handleInputEvents(canvas, player);
-  // Call setupPilotsImages once at the start of the game
-  setupPilotsImages(canvas);
-
+  centerPilots(canvas);
+  setupCarrots();
   update();
   setupGameEventListeners(window);
   setGameState(GameState.INTRO);

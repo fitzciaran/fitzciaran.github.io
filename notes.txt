@@ -364,8 +364,6 @@ Ships can fire an expanding ring of a set color?
 
 Spawn out of a mothership?
 
-trail effect, maybe that's what kills, snake style....
-
 maintain an enemies array and it's contents then have an inherited method to overrride for equality check or 
 
 
@@ -380,7 +378,6 @@ update trail death message
 I think trails should be distinct from mines, and should be a single object with many points of articulation.
     if we go this route the "tail" could have it's own momentum
 
-mine destroy effect same as ship 
 
 regular mine spawns should have a chance to spawn a power up pretty close.
     directional forces ditto
@@ -406,13 +403,11 @@ mechanic where you have to enclose something in your trail....maybe if you enclo
             collaborative option?
         maybe the shrine you encircle becomes ... collected and you take it somewhere.
 
-
 change language for a double ko/ crash
 
 when encircle detected, for a start color the encircled area. create some new entity? new mine version use effect? and just do a kill check?
 
 maybe head /body is invincible but tail isn't?
-
 
 add kill/removal of powerups, otherplayers (than playerID of freeMine), otherbots... from inside freemine.
     maybe it can - "break open" some new kind of entity 
@@ -423,8 +418,6 @@ tail grows like snake?
     what to do about tail receding when still?... maybe if trail mines are very close to player of playerID they don't expire
 
 bots could check for close powerups when choosing a new one? at all times? every % frames? 
-
-currently just checking free mine at start I think? at least for the special checks? need to get that being checked in masterUpdate
 
 check colors for good ones improve average quality, vivid bright
 
@@ -461,8 +454,6 @@ flag / icon select (draw own?)
 
 XP gain at death? XP gain 
 
-
-
 rather than send updated isDead property maybe run function to handle that (score update)?
 for now I'll just do the update for master
 
@@ -480,3 +471,7 @@ Does achievements update when return to menu?
  Xp added to guage after deathLogin user as anonymous? Or just have fallback "in ram" values maintained. 
 
 game music, for now switch between ip music?
+
+freezes after long time computer sleep?
+
+kill assists?

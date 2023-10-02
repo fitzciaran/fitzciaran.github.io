@@ -43,23 +43,6 @@ export function drawShip(ctx, camX, camY, player, points) {
     player.flameTransitionStartTime = currentTime;
   }
 
-  //   const silhouettePoints = [];
-
-  //   // Calculate silhouette points
-  //   for (let i = 0; i < points.length; i++) {
-  //     const rotatedPoint = rotateAndScalePoint(points[i].x, points[i].y, angle, shipScale);
-  //     const silhouetteX = playerCenterXWorldCoords + rotatedPoint.x;
-  //     const silhouetteY = playerCenterYWorldCoords + rotatedPoint.y;
-  //     const shadowPoint = calculateShadowPosition(silhouetteX, silhouetteY, lightSourceX, lightSourceY);
-  //     silhouettePoints.push(shadowPoint);
-  //   }
-
-  //   ctx.strokeStyle = color;
-  //   ctx.fillStyle = color;
-
-  //   // Draw silhouette
-  //   drawSilhouette(ctx, silhouettePoints);
-
   if (player.space) {
     const flameOffsetAngle = angle - Math.PI / 2 - 0.46;
     const frequency = 0.5;
@@ -162,7 +145,6 @@ function drawFlame(ctx, centerX, centerY, flameOffsetAngle, flameSize) {
   ctx.fill();
 }
 
-// Helper function to draw the ship's outline
 function drawShipOutline(ctx, player, playerCenterXScreenCoords, playerCenterYScreenCoords, points, angle, currentTime, color) {
   ctx.beginPath();
 
@@ -202,6 +184,43 @@ function drawShipOutline(ctx, player, playerCenterXScreenCoords, playerCenterYSc
   ctx.lineWidth = 5;
   ctx.stroke();
 }
+
+// function drawShipOutline(ctx, player, playerCenterXScreenCoords, playerCenterYScreenCoords, points, angle, currentTime, color) {
+//   ctx.beginPath();
+//   ctx.fillStyle = color;
+//   ctx.strokeStyle = "white";
+//   ctx.lineWidth = 5;
+
+//   // Define carrot shape points relative to the carrot's center
+//   const carrotPoints = [
+//     { x: 0, y: -30 }, // Tip of the carrot
+//     { x: -15, y: 0 }, // Left side of the carrot body
+//     { x: -10, y: 30 }, // Left bottom edge of the carrot body
+//     { x: 10, y: 30 }, // Right bottom edge of the carrot body
+//     { x: 15, y: 0 }, // Right side of the carrot body
+//     { x: 0, y: -30 }, // Back to the tip of the carrot
+//   ];
+
+//   // Rotate and scale carrot points
+//   for (let i = 0; i < carrotPoints.length; i++) {
+//     const rotatedPoint = rotateAndScalePoint(carrotPoints[i].x, carrotPoints[i].y, angle, shipScale);
+//     carrotPoints[i] = {
+//       x: playerCenterXScreenCoords + rotatedPoint.x,
+//       y: playerCenterYScreenCoords + rotatedPoint.y,
+//     };
+//   }
+
+//   // Create a smooth carrot shape using Bezier curves
+//   ctx.moveTo(carrotPoints[0].x, carrotPoints[0].y);
+//   ctx.bezierCurveTo(carrotPoints[1].x, carrotPoints[1].y, carrotPoints[2].x, carrotPoints[2].y, carrotPoints[3].x, carrotPoints[3].y);
+//   ctx.bezierCurveTo(carrotPoints[4].x, carrotPoints[4].y, carrotPoints[5].x, carrotPoints[5].y, carrotPoints[0].x, carrotPoints[0].y);
+
+//   ctx.closePath();
+//   ctx.fillStyle = color;
+//   ctx.lineWidth = 2;
+//   ctx.fill();
+//   ctx.stroke();
+// }
 
 // Helper function to draw the name and invincibility gauge
 function drawNameAndInvincibility(ctx, player, centerX, centerY, name, color) {

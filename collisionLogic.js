@@ -7,6 +7,10 @@ import { ForceType, effects, Effect, EffectType, MineType } from "./entities.js"
 export const shipScale = 2;
 export const mineScale = 0.7;
 
+export const HitByType = {
+  MINE: "a mine",
+};
+
 export function detectCollisions(playerToCheck, globalPowerUps, bots, otherPlayers, forces) {
   // Detect collisions between the player's ship and the powerups or other ships
   // If a collision is detected, update the game state accordingly
@@ -52,7 +56,7 @@ export function checkMineCollision(playerToCheck, mines) {
       // assuming the radius of ship is 10 - todo update for better hitbox on ship
       if (playerToCheck.isVulnerable() && mine.hitFrames == -1 && (mine.playerId == "" || mine.playerId != playerToCheck.id)) {
         if (mine.mineType == MineType.REGULAR) {
-          playerToCheck.gotHit("a mine");
+          playerToCheck.gotHit(HitByType.MINE);
         } else {
           resolveMineHit(playerToCheck, mine, otherPlayers, bots, player);
         }
@@ -164,7 +168,7 @@ export function checkPlayerCollision(playerToCheck, allPlayers) {
 function handlePlayerHit(playerOne, playerTwo) {
   if (playerTwo.isVulnerable()) {
     if (playerOne.isTangible()) {
-      playerTwo.gotHit(playerOne.name);
+      playerTwo.gotHit(playerOne.name, playerOne.isVulnerable());
     }
     // if (playerTwo.isBot) {
     //   playerTwo.delayReset(botRespawnDelay, true, true);
@@ -334,6 +338,6 @@ function resolveMineHit(playerToCheck, mine, otherPlayers, bots, player) {
     playerToCheck.gotHit(mineOwner.name);
     mineOwner.hitOtherPlayer(playerToCheck);
   } else {
-    playerToCheck.gotHit("a mine");
+    playerToCheck.gotHit(HitByType.MINE);
   }
 }

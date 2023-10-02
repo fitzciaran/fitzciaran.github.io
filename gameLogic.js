@@ -57,7 +57,7 @@ export class Pilot extends Entity {
     x = null,
     y = null,
     width = 100,
-    height = 100,
+    height = 130,
     lore = "",
     name = "",
     src = "",
@@ -90,10 +90,10 @@ export const pilot1 = new Pilot(
   0,
   0,
   100,
-  100,
-  "Orion, Speed: 4, Invicible Time: 10,Special: Gravity Attract, Agressive - likes to get powered up and use Gravity Attract to get kills",
+  130,
+  "Sunny Sam; Speed: 4; Invicible Time: 10;Special: Gravity Attract; Ugh, here's Sunny Side-Up Sam, the carrot who's always shining bright. How original, right? He's the 'hero' of this carrot caper, or so he thinks. Just an average carrot trying way too hard to be cool. Yawn. Is he in this tournament to prove he's the 'coolest' carrot around?;Agressive: likes to get powered up and use Gravity Attract to get kills",
   PilotName.PILOT_1,
-  "images/wolf.webp",
+  "carrot1Canvas",
   600,
   100
 );
@@ -102,10 +102,10 @@ export const pilot2 = new Pilot(
   0,
   0,
   100,
-  100,
-  "Bumble, Speed: 2, Invicible Time: 15,Special: Gravity Repel, Defensive - not so fast but can use Gravity Repel to keep attackers away ",
+  130,
+  "Girthy Gordon; Speed: 2; Invicible Time: 15;Special: Gravity Repel; A Grumpy, portly carrot with a penchant for defense. You've seen it all before, right? He might be slow, but that doesn't stop him from being the predictable 'tank' of the group. Originality, anyone? Is he here for vengeance, or is there something even darker lurking beneath his carrot exterior?;Defensive: not so fast but can use Gravity Repel to keep attackers away ",
   PilotName.PILOT_2,
-  "images/slippy.webp",
+  "carrot2Canvas",
   900,
   120
 );
@@ -114,10 +114,10 @@ export const pilot3 = new Pilot(
   0,
   0,
   100,
-  100,
-  "Zippy, Speed: 5, Invicible Time: 10, Special: Speed Boost, Speedy - tricky to control. Not for scrubs! ",
+  130,
+  "Zippy; Speed: 5; Invicible Time: 10; Special: Speed Boost; Fast but weak, unathletic, and clumsier than a bull in a china shop. He's also surprisingly tight with his money, counting every last carrot coin. Zipping around like he's in a hurry to save a few bucks. A tiny carrot with a big cliché and an even smaller wallet. Maybe he stumbled into the tournament by accident, and now he's just trying to survive the chaos!;Speedy: tricky to control. Not for scrubs! ",
   PilotName.PILOT_3,
-  "images/mouse.webp",
+  "carrot3Canvas",
   600,
   100
 );
@@ -126,10 +126,10 @@ export const pilot4 = new Pilot(
   0,
   0,
   100,
-  100,
-  "Snaffle, Speed: 3, Invicible Time: 12, Special: Tractor Beam, Sneaky! Powerful long range narrow tractor beam can cause havok from afar!",
+  130,
+  "Stan; Speed: 3; Invicible Time: 12; Special: Tractor Beam; Forever in shock, like he just found out he's a carrot. With his bleeding eyes and a backstory that involves suffering radiation poisoning from being half-cooked in the microwave. In endless pain some say he want's to win the tournament only as part of his plan to make sure the entire universe suffers as he does.;Sneaky!: Powerful long range narrow tractor beam can cause havok from afar!",
   PilotName.PILOT_4,
-  "images/bore612.webp",
+  "carrot4Canvas",
   700,
   150
 );
