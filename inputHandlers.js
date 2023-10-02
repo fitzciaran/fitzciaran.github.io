@@ -15,7 +15,7 @@ import { getFirebase } from "./db.js";
 import { getRandomName } from "./generateEntities.js";
 import { pilots, max_player_name } from "./gameLogic.js";
 import { calculateAngle } from "./gameUtils.js";
-import { loginButton } from "./login.js";
+import { loginButton, firebaseGoogleLogin } from "./login.js";
 
 let pilotMouseMoveListener;
 let pilotClickListener;
@@ -340,7 +340,8 @@ export function addLoginHandler(ctx) {
 // Add a click event listener to handle login button click.
 function handleLoginButtonClick(event, ctx) {
   let firebase = getFirebase();
-  if (firebase.auth().currentUser) {
+  let user = firebase.auth().currentUser;
+  if (user) {
     console.log("Already logged in");
     return;
   }

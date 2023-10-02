@@ -402,7 +402,7 @@ export function setGameState(newState) {
     player.x = -600;
     player.y = -600;
     player.centerCameraOnPlayer(canvas.width, canvas.height);
-    setTimeout(() => updateTopScoresInfo(), 100);
+    setTimeout(() => updateTopScoresInfo(), 300);
 
     //todo addback in if there was a good reason for this
     // globalPowerUps = [];

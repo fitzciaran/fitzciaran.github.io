@@ -99,7 +99,7 @@ function firebaseLogin(firebase, email, password) {
     });
 }
 
-function firebaseGoogleLogin() {
+export function firebaseGoogleLogin() {
   // If a popup is already open, don't open another one.
   if (googleSignInPopupOpen) {
     return;

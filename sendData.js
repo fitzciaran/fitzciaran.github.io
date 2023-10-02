@@ -125,7 +125,9 @@ function addProperty(playerToSend, data, propertyKey, playerKey, sendAnyway = fa
 
 //this is the full send that will only be sent on request / occasionally
 export function sendEntitiesState(specificPeerId = "") {
-  // Send game state to other player
+  if (!anyConnections()) {
+    return;
+  }
   let data = {
     timestamp: Date.now(),
     priority: 2,
@@ -151,7 +153,9 @@ export function sendEntitiesState(specificPeerId = "") {
 
 //this is the partial send that will be sent regually
 export function sendEntitiesUpdate() {
-  // Send game state to other player
+  if (!anyConnections()) {
+    return;
+  }
   let data = {
     timestamp: Date.now(),
     priority: 2,
@@ -169,7 +173,9 @@ export function sendEntitiesUpdate() {
 
 //this is the bot send that will be sent most frequently
 export function sendBotEntitiesUpdate() {
-  // Send game state to other player
+  if (!anyConnections()) {
+    return;
+  }
   let data = {
     timestamp: Date.now(),
     priority: 2,
@@ -182,7 +188,9 @@ export function sendBotEntitiesUpdate() {
 
 //this is the powerup update that will only be sent on request / occasionally
 export function sendPowerUpsUpdate(onlyChangedData = true) {
-  // Send game state to other player
+  if (!anyConnections()) {
+    return;
+  }
   let data = {
     timestamp: Date.now(),
     priority: 2,
@@ -195,7 +203,9 @@ export function sendPowerUpsUpdate(onlyChangedData = true) {
 
 //this is the mines only update  will only be sent on request / occasionally
 export function sendMinesUpdate(onlyChangedData = true, onlyRegularMines = true) {
-  // Send game state to other player
+  if (!anyConnections()) {
+    return;
+  }
   let data = {
     timestamp: Date.now(),
     priority: 2,
@@ -209,7 +219,9 @@ export function sendMinesUpdate(onlyChangedData = true, onlyRegularMines = true)
 
 //this is the effects only update that will only be sent on request / occasionally
 export function sendEffectsUpdate(onlyChangedData = true) {
-  // Send game state to other player
+  if (!anyConnections()) {
+    return;
+  }
   let data = {
     timestamp: Date.now(),
     priority: 2,
@@ -222,7 +234,9 @@ export function sendEffectsUpdate(onlyChangedData = true) {
 }
 
 export function sendForcesUpdate(onlyChangedData = true) {
-  // Send game state to other player
+  if (!anyConnections()) {
+    return;
+  }
   let data = {
     timestamp: Date.now(),
     priority: 2,
@@ -235,7 +249,9 @@ export function sendForcesUpdate(onlyChangedData = true) {
 }
 
 export function sendBotsUpdate(onlyChangedData = true) {
-  // Send game state to other player
+  if (!anyConnections()) {
+    return;
+  }
   let data = {
     timestamp: Date.now(),
     priority: 2,
@@ -328,4 +344,11 @@ function sendData(data, specificPeerId) {
   } else {
     console.log("nothing to send in sendData");
   }
+}
+
+function anyConnections() {
+  if (connections && connections.length > 0) {
+    return true;
+  }
+  return false;
 }
