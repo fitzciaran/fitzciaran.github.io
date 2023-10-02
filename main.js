@@ -168,7 +168,7 @@ function updateCamera(playerToFollow, deltaTime) {
   camY = Math.max(Math.min(camY, worldDimensions.height - canvas.height), 0);
 }
 
-function updateGame(deltaTime, playerActive) {
+function updateGame(deltaTime, playerActive, camX, camY) {
   //scale deltaTime
   deltaTime *= 100;
 
@@ -182,7 +182,7 @@ function updateGame(deltaTime, playerActive) {
     //todo might have to uncomment the condition
     // if (isPlayerMasterPeer(player)) {
     // This peer is the master, so it runs the game logic for shared objects
-    masterUpdateGame(player, globalPowerUps, otherPlayers, bots, mines, deltaTime);
+    masterUpdateGame(player, globalPowerUps, otherPlayers, bots, mines, deltaTime, camX, camY);
     // }
   }
 
@@ -423,7 +423,7 @@ function update() {
   while (accumulator >= fixedDeltaTime) {
     if (gameState != GameState.GAME) {
       //since we show the ongoing game at all times alway do this
-      updateGame(fixedDeltaTime, false);
+      updateGame(fixedDeltaTime, false, camX, camY);
     }
     if (gameState === GameState.INTRO) {
       updateName();
@@ -433,7 +433,7 @@ function update() {
     } else if (gameState === GameState.PILOT_SELECT) {
       updatePilot();
     } else if (gameState === GameState.GAME) {
-      updateGame(fixedDeltaTime, true);
+      updateGame(fixedDeltaTime, true, camX, camY);
     } else if (gameState === GameState.FINISHED) {
       updateWinState();
     }

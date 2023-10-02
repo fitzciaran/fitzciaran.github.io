@@ -221,12 +221,12 @@ export function updateEnemies(deltaTime) {
   }
 }
 
-export function updateOtherPlayers(deltaTime, mines) {
+export function updateOtherPlayers(deltaTime, mines, camX, camY) {
   otherPlayers.forEach((otherPlayer, index) => {
     // Check if player is an instance of the Player class
     if (otherPlayer != null && otherPlayer instanceof Player) {
       if (otherPlayer.name != "") {
-        otherPlayer.updateTick(deltaTime, mines);
+        otherPlayer.updateTick(deltaTime, mines, camX, camY);
       }
     } else {
       console.log("otherPlayer is not an instance of the Player class. Reinitializing...");
@@ -250,7 +250,7 @@ export function updateOtherPlayers(deltaTime, mines) {
   });
 }
 
-export function updateBots(deltaTime, mines) {
+export function updateBots(deltaTime, mines, camX, camY) {
   bots.forEach((bot, index) => {
     // Check if bot is an instance of the Bot class
     if (bot == null || !(bot instanceof Bot)) {
@@ -280,7 +280,7 @@ export function updateBots(deltaTime, mines) {
       if (isPlayerMasterPeer(player)) {
         bot.updateBotInputs();
       }
-      bot.updateTick(deltaTime, mines);
+      bot.updateTick(deltaTime, mines, camX, camY);
     }
   });
 }
@@ -290,16 +290,16 @@ export function updatePowerups(deltaTime) {
   //setGlobalPowerUps(getGlobalPowerUps());
 }
 
-export function masterUpdateGame(player, globalPowerUps, otherPlayers, bots, mines, deltaTime) {
+export function masterUpdateGame(player, globalPowerUps, otherPlayers, bots, mines, deltaTime, camX, camY) {
   //this isn't synced between peers
   setGameTimer(gameTimer + 1);
   if (!isPlayerMasterPeer(player)) {
     setTimeSinceMessageFromMaster(timeSinceMessageFromMaster + 1);
   }
-  player.updateTick(deltaTime, mines);
+  player.updateTick(deltaTime, mines, camX, camY);
   // generateBots(worldWidth,worldHeight,colors);
-  updateBots(deltaTime, mines);
-  updateOtherPlayers(deltaTime, mines);
+  updateBots(deltaTime, mines, camX, camY);
+  updateOtherPlayers(deltaTime, mines, camX, camY);
   updateEnemies(deltaTime);
   updatePowerups(deltaTime);
 

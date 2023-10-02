@@ -87,6 +87,8 @@ export class Player {
     this.playerAngleData = {};
     this.mousePosX = 0;
     this.mousePosY = 0;
+    this.absoluteMousePosX = 0;
+    this.absoluteMousePosY = 0;
     this.currentSpeed = 0;
     this.vel = { x: 0, y: 0 };
     this.distanceFactor = 0;
@@ -138,6 +140,8 @@ export class Player {
     this.inRangeTicks = 0;
     this.mousePosX = 0;
     this.mousePosY = 0;
+    this.absoluteMousePosX = 0;
+    this.absoluteMousePosY = 0;
     this.currentSpeed = 0;
     this.vel = { x: 0, y: 0 };
     this.timeSinceSpawned = 0;
@@ -503,7 +507,9 @@ export class Player {
     this.boundVelocity();
   }
 
-  updatePlayerAngle() {
+  updatePlayerAngle(camX, camY) {
+    this.mousePosX = this.absoluteMousePosX + camX;
+    this.mousePosY = this.absoluteMousePosY + camY;
     let dx = this.x - this.mousePosX;
     let dy = this.y - this.mousePosY;
     let distance = Math.sqrt(dx * dx + dy * dy);
@@ -797,14 +803,15 @@ export class Player {
     let camY = Math.max(Math.min(newCamY, worldDimensions.height - viewportHeight), 0);
     setCam(camX, camY);
   }
-  updateTick(deltaTime, mines) {
+
+  updateTick(deltaTime, mines, camX, camY) {
     if (this.id == player.id && player.isDead) {
       setGameState(GameState.FINISHED);
       return;
     }
     if (!this.isDead) {
       this.timeSinceSpawned++;
-      this.updatePlayerAngle();
+      this.updatePlayerAngle(camX, camY);
       this.updatePlayerVelocity(deltaTime);
       this.bouncePlayer();
       this.updatePlayerPosition(deltaTime);
@@ -940,7 +947,7 @@ export class Bot extends Player {
     this.setIsDead(false);
   }
 
-  updateTick(deltaTime, mines) {
+  updateTick(deltaTime, mines, camX, camY) {
     if (this.isDead) {
       //todo delay this?
       //this.resetState(true, true);
@@ -948,7 +955,7 @@ export class Bot extends Player {
       return;
     }
 
-    super.updateTick(deltaTime, mines);
+    super.updateTick(deltaTime, mines, camX, camY);
   }
 
   updateBotInputs() {

@@ -261,15 +261,19 @@ export function drawPreGameOverlay(canvas, ctx) {
 
 export function setupCarrots() {
   const carrot1Canvas = document.getElementById("carrot1Canvas");
+  carrot1Canvas.style.display = "none";
   const carrot1Ctx = carrot1Canvas.getContext("2d");
   setupCarrot1(carrot1Ctx);
   const carrot2Canvas = document.getElementById("carrot2Canvas");
+  carrot2Canvas.style.display = "none";
   const carrot2Ctx = carrot2Canvas.getContext("2d");
   setupCarrot2(carrot2Ctx);
   const carrot3Canvas = document.getElementById("carrot3Canvas");
+  carrot3Canvas.style.display = "none";
   const carrot3Ctx = carrot3Canvas.getContext("2d");
   setupCarrot3(carrot3Ctx);
   const carrot4Canvas = document.getElementById("carrot4Canvas");
+  carrot4Canvas.style.display = "none";
   const carrot4Ctx = carrot4Canvas.getContext("2d");
   setupCarrot4(carrot4Ctx);
 }

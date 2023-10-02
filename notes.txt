@@ -475,3 +475,5 @@ game music, for now switch between ip music?
 freezes after long time computer sleep?
 
 kill assists?
+
+switching ship draws? timer or just different modes? different styles for pilots?

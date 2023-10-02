@@ -34,6 +34,20 @@ let keys = {
 export let mousePos = { x: 0, y: 0 };
 export { handleInputEvents };
 
+export function handleMouseMove(canvas, evt, player) {
+  let coords = getMousePos(canvas, evt);
+  handleMouseMoveDirect(coords.x, coords.y, player);
+}
+
+export function handleMouseMoveDirect(x, y, player) {
+  mousePos.x = x + camX;
+  mousePos.y = y + camY;
+  player.absoluteMousePosX = x;
+  player.absoluteMousePosY = y;
+  player.mousePosX = mousePos.x;
+  player.mousePosY = mousePos.y;
+}
+
 function handleInputEvents(canvas, player) {
   window.addEventListener("keydown", function (e) {
     if (e.code === "Space") {
@@ -63,15 +77,18 @@ function handleInputEvents(canvas, player) {
   canvas.addEventListener(
     "mousemove",
     function (evt) {
-      let coords = getMousePos(canvas, evt);
-      mousePos.x = coords.x + camX;
-      mousePos.y = coords.y + camY;
-      player.mousePosX = mousePos.x;
-      player.mousePosY = mousePos.y;
-      player.angle = calculateAngle(player);
+      handleMouseMove(canvas, evt, player);
     },
     false
   );
+
+  function getMousePos(canvas, evt) {
+    let rect = canvas.getBoundingClientRect();
+    return {
+      x: evt.clientX - rect.left,
+      y: evt.clientY - rect.top,
+    };
+  }
 
   canvas.addEventListener("mousedown", function (e) {
     if (e.button === 2) {
