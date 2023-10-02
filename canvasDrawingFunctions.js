@@ -143,7 +143,7 @@ function drawText(ctx, text, x, y, font, color, textAlign) {
 
 export function drawDailyScores(ctx) {
   const bestScoresXPos = 70;
-  const bestScoresYPos = 250;
+  const bestScoresYPos = 276;
   const boxWidth = 360;
   const boxHeight = 320;
   const bestScoreCenterX = bestScoresXPos + boxWidth / 2;
@@ -179,14 +179,14 @@ export function drawAchievements(ctx) {
   const boxWidth = 360;
   const boxHeight = 320;
   const achievementsAreaXPos = ctx.canvas.width - boxWidth - 70;
-  const achievementsAreaYPos = 250;
+  const achievementsAreaYPos = 276;
   const achievementsAreaCenter = achievementsAreaXPos + boxWidth / 2;
   let currentYPos = achievementsAreaYPos + 30;
 
   drawBorder(ctx, achievementsAreaXPos, achievementsAreaYPos, boxWidth, boxHeight);
   drawBoxBackground(ctx, achievementsAreaXPos, achievementsAreaYPos, boxWidth, boxHeight);
   ctx.textAlign = "center";
-  if (achievementsTitle != achievementsTitleText.YOUR_ACHIEVMENTS) {
+  if (achievementsTitle != achievementsTitleText.YOUR_ACHIEVEMENTS) {
     drawText(ctx, achievementsTitle, achievementsAreaCenter, currentYPos + 100, "20px Arial", "white", ctx.textAlign);
     return;
   }

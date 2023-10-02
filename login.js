@@ -27,8 +27,8 @@ export const loginButton = {
 };
 
 export const achievementsTitleText = {
-  YOUR_ACHIEVMENTS: "Your Achievments",
-  LOGIN_TO_TRACK: "login to track your achievments",
+  YOUR_ACHIEVEMENTS: "Your achievements",
+  LOGIN_TO_TRACK: "login to track your achievements",
 };
 
 let googleSignInPopupOpen = false;
@@ -88,7 +88,7 @@ function firebaseLogin(firebase, email, password) {
       console.log(`Signed in as ${user.email}`);
       loginButton.text = `${user.email}`;
       player.setPlayerName(user.displayName);
-      setAchievementsTitle(achievementsTitleText.YOUR_ACHIEVMENTS);
+      setAchievementsTitle(achievementsTitleText.YOUR_ACHIEVEMENTS);
     })
     .catch((error) => {
       // Handle login errors.
@@ -123,7 +123,7 @@ function firebaseGoogleLogin() {
       //   updateLoginsCount(firebase);
       //   incrementFirebaseLoginsValue(firebase);
       incrementFirebaseGivenPropertyValue(firebase, DbPropertyKey.LOGINS, 1);
-      setAchievementsTitle(achievementsTitleText.YOUR_ACHIEVMENTS);
+      setAchievementsTitle(achievementsTitleText.YOUR_ACHIEVEMENTS);
     })
     .catch((error) => {
       // Handle Google Sign-In errors.
@@ -168,7 +168,7 @@ export function autoSignInWithGoogle(firebase) {
     // updateLoginsCount(firebase);
     //   incrementFirebaseLoginsValue(firebase);
     incrementFirebaseGivenPropertyValue(firebase, DbPropertyKey.LOGINS, 1);
-    setAchievementsTitle(achievementsTitleText.YOUR_ACHIEVMENTS);
+    setAchievementsTitle(achievementsTitleText.YOUR_ACHIEVEMENTS);
     let loginButtonText = `${firebase.auth().currentUser.email}`;
     player.setPlayerName(firebase.auth().currentUser.displayName);
     readUserDataFromFirestore(firebase, DbDocumentKey.USERS, (error, userData) => {

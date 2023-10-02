@@ -12,7 +12,7 @@ export const loreTablet = {
 export function centerPilots(canvas) {
   // Calculate the horizontal gap between pilots (excluding the central gap)
   const gapBetweenPilots = 20; // Gap between all pilots except the central gap
-  const centralGap = 300; // Width of the central gap
+  const centralGap = 330; // Width of the central gap
 
   // Calculate the total width occupied by all pilots (excluding the central gap)
   let totalWidth = 0;
@@ -25,7 +25,7 @@ export function centerPilots(canvas) {
   totalWidth += centralGap;
 
   // Calculate the starting x-position to center the pilots
-  const startX = (canvas.width - totalWidth) / 2 + gapBetweenPilots;
+  const startX = (canvas.width - totalWidth) / 2 + (gapBetweenPilots * 3) / 2;
 
   // Calculate the y-position for all pilots
   const yPosition = canvas.height / 6;
