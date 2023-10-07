@@ -1,8 +1,8 @@
-pilot select should be one image and click through options
-    should be able to select color and....other stuff?..maybe have an image of the ship on intro scene to click.. or arrows.
-    .or a Color: section on intro that randomly choose something on game load, doesn't look like you click to change it but you can.
+pilot select could be one image and click through options
+    could be able to select color and....other stuff?..maybe have an image of the ship on intro scene to click.. or arrows.
+    or a Color: section on intro that randomly choose something on game load, doesn't look like you click to change it but you can.
     maybe other easter eggs where if you keep clicking something that does something little and occasionally reacts to having been clicked a lot, finally does something like boosts stats. (or nerfs them) 
-powerups shouldn't spawn too close to ships (not super important for now)
+powerups/mines shouldn't spawn too close to ships (not super important for now)
 
 start building test suite for this project
 shooting stars effect in the background
@@ -477,3 +477,5 @@ freezes after long time computer sleep?
 kill assists?
 
 switching ship draws? timer or just different modes? different styles for pilots?
+
+hide lore if screen width low?

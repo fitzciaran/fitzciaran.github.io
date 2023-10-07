@@ -52,7 +52,7 @@ export function centerPilots(canvas) {
 
   // Position the lore tablet
   loreTablet.x = canvas.width / 2 - loreTablet.width / 2;
-  loreTablet.y = canvas.height / 2 - 100;
+  loreTablet.y = 359;
 }
 
 export function setupPilotsImages(canvas) {

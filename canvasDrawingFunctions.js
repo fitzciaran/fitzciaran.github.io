@@ -298,18 +298,39 @@ function drawBackground(ctx, left, top, width, height, color) {
 
 function drawCarrotBody(ctx, left, top, color) {
   ctx.beginPath();
-  ctx.moveTo(left + 50, top + 10);
-  ctx.bezierCurveTo(left + 80, top + 10, left + 80, top + 70, left + 50, top + 120);
-  ctx.bezierCurveTo(left + 20, top + 70, left + 20, top + 10, left + 50, top + 10);
+  ctx.moveTo(left + 50, top + 120);
+  ctx.bezierCurveTo(left + 80, top + 10, left + 80, top + 10, left + 50, top + 10);
+  ctx.bezierCurveTo(left + 20, top + 10, left + 20, top + 10, left + 50, top + 120);
   ctx.fillStyle = color;
   ctx.fill();
-}
 
+  // Add 3D rounded effect curved lines
+  ctx.strokeStyle = "white"; // Color of the curved lines
+  ctx.lineWidth = 2; // Adjust the width as needed
+  ctx.beginPath();
+
+  let x = left + 27;
+  let y = top + 20;
+  ctx.moveTo(x, y);
+  ctx.quadraticCurveTo(x + 5, y - 5, x + 10, y - 2);
+
+  x += 0;
+  y += 13;
+  ctx.moveTo(x, y);
+  ctx.quadraticCurveTo(x + 5, y - 5, x + 10, y - 2);
+
+  x += 35;
+  y += -5;
+  ctx.moveTo(x, y);
+  ctx.quadraticCurveTo(x + 5, y - 4, x + 10, y + 3);
+
+  ctx.stroke();
+}
 function drawCarrotTop(ctx, left, top, color) {
   ctx.beginPath();
   ctx.moveTo(left + 50, top + 10);
-  ctx.lineTo(left + 80, top + 60);
-  ctx.lineTo(left + 50, top + 90);
+  ctx.lineTo(left + 80, top + 30);
+  ctx.lineTo(left + 50, top + 60);
   ctx.closePath();
   ctx.fillStyle = color;
   ctx.fill();
@@ -349,21 +370,19 @@ function drawCarrotMouth(ctx, left, top, mouthColor) {
 
 function drawCarrotLimbs(ctx, left, top, color) {
   drawCarrotArms(ctx, left, top, color);
-  drawCarrotLegs(ctx, left, top, color);
+  // drawCarrotLegs(ctx, left, top, color);
 }
 
 function drawOtherCarrotLimbs(ctx, left, top, color) {
-  // drawCarrotFoot(ctx, left, top, color);
   drawCarrotHand(ctx, left, top, color);
-  // drawCarrotArmSign(ctx, left, top, color);
 }
 
 function drawCarrotLegs(ctx, left, top, color) {
   // Draw legs
   ctx.beginPath();
-  ctx.moveTo(left + 40, top + 120);
+  ctx.moveTo(left + 50, top + 100);
   ctx.lineTo(left + 30, top + 130);
-  ctx.moveTo(left + 60, top + 120);
+  ctx.moveTo(left + 50, top + 100);
   ctx.lineTo(left + 70, top + 130);
   ctx.strokeStyle = color;
   ctx.lineWidth = 5;
@@ -383,17 +402,30 @@ function drawCarrotFoot(ctx, left, top, color) {
   ctx.fill();
 }
 
-function drawCarrotArms(ctx, left, top, color) {
+function drawShortCarrotArms(ctx, left, top, color) {
   // Draw arms
   ctx.beginPath();
-  ctx.moveTo(left + 20, top + 70);
+  ctx.moveTo(left + 15, top + 70);
   ctx.lineTo(left + 30, top + 80);
-  ctx.moveTo(left + 80, top + 70);
+  ctx.moveTo(left + 86, top + 70);
   ctx.lineTo(left + 70, top + 80);
   ctx.strokeStyle = color;
   ctx.lineWidth = 5;
   ctx.stroke();
 }
+
+function drawCarrotArms(ctx, left, top, color) {
+  // Draw arms
+  ctx.beginPath();
+  ctx.moveTo(left + 20, top + 60);
+  ctx.lineTo(left + 45, top + 85);
+  ctx.moveTo(left + 80, top + 60);
+  ctx.lineTo(left + 60, top + 77);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 5;
+  ctx.stroke();
+}
+
 function drawCarrotHand(ctx, left, top, color) {
   ctx.beginPath();
   ctx.moveTo(left + 20, top + 70);
@@ -657,11 +689,10 @@ function setupCarrot1(carrotCtx) {
 
   drawBackground(carrotCtx, left, top, 100, 130, "lightblue");
   drawCarrotBody(carrotCtx, left, top, "orange");
-  drawCarrotTop(carrotCtx, left, top, "green");
-  drawCarrotFace(carrotCtx, left, top, "orange");
-  drawCarrotEyes(carrotCtx, left, top, "white", "black");
-  drawCarrotMouth(carrotCtx, left, top, "black");
-  drawCarrotGreens(carrotCtx, left, top, "green");
+  drawCarrotEyes(carrotCtx, left, top - 15, "white", "black");
+  drawCarrotMouth(carrotCtx, left, top - 15, "black");
+
+  drawCarrotGreens(carrotCtx, left, top - 20, "darkgreen");
   drawCarrotLimbs(carrotCtx, left, top, "orange");
 }
 
@@ -671,21 +702,11 @@ function setupCarrot2(carrotCtx) {
 
   drawBackground(carrotCtx, left, top, 100, 130, "lightblue");
   drawFatCarrotBody(carrotCtx, left, top, "orange");
-
-  // drawLongFlowingCarrotTop(carrotCtx, left, top, "green");
-
-  drawCarrotFace(carrotCtx, left, top, "orange");
-  // drawBleedingCarrotEyes(carrotCtx, left, top, "white", "black");
-  // drawNarrowCarrotEyes(carrotCtx, left, top, "white", "black");
-  // drawLookingDownCarrotEyes(carrotCtx, left, top, "white", "black");
-  // drawLookingUpCarrotEyes(carrotCtx, left, top, "white", "black");
   drawUghCarrotEyes(carrotCtx, left, top, "white", "black");
-  // drawGoofyCarrotEyes(carrotCtx, left, top, "white", "black");
   drawScaredCarrotMouth(carrotCtx, left, top, "black");
-
   drawLongFlowingCarrotGreens(carrotCtx, left, top, "green");
-
-  drawCarrotLimbs(carrotCtx, left, top, "orange");
+  drawShortCarrotArms(carrotCtx, left, top, "orange");
+  drawCarrotLegs(carrotCtx, left, top, "orange");
 }
 
 function setupCarrot3(carrotCtx) {
@@ -693,14 +714,12 @@ function setupCarrot3(carrotCtx) {
   let top = 0;
 
   drawBackground(carrotCtx, left, top, 100, 130, "lightblue");
+  drawCarrotLimbs(carrotCtx, left, top, "orange");
   drawThinCarrotBody(carrotCtx, left, top, "orange");
 
-  // drawCarrotTop(carrotCtx, left, top, "green");
-  drawCarrotFace(carrotCtx, left, top, "orange");
   drawNarrowCarrotEyes(carrotCtx, left, top, "white", "black");
   drawGrumpyCarrotMouth(carrotCtx, left, top, "black");
   drawCarrotGreens(carrotCtx, left, top, "green");
-  drawCarrotLimbs(carrotCtx, left, top, "orange");
 }
 
 function setupCarrot4(carrotCtx) {
@@ -708,15 +727,11 @@ function setupCarrot4(carrotCtx) {
   let top = 0;
 
   drawBackground(carrotCtx, left, top, 100, 130, "lightblue");
+  drawCarrotLimbs(carrotCtx, left, top, "orange");
   drawCarrotBody(carrotCtx, left, top, "orange");
 
-  // drawCarrotTop(carrotCtx, left, top, "green");
-  drawCarrotFace(carrotCtx, left, top, "orange");
   drawBleedingCarrotEyes(carrotCtx, left, top, "white", "black");
   drawSurprisedCarrotMouth(carrotCtx, left, top, "black");
-  // drawHappyCarrotMouth(carrotCtx, left, top, "black");
-  // drawCarrotGreens(carrotCtx, left, top, "green");
-  drawCarrotLimbs(carrotCtx, left, top, "orange");
 }
 
 function drawUprightCarrotGreens(ctx, left, top, color) {
@@ -862,18 +877,6 @@ export function drawInputField(canvas, ctx, inputText, x, y, width, height, inpu
   // Draw input field background
   ctx.fillStyle = "white";
   ctx.fillRect(x, y, width, height); // Adjust the width and height as needed
-
-  // // Draw input text
-  // ctx.fillStyle = "black";
-  // ctx.fillText(inputText, x + 5, y + 20); // Adjust the x and y offsets as needed
-
-  // // Calculate the cursor position
-  // const cursorX = x + width / 2 + ctx.measureText(inputText).width + 5; // Adjust the offset as needed
-
-  // // Draw the cursor (a vertical line)
-  // if (document.hasFocus()) {
-  //   drawCursor(ctx, cursorX, y + 5, y + 25); // Adjust the cursor height as needed
-  // }
 
   ctx.font = "20px Arial";
   ctx.fillStyle = "black";
