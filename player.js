@@ -117,7 +117,7 @@ export class Player {
   setAngle(angle) {
     let previousAngleDifference = angle - this.#angle;
     if (this.isBot == false && Math.abs(previousAngleDifference > 0.2)) {
-      console.log(`Before: ${this.#angle}, After: ${angle}`);
+      // console.log(`Before: ${this.#angle}, After: ${angle}`);
     }
     this.#angle = angle;
   }

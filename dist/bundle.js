@@ -1794,10 +1794,11 @@ function createPeer(player, otherPlayers, globalPowerUps, reconnectionAttempts =
       createPeer(player, otherPlayers, globalPowerUps, reconnectionAttempts);
     } else if (err.type === "browser-incompatible") {
       console.log("browser incompatible:", err);
-      //console.log("Other error:");
+    } else if (err.type === "network") {
+      console.log("network error :", err);
+      createPeer(player, otherPlayers, globalPowerUps, reconnectionAttempts);
     } else {
-      //console.log("Other error:", err);
-      //console.log("Other error:");
+      console.log("Other error:", err);
     }
   });
   peer.on("close", () => {
@@ -7959,7 +7960,7 @@ class Player {
   setAngle(angle) {
     let previousAngleDifference = angle - this.#angle;
     if (this.isBot == false && Math.abs(previousAngleDifference > 0.2)) {
-      console.log(`Before: ${this.#angle}, After: ${angle}`);
+      // console.log(`Before: ${this.#angle}, After: ${angle}`);
     }
     this.#angle = angle;
   }

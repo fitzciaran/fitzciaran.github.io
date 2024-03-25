@@ -215,10 +215,11 @@ export function createPeer(player, otherPlayers, globalPowerUps, reconnectionAtt
       createPeer(player, otherPlayers, globalPowerUps, reconnectionAttempts);
     } else if (err.type === "browser-incompatible") {
       console.log("browser incompatible:", err);
-      //console.log("Other error:");
+    } else if (err.type === "network") {
+      console.log("network error :", err);
+      createPeer(player, otherPlayers, globalPowerUps, reconnectionAttempts);
     } else {
-      //console.log("Other error:", err);
-      //console.log("Other error:");
+      console.log("Other error:", err);
     }
   });
   peer.on("close", () => {
