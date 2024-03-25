@@ -150,7 +150,7 @@ function handleInputEvents(canvas, player) {
         mousePos.y = coords.y + camY;
         player.mousePosX = mousePos.x;
         player.mousePosY = mousePos.y;
-        player.setAnlge(calculateAngle(player));
+        player.setAngle(calculateAngle(player));
       }
     },
     { passive: false }

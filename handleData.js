@@ -530,7 +530,7 @@ function updateBots(data, bots) {
         localBot.setIsDead(receivedBot.isDead);
 
         // Don't interpolate the angle because that can naturally change very sharply
-        localBot.setAnlge(receivedBot.getAngle());
+        localBot.setAngle(receivedBot.angle);
         localBot.currentSpeed = receivedBot.currentSpeed;
         localBot.timeOfLastActive = receivedBot.timeOfLastActive;
         localBot.playerAngleData = receivedBot.playerAngleData;

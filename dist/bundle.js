@@ -6224,7 +6224,7 @@ function updateBots(data, bots) {
         localBot.setIsDead(receivedBot.isDead);
 
         // Don't interpolate the angle because that can naturally change very sharply
-        localBot.setAnlge(receivedBot.getAngle());
+        localBot.setAngle(receivedBot.angle);
         localBot.currentSpeed = receivedBot.currentSpeed;
         localBot.timeOfLastActive = receivedBot.timeOfLastActive;
         localBot.playerAngleData = receivedBot.playerAngleData;
@@ -6545,7 +6545,7 @@ function handleInputEvents(canvas, player) {
         mousePos.y = coords.y + _main_js__WEBPACK_IMPORTED_MODULE_0__.camY;
         player.mousePosX = mousePos.x;
         player.mousePosY = mousePos.y;
-        player.setAnlge((0,_gameUtils_js__WEBPACK_IMPORTED_MODULE_5__.calculateAngle)(player));
+        player.setAngle((0,_gameUtils_js__WEBPACK_IMPORTED_MODULE_5__.calculateAngle)(player));
       }
     },
     { passive: false }
