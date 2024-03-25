@@ -204,6 +204,10 @@ function updateOtherPlayerData(otherPlayer, data, otherPlayers, globalPowerUps, 
           // Update velocities directly
           otherPlayer[key] = data[key];
         }
+      } else if (key === "angle") {
+        // Log the name, angle before, and angle after
+        //console.log(`Updating angle for ${otherPlayer.name}: Before: ${otherPlayer.getAngle()}, After: ${data[key]}`);
+        otherPlayer.setAngle(data[key]);
       } else {
         otherPlayer[key] = data[key];
       }
@@ -526,7 +530,7 @@ function updateBots(data, bots) {
         localBot.setIsDead(receivedBot.isDead);
 
         // Don't interpolate the angle because that can naturally change very sharply
-        localBot.angle = receivedBot.angle;
+        localBot.setAnlge(receivedBot.getAngle());
         localBot.currentSpeed = receivedBot.currentSpeed;
         localBot.timeOfLastActive = receivedBot.timeOfLastActive;
         localBot.playerAngleData = receivedBot.playerAngleData;

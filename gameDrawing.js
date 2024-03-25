@@ -122,6 +122,7 @@ export function drawEffect(ctx, camX, camY, effect) {
     ctx.strokeStyle = effect.color;
     ctx.fillStyle = effect.color;
   }
+
   if (!effect.type || effect.type == "") {
     ctx.beginPath();
     ctx.arc(effect.x - camX, effect.y - camY, effect.radius, 0, Math.PI * 2);
@@ -139,8 +140,8 @@ export function drawEffect(ctx, camX, camY, effect) {
 
     if (frameIndex < numFrames) {
       // Calculate the current radius for the explosion
-      const currentRadius = (frameIndex / numFrames) * maxRadius;
-
+      let currentRadius = (frameIndex / numFrames) * maxRadius;
+      currentRadius = Math.max(currentRadius, 0);
       // Draw the expanding circle
       ctx.beginPath();
       ctx.arc(effect.x - camX, effect.y - camY, currentRadius, 0, Math.PI * 2);

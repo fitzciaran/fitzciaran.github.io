@@ -111,16 +111,20 @@ export function sendPlayerStates(playerToSend, masterSending, sendFullerData = f
 // Define a function to add properties to the data object if they have changed
 function addProperty(playerToSend, data, propertyKey, playerKey, sendAnyway = false) {
   if (lastSentPlayerData[propertyKey] !== playerToSend[playerKey] || sendAnyway) {
-    if (playerToSend[playerKey] == null) {
+    if ((playerToSend[playerKey] == null && playerKey != "angle") || (playerToSend.getAngle() == null && playerKey == "angle")) {
       console.log("null property in send player state: " + playerKey);
       return false;
     }
-    data[propertyKey] = playerToSend[playerKey];
-    lastSentPlayerData[propertyKey] = playerToSend[playerKey];
-
-    return true; // Indicates that the property was changed
+    if (playerKey != "angle") {
+      data[propertyKey] = playerToSend[playerKey];
+      lastSentPlayerData[propertyKey] = playerToSend[playerKey];
+    } else {
+      data[propertyKey] = playerToSend.getAngle();
+      lastSentPlayerData[propertyKey] = playerToSend.getAngle();
+    }
+    return true; // property was changed
   }
-  return false; // Indicates that the property was not changed
+  return false; // property was not changed
 }
 
 //this is the full send that will only be sent on request / occasionally

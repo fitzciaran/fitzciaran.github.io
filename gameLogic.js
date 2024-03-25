@@ -238,7 +238,7 @@ export function updateOtherPlayers(deltaTime, mines, camX, camY) {
         otherPlayer.y,
         otherPlayer.powerUps,
         otherPlayer.color,
-        otherPlayer.angle,
+        otherPlayer.getAngle(),
         otherPlayer.pilot,
         otherPlayer.name,
         otherPlayer.isPlaying
@@ -263,7 +263,7 @@ export function updateBots(deltaTime, mines, camX, camY) {
         bot.y,
         bot.powerUps,
         bot.color,
-        bot.angle,
+        bot.getAngle(),
         bot.pilot,
         bot.name
         // Add other properties as needed

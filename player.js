@@ -54,6 +54,7 @@ export const Special = {
 };
 
 export class Player {
+  #angle;
   constructor(
     id = null,
     x = null,
@@ -71,7 +72,7 @@ export class Player {
     this.y = y !== null ? y : 600 + Math.random() * (worldDimensions.height - 1200);
     this.powerUps = powerUps;
     this.color = color !== null ? color : getRandomUniqueColor(colors, selectedColors);
-    this.angle = angle;
+    this.#angle = angle;
     this.pilot = pilot;
     this.name = name;
     this.isPlaying = isPlaying;
@@ -113,7 +114,16 @@ export class Player {
     this.killedBy = [];
     this.resetting = false;
   }
-
+  setAngle(angle) {
+    let previousAngleDifference = angle - this.#angle;
+    if (this.isBot == false && Math.abs(previousAngleDifference > 0.2)) {
+      console.log(`Before: ${this.#angle}, After: ${angle}`);
+    }
+    this.#angle = angle;
+  }
+  getAngle() {
+    return this.#angle;
+  }
   resetState(keepName, keepColor) {
     this.x = 1200 + Math.random() * (worldDimensions.width - 2400);
     this.y = 600 + Math.random() * (worldDimensions.height - 1200);
@@ -121,7 +131,7 @@ export class Player {
     if (!keepColor) {
       this.color = getRandomUniqueColor(colors, selectedColors);
     }
-    this.angle = 0;
+    this.setAngle(0);
     if (!keepName) {
       this.name = "";
     }
@@ -509,13 +519,17 @@ export class Player {
 
   updatePlayerAngle(camX, camY) {
     if (!this.isBot) {
+      if (!this.isLocal) {
+        //if this is another player, don't update the angle since we get that directly
+        return;
+      }
       this.mousePosX = this.absoluteMousePosX + camX;
       this.mousePosY = this.absoluteMousePosY + camY;
     }
     let dx = this.x - this.mousePosX;
     let dy = this.y - this.mousePosY;
     let distance = Math.sqrt(dx * dx + dy * dy);
-    this.angle = Math.atan2(dy, dx) + Math.PI / 2;
+    this.setAngle(Math.atan2(dy, dx) + Math.PI / 2);
     if (isNaN(dx) || isNaN(dy) || isNaN(distance)) {
       console.log("player angle NaN data");
     } else {
@@ -581,7 +595,7 @@ export class Player {
             attractive = false;
           }
           // Calculate the cone's direction based on the ship's angle is needed since everything is offset by this
-          const coneDirection = this.angle - Math.PI / 2;
+          const coneDirection = this.getAngle() - Math.PI / 2;
           // Specify the desired cone angle (in radians) for the force
           let coneAngle = Math.PI * 2;
           let forcePower = 1.5;
@@ -941,6 +955,14 @@ export class Bot extends Player {
     this.target = { x: 0, y: 0, id: "" };
     this.inRangeTicks = 0;
     this.isBot = true;
+  }
+
+  setAngle(angle) {
+    super.setAngle(angle);
+  }
+
+  getAngle() {
+    return super.getAngle();
   }
   resetState(keepName, keepColor) {
     super.resetState(keepName, keepColor);
@@ -1304,7 +1326,7 @@ function serializeBot(bot) {
     y: bot.y,
     vel: bot.vel,
     isDead: bot.isDead,
-    angle: bot.angle,
+    angle: bot.getAngle(),
     currentSpeed: bot.currentSpeed,
     timeOfLastActive: bot.timeOfLastActive,
     playerAngleData: bot.playerAngleData,
@@ -1364,7 +1386,7 @@ function isEqualBot(bot1, bot2) {
     bot1.y === bot2.y &&
     bot1.vel === bot2.vel &&
     bot1.isDead === bot2.isDead &&
-    bot1.angle === bot2.angle &&
+    bot1.getAngle() === bot2.getAngle() &&
     bot1.currentSpeed === bot2.currentSpeed &&
     bot1.timeOfLastActive === bot2.timeOfLastActive &&
     bot1.playerAngleData === bot2.playerAngleData &&

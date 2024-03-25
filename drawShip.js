@@ -27,7 +27,7 @@ export function drawShip(ctx, camX, camY, player, points) {
   const playerCenterYWorldCoords = player.y;
   const playerCenterXScreenCoords = playerCenterXWorldCoords - camX;
   const playerCenterYScreenCoords = playerCenterYWorldCoords - camY;
-  const angle = player.angle;
+  const angle = player.getAngle();
   const color = player.color;
   const name = player.name;
   const lightSourceX = 0;
